@@ -1,0 +1,34 @@
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import Header from './components/Header';
+import Footer from './components/Footer';
+import ScrollToTop from './components/ScrollToTop';
+import Home from './pages/Home';
+import RentalContract from './pages/RentalContract';
+import CT01Form from './pages/CT01Form';
+import About from './pages/About';
+import TemporaryResidence from './pages/guides/TemporaryResidence';
+import PermanentResidence from './pages/guides/PermanentResidence';
+import CT07Guide from './pages/guides/CT07Guide';
+import LandTitle from './pages/guides/LandTitle';
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <ScrollToTop />
+      <Header />
+      <main>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/hop-dong-thue-nha" element={<RentalContract />} />
+          <Route path="/dien-form-ct01" element={<CT01Form />} />
+          <Route path="/gioi-thieu" element={<About />} />
+          <Route path="/huong-dan/tam-tru" element={<TemporaryResidence />} />
+          <Route path="/huong-dan/thuong-tru" element={<PermanentResidence />} />
+          <Route path="/huong-dan/ct07" element={<CT07Guide />} />
+          <Route path="/huong-dan/sang-ten-so-hong" element={<LandTitle />} />
+        </Routes>
+      </main>
+      <Footer />
+    </BrowserRouter>
+  );
+}
