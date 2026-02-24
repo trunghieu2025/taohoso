@@ -1,0 +1,80 @@
+// Shared domain types used across components, pages, and utilities
+
+export interface ContractData {
+  template: string;
+  // Landlord (Bên A)
+  landlordName: string;
+  landlordDob: string;
+  landlordId: string;
+  landlordIdDate: string;
+  landlordIdPlace: string;
+  landlordAddress: string;
+  landlordPhone: string;
+  landlordBank: string;
+  landlordBankName: string;
+  // Tenant (Bên B)
+  tenantName: string;
+  tenantDob: string;
+  tenantId: string;
+  tenantIdDate: string;
+  tenantIdPlace: string;
+  tenantAddress: string;
+  tenantPhone: string;
+  // Property
+  propertyAddress: string;
+  propertyArea: string;
+  propertyFloors: string;
+  propertyRooms: string;
+  propertyDescription: string;
+  propertyEquipment: string;
+  // Financial
+  rentAmount: string;
+  rentAmountWords: string;
+  depositAmount: string;
+  depositAmountWords: string;
+  paymentDay: string;
+  paymentMethod: string;
+  electricRate: string;
+  waterRate: string;
+  internetCost: string;
+  otherCosts: string;
+  // Lease
+  leaseDuration: string;
+  startDate: string;
+  endDate: string;
+  noticePeriod: string;
+  // Terms
+  additionalTerms: string;
+  purpose: string;
+}
+
+export interface CT01Person {
+  name: string;
+  idNumber: string;
+  relationship: string;
+}
+
+export interface CT01Data {
+  fullName: string;
+  dob: string;
+  gender: string;
+  nationality: string;
+  idNumber: string;
+  phone: string;
+  email: string;
+  currentAddress: string;
+  newAddress: string;
+  district: string;
+  reason: string;
+  moveDate: string;
+  relationship: string;
+  additionalPeople: CT01Person[];
+}
+
+export interface SearchItem {
+  title: string;
+  url: string;
+  content: string;
+  type: string;
+  searchText: string;
+}

@@ -10,7 +10,7 @@ export default function LandTitle() {
     const incomeTax = value * 0.02; // 2%
     const total = notaryFee + registrationTax + incomeTax;
 
-    const formatVND = (v) => v.toLocaleString('vi-VN') + ' VND';
+    const formatVND = (v: number) => v.toLocaleString('vi-VN') + ' VND';
 
     return (
         <>

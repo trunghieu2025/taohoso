@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import HeaderSearchInput from './HeaderSearchInput';
 
 export default function Header() {
     const [mobileOpen, setMobileOpen] = useState(false);
     const location = useLocation();
 
-    const isActive = (path) => location.pathname === path ? 'active' : '';
+    const isActive = (path: string) => location.pathname === path ? 'active' : '';
 
     return (
         <header className="header">
@@ -49,6 +50,8 @@ export default function Header() {
                     <Link to="/gioi-thieu" className={`nav-link ${isActive('/gioi-thieu')}`} onClick={() => setMobileOpen(false)}>
                         Giới thiệu
                     </Link>
+
+                    <HeaderSearchInput />
                 </nav>
             </div>
         </header>
