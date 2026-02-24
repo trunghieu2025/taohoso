@@ -36,9 +36,9 @@ const faqData = [
 ];
 
 export default function FAQ() {
-    const [activeIndex, setActiveIndex] = useState(null);
+    const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
-    const toggle = (i) => setActiveIndex(activeIndex === i ? null : i);
+    const toggle = (i: number) => setActiveIndex(activeIndex === i ? null : i);
 
     return (
         <div className="faq-list">

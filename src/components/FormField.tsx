@@ -2,8 +2,45 @@
  * Reusable form field components defined outside of any parent component
  * to prevent React from re-mounting them on every render.
  */
+import { ChangeEvent } from 'react';
 
-export function FormInput({ label, name, value, onChange, required, type = 'text', placeholder, hint, error }) {
+interface FormInputProps {
+  label: string;
+  name: string;
+  value: string;
+  onChange: (e: ChangeEvent<HTMLInputElement>) => void;
+  required?: boolean;
+  type?: string;
+  placeholder?: string;
+  hint?: string;
+  error?: string;
+}
+
+interface FormTextAreaProps {
+  label: string;
+  name: string;
+  value: string;
+  onChange: (e: ChangeEvent<HTMLTextAreaElement>) => void;
+  placeholder?: string;
+  hint?: string;
+  rows?: number;
+}
+
+interface SelectOption {
+  value: string;
+  label: string;
+}
+
+interface FormSelectProps {
+  label: string;
+  name: string;
+  value: string;
+  onChange: (e: ChangeEvent<HTMLSelectElement>) => void;
+  options: SelectOption[];
+  hint?: string;
+}
+
+export function FormInput({ label, name, value, onChange, required, type = 'text', placeholder, hint, error }: FormInputProps) {
     return (
         <div className="form-group">
             <label className="form-label">
@@ -23,7 +60,7 @@ export function FormInput({ label, name, value, onChange, required, type = 'text
     );
 }
 
-export function FormTextArea({ label, name, value, onChange, placeholder, hint, rows = 3 }) {
+export function FormTextArea({ label, name, value, onChange, placeholder, hint, rows = 3 }: FormTextAreaProps) {
     return (
         <div className="form-group">
             <label className="form-label">{label}</label>
@@ -40,7 +77,7 @@ export function FormTextArea({ label, name, value, onChange, placeholder, hint, 
     );
 }
 
-export function FormSelect({ label, name, value, onChange, options, hint }) {
+export function FormSelect({ label, name, value, onChange, options, hint }: FormSelectProps) {
     return (
         <div className="form-group">
             <label className="form-label">{label}</label>
