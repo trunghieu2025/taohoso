@@ -78,3 +78,35 @@ export interface SearchItem {
   type: string;
   searchText: string;
 }
+
+// Invoice form types
+export interface SummaryRow {
+  label: string;
+  value: number; // positive = add, negative = deduct
+}
+
+export interface InvoiceItem {
+  date: string;
+  name: string;
+  unit: string; // ĐVT
+  spec: string; // Quy Cách
+  qty: number; // SL
+  price: number; // Đơn giá
+}
+
+export interface InvoiceData {
+  // Company info
+  companyName: string;
+  companyAddress: string;
+  companyPhone: string;
+  companyBank: string;
+  // Customer
+  customerName: string;
+  customerAddress: string;
+  customerPhone: string;
+  // Items
+  items: InvoiceItem[];
+  // Summary — extra rows between Thành tiền and Còn lại
+  summaryRows: SummaryRow[];
+  note: string;
+}

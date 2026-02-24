@@ -1,6 +1,6 @@
 // PDF generation via browser print window — renders HTML with native fonts,
 // so Vietnamese diacritics work correctly without embedding custom font files.
-import { ContractData, CT01Data, CT01Person } from '../types';
+import { ContractData, CT01Data, CT01Person, InvoiceData } from '../types';
 
 function openPrintWindow(htmlContent: string, title: string): void {
     const win = window.open('', '_blank');
@@ -213,4 +213,84 @@ ${additionalPeopleHtml}
 </div>`;
 
     openPrintWindow(html, title);
+}
+
+// Escape user-supplied strings to prevent XSS in the print window HTML
+function esc(s: string): string {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+export function generateInvoicePDF(
+    data: InvoiceData,
+    totals: { subtotal: number; remaining: number },
+    logoDataUrl = ''
+): void {
+    const fmt = (n: number) => n.toLocaleString('vi-VN');
+    const { subtotal, remaining } = totals;
+
+    const itemRows = data.items
+        .filter(i => i.name || i.qty || i.price)
+        .map(i => `
+  <tr>
+    <td style="border:1px solid #000;padding:4pt 6pt">${esc(i.date)}</td>
+    <td style="border:1px solid #000;padding:4pt 6pt">${esc(i.name)}</td>
+    <td style="border:1px solid #000;padding:4pt 6pt;text-align:center">${esc(i.unit)}</td>
+    <td style="border:1px solid #000;padding:4pt 6pt;text-align:center">${esc(i.spec)}</td>
+    <td style="border:1px solid #000;padding:4pt 6pt;text-align:center">${i.qty}</td>
+    <td style="border:1px solid #000;padding:4pt 6pt;text-align:right">${fmt(i.price)}</td>
+    <td style="border:1px solid #000;padding:4pt 6pt;text-align:right;font-weight:600">${fmt(i.qty * i.price)}</td>
+  </tr>`).join('');
+
+    const logoHtml = logoDataUrl
+        ? `<img src="${logoDataUrl}" alt="Logo" style="max-width:80pt;max-height:80pt;object-fit:contain;">`
+        : '';
+
+    const html = `
+<div style="display:flex;align-items:center;gap:16pt;margin-bottom:12pt;">
+  ${logoHtml ? `<div style="flex-shrink:0">${logoHtml}</div>` : ''}
+  <div${logoHtml ? '' : ' style="text-align:center;width:100%"'}>
+    <p style="font-weight:bold;font-size:14pt;text-transform:uppercase;margin:0 0 3pt">${esc(data.companyName)}</p>
+    <p style="margin:2pt 0">Đ/C: ${esc(data.companyAddress)}</p>
+    <p style="margin:2pt 0">SĐT: ${esc(data.companyPhone)}</p>
+    <p style="margin:2pt 0">STK: ${esc(data.companyBank)}</p>
+  </div>
+</div>
+<h1>HOÁ ĐƠN BÁN HÀNG</h1>
+<p style="margin:4pt 0"><strong>Tên khách hàng:</strong> ${esc(data.customerName)}</p>
+<p style="margin:4pt 0"><strong>Địa chỉ:</strong> ${esc(data.customerAddress)}</p>
+<p style="margin:4pt 0 12pt"><strong>Số điện thoại:</strong> ${esc(data.customerPhone)}</p>
+
+<table style="width:100%;border-collapse:collapse;font-size:11pt;margin-bottom:12pt;">
+  <thead>
+    <tr style="background:#f0f0f0;">
+      <th style="border:1px solid #000;padding:5pt 6pt;text-align:left">Ngày</th>
+      <th style="border:1px solid #000;padding:5pt 6pt;text-align:left">Tên hàng hoá</th>
+      <th style="border:1px solid #000;padding:5pt 6pt;text-align:center">ĐVT</th>
+      <th style="border:1px solid #000;padding:5pt 6pt;text-align:center">Quy Cách</th>
+      <th style="border:1px solid #000;padding:5pt 6pt;text-align:center">SL</th>
+      <th style="border:1px solid #000;padding:5pt 6pt;text-align:right">Đơn giá</th>
+      <th style="border:1px solid #000;padding:5pt 6pt;text-align:right">Thành tiền</th>
+    </tr>
+  </thead>
+  <tbody>${itemRows}</tbody>
+</table>
+
+<table style="width:280pt;margin-left:auto;border-collapse:collapse;font-size:11pt;">
+  <tr>
+    <td style="padding:4pt 8pt;font-weight:600">Thành tiền</td>
+    <td style="padding:4pt 8pt;text-align:right">${fmt(subtotal)} ₫</td>
+  </tr>
+  ${data.summaryRows.filter(r => r.label || r.value).map(r => `
+  <tr>
+    <td style="padding:4pt 8pt">${esc(r.label)}</td>
+    <td style="padding:4pt 8pt;text-align:right">${fmt(r.value)} ₫</td>
+  </tr>`).join('')}
+  <tr style="border-top:2px solid #000;">
+    <td style="padding:4pt 8pt;font-weight:700;font-size:12pt">Còn lại</td>
+    <td style="padding:4pt 8pt;text-align:right;font-weight:700;font-size:12pt">${fmt(remaining)} ₫</td>
+  </tr>
+</table>
+${data.note ? `<p style="margin-top:12pt"><strong>Ghi chú:</strong> ${esc(data.note)}</p>` : ''}`;
+
+    openPrintWindow(html, 'Hoá Đơn Bán Hàng');
 }

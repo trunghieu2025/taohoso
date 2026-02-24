@@ -5,6 +5,7 @@ import ScrollToTop from './components/ScrollToTop';
 import Home from './pages/Home';
 import RentalContract from './pages/RentalContract';
 import CT01Form from './pages/CT01Form';
+import InvoiceForm from './pages/InvoiceForm';
 import About from './pages/About';
 import SearchPage from './pages/SearchPage';
 import NotFoundPage from './pages/NotFoundPage';
@@ -25,9 +26,13 @@ export default function App() {
           <Route path="/dien-form-ct01" element={<CT01Form />} />
           <Route path="/gioi-thieu" element={<About />} />
           <Route path="/huong-dan/tam-tru" element={<TemporaryResidence />} />
-          <Route path="/huong-dan/thuong-tru" element={<PermanentResidence />} />
+          <Route
+            path="/huong-dan/thuong-tru"
+            element={<PermanentResidence />}
+          />
           <Route path="/huong-dan/ct07" element={<CT07Guide />} />
           <Route path="/huong-dan/sang-ten-so-hong" element={<LandTitle />} />
+          <Route path="/hoa-don-ban-hang" element={<InvoiceForm />} />
           <Route path="/tim-kiem" element={<SearchPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
