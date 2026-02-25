@@ -80,6 +80,13 @@ export interface SearchItem {
 }
 
 // Invoice form types
+export interface CustomColumn {
+  id: string;
+  title: string;
+  type: 'text' | 'formula';
+  formula: string; // only used when type === 'formula'
+}
+
 export interface SummaryRow {
   label: string;
   value: number; // positive = add, negative = deduct
@@ -92,6 +99,7 @@ export interface InvoiceItem {
   spec: string; // Quy Cách
   qty: number; // SL
   price: number; // Đơn giá
+  customFields: Record<string, string>; // columnId → value
 }
 
 export interface InvoiceData {
@@ -106,6 +114,8 @@ export interface InvoiceData {
   customerPhone: string;
   // Items
   items: InvoiceItem[];
+  // Custom columns
+  customColumns: CustomColumn[];
   // Summary — extra rows between Thành tiền and Còn lại
   summaryRows: SummaryRow[];
   note: string;
