@@ -3,9 +3,9 @@
 import { ContractData, CT01Data, CT01Person, InvoiceData } from '../types';
 
 function openPrintWindow(htmlContent: string, title: string): void {
-    const win = window.open('', '_blank');
-    if (!win) return;
-    win.document.write(`<!DOCTYPE html>
+  const win = window.open('', '_blank');
+  if (!win) return;
+  win.document.write(`<!DOCTYPE html>
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
@@ -54,21 +54,22 @@ ${htmlContent}
 </script>
 </body>
 </html>`);
-    win.document.close();
+  win.document.close();
 }
 
 export function generateContractPDF(data: ContractData): void {
-    const TEMPLATE_NAMES: Record<string, string> = {
-        'nha-nguyen-can': 'Hợp Đồng Thuê Nhà Nguyên Căn',
-        'phong-tro': 'Hợp Đồng Thuê Phòng Trọ',
-        'van-phong': 'Hợp Đồng Thuê Văn Phòng',
-        'mat-bang': 'Hợp Đồng Thuê Mặt Bằng Kinh Doanh',
-    };
-    const title = TEMPLATE_NAMES[data.template] || 'Hợp Đồng Thuê Nhà';
-    const today = new Date();
-    const fmtMoney = (v: string): string => v ? Number(v).toLocaleString('vi-VN') + ' đồng' : '...';
+  const TEMPLATE_NAMES: Record<string, string> = {
+    'nha-nguyen-can': 'Hợp Đồng Thuê Nhà Nguyên Căn',
+    'phong-tro': 'Hợp Đồng Thuê Phòng Trọ',
+    'van-phong': 'Hợp Đồng Thuê Văn Phòng',
+    'mat-bang': 'Hợp Đồng Thuê Mặt Bằng Kinh Doanh',
+  };
+  const title = TEMPLATE_NAMES[data.template] || 'Hợp Đồng Thuê Nhà';
+  const today = new Date();
+  const fmtMoney = (v: string): string =>
+    v ? Number(v).toLocaleString('vi-VN') + ' đồng' : '...';
 
-    const html = `
+  const html = `
 <p class="center bold upper">Cộng Hòa Xã Hội Chủ Nghĩa Việt Nam</p>
 <p class="center italic underline">Độc lập - Tự do - Hạnh phúc</p>
 <h1>${title}</h1>
@@ -117,8 +118,12 @@ ${data.propertyEquipment ? `<p>• Trang thiết bị bàn giao: ${data.property
 <p>• Tiền đặt cọc: ${fmtMoney(data.depositAmount)}${data.depositAmountWords ? ` (${data.depositAmountWords})` : ''}</p>
 <p>• Thanh toán: ${data.paymentMethod || 'Tiền mặt hoặc chuyển khoản'}, trước ngày ${data.paymentDay || '05'} mỗi tháng</p>
 <p>• Tiền đặt cọc được hoàn trả khi Bên B trả nhà đúng hạn và không vi phạm hợp đồng</p>
-${data.electricRate || data.waterRate ? `
-<p>• Chi phí khác:${data.electricRate ? ` Điện ${Number(data.electricRate).toLocaleString('vi-VN')} VND/kWh;` : ''}${data.waterRate ? ` Nước ${Number(data.waterRate).toLocaleString('vi-VN')} VND/m³;` : ''}${data.internetCost ? ` Internet ${Number(data.internetCost).toLocaleString('vi-VN')} VND/tháng;` : ''}${data.otherCosts ? ` Khác: ${data.otherCosts}` : ''}</p>` : ''}
+${
+  data.electricRate || data.waterRate
+    ? `
+<p>• Chi phí khác:${data.electricRate ? ` Điện ${Number(data.electricRate).toLocaleString('vi-VN')} VND/kWh;` : ''}${data.waterRate ? ` Nước ${Number(data.waterRate).toLocaleString('vi-VN')} VND/m³;` : ''}${data.internetCost ? ` Internet ${Number(data.internetCost).toLocaleString('vi-VN')} VND/tháng;` : ''}${data.otherCosts ? ` Khác: ${data.otherCosts}` : ''}</p>`
+    : ''
+}
 
 <p class="section-heading">Điều 3: Thời hạn thuê</p>
 <p>• Thời hạn: ${data.leaseDuration || '12'} tháng, từ ngày ${data.startDate || '...'} đến ngày ${data.endDate || '...'}</p>
@@ -144,9 +149,13 @@ ${data.electricRate || data.waterRate ? `
 <p>6.2. Mọi tranh chấp giải quyết thông qua thương lượng; nếu không thống nhất sẽ đưa ra Tòa án nhân dân có thẩm quyền</p>
 <p>6.3. Hợp đồng được lập thành 02 bản, mỗi bên giữ 01 bản, có giá trị pháp lý như nhau</p>
 <p>6.4. Hợp đồng có hiệu lực kể từ ngày ${data.startDate || '...'}</p>
-${data.additionalTerms ? `
+${
+  data.additionalTerms
+    ? `
 <p class="section-heading">Điều khoản bổ sung</p>
-<p>${data.additionalTerms}</p>` : ''}
+<p>${data.additionalTerms}</p>`
+    : ''
+}
 
 <div class="signatures">
   <div class="sig-block">
@@ -161,21 +170,25 @@ ${data.additionalTerms ? `
   </div>
 </div>`;
 
-    openPrintWindow(html, title);
+  openPrintWindow(html, title);
 }
 
 export function generateCT01PDF(data: CT01Data): void {
-    const title = 'Tờ Khai Thay Đổi Thông Tin Cư Trú (CT01)';
-    const today = new Date();
+  const title = 'Tờ Khai Thay Đổi Thông Tin Cư Trú (CT01)';
+  const today = new Date();
 
-    const additionalPeopleHtml = data.additionalPeople && data.additionalPeople.length > 0
-        ? `<p class="section-heading">Người cùng đăng ký:</p>
-           ${data.additionalPeople.map((p: CT01Person, i: number) =>
-               `<p>${i + 1}. ${p.name || '...'} — CCCD: ${p.idNumber || '...'} — Quan hệ: ${p.relationship || '...'}</p>`
-           ).join('')}`
-        : '';
+  const additionalPeopleHtml =
+    data.additionalPeople && data.additionalPeople.length > 0
+      ? `<p class="section-heading">Người cùng đăng ký:</p>
+           ${data.additionalPeople
+             .map(
+               (p: CT01Person, i: number) =>
+                 `<p>${i + 1}. ${p.name || '...'} — CCCD: ${p.idNumber || '...'} — Quan hệ: ${p.relationship || '...'}</p>`,
+             )
+             .join('')}`
+      : '';
 
-    const html = `
+  const html = `
 <p class="center italic" style="font-size:10pt;">Mẫu CT01</p>
 <p class="center italic" style="font-size:9pt;">(Ban hành kèm theo Thông tư 55/2021/TT-BCA)</p>
 <br>
@@ -212,25 +225,26 @@ ${additionalPeopleHtml}
   </div>
 </div>`;
 
-    openPrintWindow(html, title);
+  openPrintWindow(html, title);
 }
 
 // Escape user-supplied strings to prevent XSS in the print window HTML
 function esc(s: string): string {
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 export function generateInvoicePDF(
-    data: InvoiceData,
-    totals: { subtotal: number; remaining: number },
-    logoDataUrl = ''
+  data: InvoiceData,
+  totals: { subtotal: number; remaining: number },
+  logoDataUrl = '',
 ): void {
-    const fmt = (n: number) => n.toLocaleString('vi-VN');
-    const { subtotal, remaining } = totals;
+  const fmt = (n: number) => n.toLocaleString('vi-VN');
+  const { subtotal, remaining } = totals;
 
-    const itemRows = data.items
-        .filter(i => i.name || i.qty || i.price)
-        .map(i => `
+  const itemRows = data.items
+    .filter((i) => i.name || i.qty || i.price)
+    .map(
+      (i) => `
   <tr>
     <td style="border:1px solid #000;padding:4pt 6pt">${esc(i.date)}</td>
     <td style="border:1px solid #000;padding:4pt 6pt">${esc(i.name)}</td>
@@ -239,13 +253,15 @@ export function generateInvoicePDF(
     <td style="border:1px solid #000;padding:4pt 6pt;text-align:center">${i.qty}</td>
     <td style="border:1px solid #000;padding:4pt 6pt;text-align:right">${fmt(i.price)}</td>
     <td style="border:1px solid #000;padding:4pt 6pt;text-align:right;font-weight:600">${fmt(i.qty * i.price)}</td>
-  </tr>`).join('');
+  </tr>`,
+    )
+    .join('');
 
-    const logoHtml = logoDataUrl
-        ? `<img src="${logoDataUrl}" alt="Logo" style="max-width:80pt;max-height:80pt;object-fit:contain;">`
-        : '';
+  const logoHtml = logoDataUrl
+    ? `<img src="${logoDataUrl}" alt="Logo" style="max-width:80pt;max-height:80pt;object-fit:contain;">`
+    : '';
 
-    const html = `
+  const html = `
 <div style="display:flex;align-items:center;gap:16pt;margin-bottom:12pt;">
   ${logoHtml ? `<div style="flex-shrink:0">${logoHtml}</div>` : ''}
   <div${logoHtml ? '' : ' style="text-align:center;width:100%"'}>
@@ -280,17 +296,36 @@ export function generateInvoicePDF(
     <td style="padding:4pt 8pt;font-weight:600">Thành tiền</td>
     <td style="padding:4pt 8pt;text-align:right">${fmt(subtotal)} ₫</td>
   </tr>
-  ${data.summaryRows.filter(r => r.label || r.value).map(r => `
+  ${data.summaryRows
+    .filter((r) => r.label || r.value)
+    .map(
+      (r) => `
   <tr>
     <td style="padding:4pt 8pt">${esc(r.label)}</td>
     <td style="padding:4pt 8pt;text-align:right">${fmt(r.value)} ₫</td>
-  </tr>`).join('')}
+  </tr>`,
+    )
+    .join('')}
   <tr style="border-top:2px solid #000;">
     <td style="padding:4pt 8pt;font-weight:700;font-size:12pt">Còn lại</td>
     <td style="padding:4pt 8pt;text-align:right;font-weight:700;font-size:12pt">${fmt(remaining)} ₫</td>
   </tr>
 </table>
-${data.note ? `<p style="margin-top:12pt"><strong>Ghi chú:</strong> ${esc(data.note)}</p>` : ''}`;
+${data.note ? `<p style="margin-top:12pt"><strong>Ghi chú:</strong> ${esc(data.note)}</p>` : ''}
+<table style="width:100%;margin-top:40pt;border-collapse:collapse;text-align:center">
+  <tr>
+    <td style="width:50%;padding:0 8pt;vertical-align:top">
+      <strong>NGƯỜI MUA</strong><br>
+      <em style="font-size:9pt">(Ký, ghi rõ họ tên)</em>
+      <div style="margin-top:60pt;font-size:10pt">${esc(data.customerName)}</div>
+    </td>
+    <td style="width:50%;padding:0 8pt;vertical-align:top">
+      <strong>NGƯỜI BÁN</strong><br>
+      <em style="font-size:9pt">(Ký, ghi rõ họ tên)</em>
+      <div style="margin-top:60pt;font-size:10pt">${esc(data.companyName)}</div>
+    </td>
+  </tr>
+</table>`;
 
-    openPrintWindow(html, 'Hoá Đơn Bán Hàng');
+  openPrintWindow(html, 'Hoá Đơn Bán Hàng');
 }

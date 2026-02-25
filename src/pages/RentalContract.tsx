@@ -10,7 +10,9 @@ import {
 } from './rental-contract/rental-contract-constants';
 import { ContractData } from '../types';
 
-type FormChangeEvent = ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>;
+type FormChangeEvent = ChangeEvent<
+  HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+>;
 
 export default function RentalContract() {
   const [step, setStep] = useState(0);
