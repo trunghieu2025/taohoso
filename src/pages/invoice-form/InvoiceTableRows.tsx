@@ -1,8 +1,10 @@
-import { InvoiceItem } from '../../types';
+import { InvoiceItem, CustomColumn } from '../../types';
 import { emptyItem } from './invoice-form-constants';
+import { evaluateFormulaForItem } from '../../utils/formulaEvaluator';
 
 interface Props {
   items: InvoiceItem[];
+  customColumns: CustomColumn[];
   onChange: (items: InvoiceItem[]) => void;
 }
 
@@ -22,6 +24,8 @@ function updateItem(
   const item = { ...updated[idx] };
   if (field === 'qty' || field === 'price') {
     (item[field] as number) = parseFloat(value) || 0;
+  } else if (field === 'customFields') {
+    // handled separately
   } else {
     (item[field] as string) = value;
   }
@@ -29,7 +33,21 @@ function updateItem(
   return updated;
 }
 
-export default function InvoiceTableRows({ items, onChange }: Props) {
+function updateCustomField(
+  items: InvoiceItem[],
+  idx: number,
+  colId: string,
+  value: string,
+): InvoiceItem[] {
+  const updated = [...items];
+  updated[idx] = {
+    ...updated[idx],
+    customFields: { ...updated[idx].customFields, [colId]: value },
+  };
+  return updated;
+}
+
+export default function InvoiceTableRows({ items, customColumns, onChange }: Props) {
   const inputStyle: React.CSSProperties = {
     width: '100%',
     border: '1px solid var(--border)',
@@ -38,6 +56,8 @@ export default function InvoiceTableRows({ items, onChange }: Props) {
     fontSize: '0.85rem',
     fontFamily: 'inherit',
   };
+
+  const totalCols = 8 + customColumns.length; // 7 fixed + custom + delete btn
 
   return (
     <>
@@ -120,6 +140,39 @@ export default function InvoiceTableRows({ items, onChange }: Props) {
               >
                 {fmtMoney(amount)}
               </td>
+              {/* Custom columns */}
+              {customColumns.map((col) => (
+                <td key={col.id} style={{ padding: '4px' }}>
+                  {col.type === 'formula' ? (
+                    <span
+                      style={{
+                        display: 'block',
+                        padding: '4px 6px',
+                        fontSize: '0.85rem',
+                        textAlign: 'right',
+                        color: 'var(--primary, #4f46e5)',
+                        fontWeight: 500,
+                        background: 'var(--bg-subtle, #f0f4ff)',
+                        borderRadius: '4px',
+                        minWidth: '80px',
+                        whiteSpace: 'nowrap',
+                      }}
+                      title={`Công thức: ${col.formula}`}
+                    >
+                      {evaluateFormulaForItem(col.formula, item, customColumns, col.id)}
+                    </span>
+                  ) : (
+                    <input
+                      style={{ ...inputStyle, minWidth: '80px' }}
+                      value={item.customFields[col.id] || ''}
+                      placeholder={col.title}
+                      onChange={(e) =>
+                        onChange(updateCustomField(items, idx, col.id, e.target.value))
+                      }
+                    />
+                  )}
+                </td>
+              ))}
               <td style={{ padding: '4px', textAlign: 'center' }}>
                 <button
                   title="Xóa dòng"
@@ -146,7 +199,7 @@ export default function InvoiceTableRows({ items, onChange }: Props) {
       </tbody>
       <tfoot>
         <tr>
-          <td colSpan={8} style={{ padding: '6px 4px' }}>
+          <td colSpan={totalCols} style={{ padding: '6px 4px' }}>
             <button
               className="btn btn-outline btn-sm"
               onClick={() => onChange([...items, emptyItem()])}

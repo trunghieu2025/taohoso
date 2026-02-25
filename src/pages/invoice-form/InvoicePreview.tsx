@@ -20,6 +20,10 @@ export default function InvoicePreview({
   const today = new Date();
 
   const visibleItems = data.items.filter((i) => i.name || i.qty || i.price);
+  const customCols = data.customColumns || [];
+
+  // Fixed headers + custom column headers
+  const fixedHeaders = ['Ngày', 'Tên hàng', 'ĐVT', 'SL', 'Đơn giá', 'Thành tiền'];
 
   return (
     <div className="contract-preview">
@@ -136,14 +140,7 @@ export default function InvoicePreview({
             >
               <thead>
                 <tr style={{ background: 'var(--bg-secondary, #f5f5f5)' }}>
-                  {[
-                    'Ngày',
-                    'Tên hàng',
-                    'ĐVT',
-                    'SL',
-                    'Đơn giá',
-                    'Thành tiền',
-                  ].map((h) => (
+                  {fixedHeaders.map((h) => (
                     <th
                       key={h}
                       style={{
@@ -156,69 +153,110 @@ export default function InvoicePreview({
                       {h}
                     </th>
                   ))}
+                  {customCols.map((col) => (
+                    <th
+                      key={col.id}
+                      style={{
+                        border: '1px solid var(--border)',
+                        padding: '3px 5px',
+                        textAlign: 'left',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {col.title}
+                      {col.type === 'formula' && (
+                        <span style={{ fontSize: '0.65rem', color: 'var(--primary, #4f46e5)', marginLeft: '3px' }}>ƒx</span>
+                      )}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {visibleItems.map((item, idx) => (
-                  <tr key={idx}>
-                    <td
-                      style={{
-                        border: '1px solid var(--border)',
-                        padding: '3px 5px',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {item.date}
-                    </td>
-                    <td
-                      style={{
-                        border: '1px solid var(--border)',
-                        padding: '3px 5px',
-                      }}
-                    >
-                      {item.name}
-                    </td>
-                    <td
-                      style={{
-                        border: '1px solid var(--border)',
-                        padding: '3px 5px',
-                        textAlign: 'center',
-                      }}
-                    >
-                      {item.unit}
-                    </td>
-                    <td
-                      style={{
-                        border: '1px solid var(--border)',
-                        padding: '3px 5px',
-                        textAlign: 'center',
-                      }}
-                    >
-                      {item.qty || ''}
-                    </td>
-                    <td
-                      style={{
-                        border: '1px solid var(--border)',
-                        padding: '3px 5px',
-                        textAlign: 'right',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {item.price ? fmt(item.price) : ''}
-                    </td>
-                    <td
-                      style={{
-                        border: '1px solid var(--border)',
-                        padding: '3px 5px',
-                        textAlign: 'right',
-                        fontWeight: 600,
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {item.qty && item.price ? fmt(item.qty * item.price) : ''}
-                    </td>
-                  </tr>
-                ))}
+                {visibleItems.map((item, idx) => {
+                  const resolvedFields = item.customFields || {};
+                  return (
+                    <tr key={idx}>
+                      <td
+                        style={{
+                          border: '1px solid var(--border)',
+                          padding: '3px 5px',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {item.date}
+                      </td>
+                      <td
+                        style={{
+                          border: '1px solid var(--border)',
+                          padding: '3px 5px',
+                        }}
+                      >
+                        {item.name}
+                      </td>
+                      <td
+                        style={{
+                          border: '1px solid var(--border)',
+                          padding: '3px 5px',
+                          textAlign: 'center',
+                        }}
+                      >
+                        {item.unit}
+                      </td>
+                      <td
+                        style={{
+                          border: '1px solid var(--border)',
+                          padding: '3px 5px',
+                          textAlign: 'center',
+                        }}
+                      >
+                        {item.qty || ''}
+                      </td>
+                      <td
+                        style={{
+                          border: '1px solid var(--border)',
+                          padding: '3px 5px',
+                          textAlign: 'right',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {item.price ? fmt(item.price) : ''}
+                      </td>
+                      <td
+                        style={{
+                          border: '1px solid var(--border)',
+                          padding: '3px 5px',
+                          textAlign: 'right',
+                          fontWeight: 600,
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {item.qty && item.price ? fmt(item.qty * item.price) : ''}
+                      </td>
+                      {customCols.map((col) => {
+                        const val = resolvedFields[col.id] || '';
+                        const numVal = parseFloat(val);
+                        const displayVal = !isNaN(numVal) && val !== 'Lỗi'
+                          ? numVal.toLocaleString('vi-VN')
+                          : val;
+                        return (
+                          <td
+                            key={col.id}
+                            style={{
+                              border: '1px solid var(--border)',
+                              padding: '3px 5px',
+                              textAlign: col.type === 'formula' ? 'right' : 'left',
+                              fontWeight: col.type === 'formula' ? 500 : 400,
+                              whiteSpace: 'nowrap',
+                              color: col.type === 'formula' ? 'var(--primary, #4f46e5)' : undefined,
+                            }}
+                          >
+                            {displayVal}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

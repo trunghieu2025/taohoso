@@ -10,7 +10,7 @@ export const COMPANY_DEFAULTS = {
 
 // Factory for a blank item row
 export function emptyItem(): InvoiceItem {
-  return { date: '', name: '', unit: '', spec: '', qty: 0, price: 0 };
+  return { date: '', name: '', unit: '', spec: '', qty: 0, price: 0, customFields: {} };
 }
 
 // Factory for a blank summary row
@@ -25,6 +25,7 @@ export const INITIAL_INVOICE_DATA: InvoiceData = {
   customerAddress: '',
   customerPhone: '',
   items: [emptyItem()],
+  customColumns: [],
   summaryRows: [],
   note: '',
 };
