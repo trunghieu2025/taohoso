@@ -53,3 +53,5 @@ CLAUDE.md
 AGENTS.md
 .repomixignore
 release-manifest.json
+.vercel
+.env*.local
