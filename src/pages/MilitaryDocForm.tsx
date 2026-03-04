@@ -8,6 +8,13 @@ import {
     scanDuplicateTexts,
     createTemplateWithTags,
 } from '../utils/militaryDocGenerator';
+import {
+    scanExcelDuplicates,
+    extractExcelTags,
+    createExcelTemplate,
+    renderExcelPreview,
+    generateExcelDoc,
+} from '../utils/excelTemplateGenerator';
 import type { ScanResult } from '../utils/militaryDocGenerator';
 
 /* ── Human-friendly labels for known MERGEFIELD tags ── */
@@ -150,6 +157,7 @@ export default function MilitaryDocForm() {
     const [templateTags, setTemplateTags] = useState<string[]>([]);
     const [isCustomTemplate, setIsCustomTemplate] = useState(false);
     const [customLabels, setCustomLabels] = useState<Record<string, string>>({});
+    const [fileType, setFileType] = useState<'word' | 'excel'>('word');
 
     // Scan modal state
     const [showScanModal, setShowScanModal] = useState(false);
@@ -183,7 +191,7 @@ export default function MilitaryDocForm() {
         })();
     }, []);
 
-    // Debounced preview update using docx-preview
+    // Debounced preview update
     useEffect(() => {
         if (!templateBuffer || !previewContainerRef.current) return;
 
@@ -191,7 +199,26 @@ export default function MilitaryDocForm() {
         debounceRef.current = setTimeout(async () => {
             setPreviewLoading(true);
             try {
-                await renderDocxPreview(templateBuffer, data, previewContainerRef.current!);
+                if (fileType === 'excel') {
+                    // Excel: render HTML table
+                    const html = renderExcelPreview(templateBuffer, data);
+                    previewContainerRef.current!.innerHTML = html;
+                    // Style the Excel preview tables
+                    const tables = previewContainerRef.current!.querySelectorAll('table');
+                    tables.forEach(t => {
+                        t.style.borderCollapse = 'collapse';
+                        t.style.width = '100%';
+                        t.style.fontSize = '11px';
+                    });
+                    const cells = previewContainerRef.current!.querySelectorAll('td,th');
+                    cells.forEach(c => {
+                        (c as HTMLElement).style.border = '1px solid #d1d5db';
+                        (c as HTMLElement).style.padding = '4px 6px';
+                    });
+                } else {
+                    // Word: docx-preview
+                    await renderDocxPreview(templateBuffer, data, previewContainerRef.current!);
+                }
                 setPreviewReady(true);
             } catch (err) {
                 console.error('[preview]', err);
@@ -204,7 +231,7 @@ export default function MilitaryDocForm() {
         }, 600);
 
         return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-    }, [data, templateBuffer]);
+    }, [data, templateBuffer, fileType]);
 
     const handleChange = useCallback((e: FormChangeEvent) => {
         const { name, value } = e.target;
@@ -215,7 +242,11 @@ export default function MilitaryDocForm() {
         if (!templateBuffer) return;
         setLoading(true);
         try {
-            await generateMilitaryDoc(data, templateBuffer);
+            if (fileType === 'excel') {
+                generateExcelDoc(data, templateBuffer);
+            } else {
+                await generateMilitaryDoc(data, templateBuffer);
+            }
         } catch (err) {
             alert('Lỗi khi xuất file: ' + (err as Error).message);
         } finally {
@@ -241,33 +272,80 @@ export default function MilitaryDocForm() {
             return;
         }
 
+        // Check for .xls (old Excel format)
+        if (file.name.toLowerCase().endsWith('.xls') && !file.name.toLowerCase().endsWith('.xlsx')) {
+            alert(
+                '⚠️ File .xls (Excel cũ) không đọc được đầy đủ trên web.\n\n'
+                + 'Hướng dẫn chuyển sang .xlsx:\n'
+                + '1. Mở file bằng Excel\n'
+                + '2. Vào File → Save As\n'
+                + '3. Chọn định dạng "Excel Workbook (.xlsx)"\n'
+                + '4. Lưu và upload lại file .xlsx'
+            );
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            return;
+        }
+
+        // Detect file type
+        const isExcel = /\.xlsx?$/i.test(file.name);
+
         const buf = await file.arrayBuffer();
         try {
-            // First check: does the file already have {tag} placeholders?
-            const existingTags = extractTags(buf);
-            if (existingTags.length > 0) {
-                // File already has placeholders — use directly
-                setTemplateBuffer(buf);
-                setTemplateName(file.name);
-                setTemplateTags(existingTags);
-                setIsCustomTemplate(true);
-                setCustomLabels({});
-                setData((prev) => {
-                    const newData: Record<string, string> = {};
-                    existingTags.forEach(tag => { newData[tag] = prev[tag] || ''; });
-                    return newData;
-                });
-            } else {
-                // No placeholders — auto-scan for duplicate text
-                const results = scanDuplicateTexts(buf);
-                if (results.length === 0) {
-                    alert('Không tìm thấy giá trị trùng lặp nào trong file.\nFile cần có text xuất hiện ≥ 2 lần để tạo trường nhập liệu.');
-                    return;
+            if (isExcel) {
+                // Excel file
+                const existingTags = extractExcelTags(buf);
+                if (existingTags.length > 0) {
+                    setTemplateBuffer(buf);
+                    setTemplateName(file.name);
+                    setTemplateTags(existingTags);
+                    setIsCustomTemplate(true);
+                    setFileType('excel');
+                    setCustomLabels({});
+                    setPreviewReady(false);
+                    setData(() => {
+                        const d: Record<string, string> = {};
+                        existingTags.forEach(t => { d[t] = ''; });
+                        return d;
+                    });
+                } else {
+                    const results = scanExcelDuplicates(buf);
+                    if (results.length === 0) {
+                        alert('Không tìm thấy giá trị trùng lặp nào trong file Excel.');
+                        return;
+                    }
+                    setRawUploadBuffer(buf);
+                    setRawUploadName(file.name);
+                    setFileType('excel');
+                    setScanResults(results);
+                    setShowScanModal(true);
                 }
-                setRawUploadBuffer(buf);
-                setRawUploadName(file.name);
-                setScanResults(results);
-                setShowScanModal(true);
+            } else {
+                // Word file
+                const existingTags = extractTags(buf);
+                if (existingTags.length > 0) {
+                    setTemplateBuffer(buf);
+                    setTemplateName(file.name);
+                    setTemplateTags(existingTags);
+                    setIsCustomTemplate(true);
+                    setFileType('word');
+                    setCustomLabels({});
+                    setData((prev) => {
+                        const newData: Record<string, string> = {};
+                        existingTags.forEach(tag => { newData[tag] = prev[tag] || ''; });
+                        return newData;
+                    });
+                } else {
+                    const results = scanDuplicateTexts(buf);
+                    if (results.length === 0) {
+                        alert('Không tìm thấy giá trị trùng lặp nào trong file Word.');
+                        return;
+                    }
+                    setRawUploadBuffer(buf);
+                    setRawUploadName(file.name);
+                    setFileType('word');
+                    setScanResults(results);
+                    setShowScanModal(true);
+                }
             }
         } catch (err) {
             alert('Lỗi đọc file: ' + (err as Error).message);
@@ -280,10 +358,14 @@ export default function MilitaryDocForm() {
 
         // Create template with {tag} placeholders
         const replacements = selected.map(s => ({ text: s.text, tag: s.tag }));
-        const newTemplate = createTemplateWithTags(rawUploadBuffer, replacements);
+        const newTemplate = fileType === 'excel'
+            ? createExcelTemplate(rawUploadBuffer, replacements)
+            : createTemplateWithTags(rawUploadBuffer, replacements);
 
         // Extract tags from the new template
-        const tags = extractTags(newTemplate);
+        const tags = fileType === 'excel'
+            ? extractExcelTags(newTemplate)
+            : extractTags(newTemplate);
 
         // Save custom labels
         const labels: Record<string, string> = {};
@@ -310,7 +392,9 @@ export default function MilitaryDocForm() {
 
     const handleReopenScan = () => {
         if (!rawUploadBuffer) return;
-        const results = scanDuplicateTexts(rawUploadBuffer);
+        const results = fileType === 'excel'
+            ? scanExcelDuplicates(rawUploadBuffer)
+            : scanDuplicateTexts(rawUploadBuffer);
         setScanResults(results);
         setShowScanModal(true);
     };
@@ -324,6 +408,7 @@ export default function MilitaryDocForm() {
             setTemplateName('Mẫu mặc định (Nhà tập thể)');
             setTemplateTags(extractTags(buf));
             setIsCustomTemplate(false);
+            setFileType('word');
         } catch { /* ignore */ }
     };
 
@@ -450,7 +535,7 @@ export default function MilitaryDocForm() {
             <div className="page-header">
                 <div className="container">
                     <h1>Hồ sơ sửa chữa công trình</h1>
-                    <p>Nhập thông tin một lần — xuất file Word đầy đủ 6 mẫu biểu</p>
+                    <p>Nhập thông tin một lần — xuất file Word / Excel đầy đủ mẫu biểu</p>
                 </div>
             </div>
 
@@ -480,7 +565,7 @@ export default function MilitaryDocForm() {
                                             <input
                                                 ref={fileInputRef}
                                                 type="file"
-                                                accept=".docx,.doc"
+                                                accept=".docx,.doc,.xlsx,.xls"
                                                 style={{ display: 'none' }}
                                                 onChange={handleUploadTemplate}
                                             />
@@ -528,7 +613,7 @@ export default function MilitaryDocForm() {
                                         </button>
                                     )}
                                     <button className="btn btn-primary" onClick={handleExport} disabled={loading || !templateBuffer}>
-                                        {loading ? '⏳ Đang xuất...' : '📥 Xuất file Word (.docx)'}
+                                        {loading ? '⏳ Đang xuất...' : `📥 Xuất file ${fileType === 'excel' ? 'Excel (.xlsx)' : 'Word (.docx)'}`}
                                     </button>
                                 </div>
                             </div>
