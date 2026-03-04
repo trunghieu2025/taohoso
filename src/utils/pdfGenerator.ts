@@ -1,17 +1,80 @@
 // PDF generation via browser print window — renders HTML with native fonts,
 // so Vietnamese diacritics work correctly without embedding custom font files.
-import { ContractData, CT01Data, CT01Person, InvoiceData } from '../types';
+import { ContractData, CT01Data, CT01Person, InvoiceData, CustomColumn } from '../types';
+import { resolveCustomFields } from './formulaEvaluator';
 
-function openPrintWindow(htmlContent: string, title: string): void {
+export type ScaleMode = 'default' | 'fit-page' | 'fit-width' | 'fit-height';
+
+function getScaleCSS(mode: ScaleMode): string {
+  switch (mode) {
+    case 'fit-page':
+      return `
+        @page { size: A4; margin: 10mm; }
+        html, body { width: 190mm; }
+        body {
+          transform-origin: top left;
+        }
+        @media print {
+          body {
+            width: 190mm;
+            max-height: 277mm;
+            overflow: hidden;
+          }
+        }
+      `;
+    case 'fit-width':
+      return `
+        @page { size: A4; margin: 10mm; }
+        html, body { width: 190mm; }
+        table { font-size: 9pt !important; }
+        td, th { padding: 2pt 4pt !important; }
+      `;
+    case 'fit-height':
+      return `
+        @page { size: A4; margin: 8mm 20mm; }
+        body { font-size: 10pt; line-height: 1.3; }
+        h1 { font-size: 12pt; margin: 4pt 0 2pt; }
+        p { margin: 1pt 0; }
+        table { font-size: 9pt !important; }
+        td, th { padding: 2pt 4pt !important; }
+        .signatures { margin-top: 15pt; }
+        .sig-name { margin-top: 25pt; }
+      `;
+    default:
+      return '@page { size: A4; margin: 20mm; }';
+  }
+}
+
+function getScaleJS(mode: ScaleMode): string {
+  if (mode !== 'fit-page') return '';
+  return `
+    // Auto-scale content to fit one page
+    (function() {
+      var body = document.body;
+      var pageH = 277; // mm (A4 height 297 - 10mm*2 margins)
+      var contentH = body.scrollHeight * 0.2646; // px to mm
+      if (contentH > pageH) {
+        var scale = pageH / contentH;
+        body.style.transform = 'scale(' + scale + ')';
+        body.style.transformOrigin = 'top left';
+        body.style.width = (100 / scale) + '%';
+      }
+    })();
+  `;
+}
+
+function openPrintWindow(htmlContent: string, title: string, scaleMode: ScaleMode = 'default'): void {
   const win = window.open('', '_blank');
   if (!win) return;
+  const scaleCss = getScaleCSS(scaleMode);
+  const scaleJs = getScaleJS(scaleMode);
   win.document.write(`<!DOCTYPE html>
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
   <title>${title}</title>
   <style>
-    @page { size: A4; margin: 20mm; }
+    ${scaleCss}
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: 'Times New Roman', Times, serif;
@@ -48,6 +111,7 @@ function openPrintWindow(htmlContent: string, title: string): void {
 ${htmlContent}
 <script>
   window.onload = function() {
+    ${scaleJs}
     window.print();
     window.addEventListener('afterprint', function() { window.close(); });
   };
@@ -118,12 +182,11 @@ ${data.propertyEquipment ? `<p>• Trang thiết bị bàn giao: ${data.property
 <p>• Tiền đặt cọc: ${fmtMoney(data.depositAmount)}${data.depositAmountWords ? ` (${data.depositAmountWords})` : ''}</p>
 <p>• Thanh toán: ${data.paymentMethod || 'Tiền mặt hoặc chuyển khoản'}, trước ngày ${data.paymentDay || '05'} mỗi tháng</p>
 <p>• Tiền đặt cọc được hoàn trả khi Bên B trả nhà đúng hạn và không vi phạm hợp đồng</p>
-${
-  data.electricRate || data.waterRate
-    ? `
+${data.electricRate || data.waterRate
+      ? `
 <p>• Chi phí khác:${data.electricRate ? ` Điện ${Number(data.electricRate).toLocaleString('vi-VN')} VND/kWh;` : ''}${data.waterRate ? ` Nước ${Number(data.waterRate).toLocaleString('vi-VN')} VND/m³;` : ''}${data.internetCost ? ` Internet ${Number(data.internetCost).toLocaleString('vi-VN')} VND/tháng;` : ''}${data.otherCosts ? ` Khác: ${data.otherCosts}` : ''}</p>`
-    : ''
-}
+      : ''
+    }
 
 <p class="section-heading">Điều 3: Thời hạn thuê</p>
 <p>• Thời hạn: ${data.leaseDuration || '12'} tháng, từ ngày ${data.startDate || '...'} đến ngày ${data.endDate || '...'}</p>
@@ -149,13 +212,12 @@ ${
 <p>6.2. Mọi tranh chấp giải quyết thông qua thương lượng; nếu không thống nhất sẽ đưa ra Tòa án nhân dân có thẩm quyền</p>
 <p>6.3. Hợp đồng được lập thành 02 bản, mỗi bên giữ 01 bản, có giá trị pháp lý như nhau</p>
 <p>6.4. Hợp đồng có hiệu lực kể từ ngày ${data.startDate || '...'}</p>
-${
-  data.additionalTerms
-    ? `
+${data.additionalTerms
+      ? `
 <p class="section-heading">Điều khoản bổ sung</p>
 <p>${data.additionalTerms}</p>`
-    : ''
-}
+      : ''
+    }
 
 <div class="signatures">
   <div class="sig-block">
@@ -181,11 +243,11 @@ export function generateCT01PDF(data: CT01Data): void {
     data.additionalPeople && data.additionalPeople.length > 0
       ? `<p class="section-heading">Người cùng đăng ký:</p>
            ${data.additionalPeople
-             .map(
-               (p: CT01Person, i: number) =>
-                 `<p>${i + 1}. ${p.name || '...'} — CCCD: ${p.idNumber || '...'} — Quan hệ: ${p.relationship || '...'}</p>`,
-             )
-             .join('')}`
+        .map(
+          (p: CT01Person, i: number) =>
+            `<p>${i + 1}. ${p.name || '...'} — CCCD: ${p.idNumber || '...'} — Quan hệ: ${p.relationship || '...'}</p>`,
+        )
+        .join('')}`
       : '';
 
   const html = `
@@ -237,14 +299,31 @@ export function generateInvoicePDF(
   data: InvoiceData,
   totals: { subtotal: number; remaining: number },
   logoDataUrl = '',
+  scaleMode: ScaleMode = 'default',
 ): void {
   const fmt = (n: number) => n.toLocaleString('vi-VN');
   const { subtotal, remaining } = totals;
+  const customCols: CustomColumn[] = data.customColumns || [];
+
+  // Build custom column headers
+  const customHeaders = customCols
+    .map((c) => `<th style="border:1px solid #000;padding:5pt 6pt;text-align:${c.type === 'formula' ? 'right' : 'left'}">${esc(c.title)}</th>`)
+    .join('');
 
   const itemRows = data.items
     .filter((i) => i.name || i.qty || i.price)
-    .map(
-      (i) => `
+    .map((i) => {
+      // Resolve formula fields for this item
+      const resolved = resolveCustomFields(i, customCols);
+      const customCells = customCols
+        .map((c) => {
+          const val = resolved[c.id] || '';
+          const numVal = parseFloat(val);
+          const displayVal = !isNaN(numVal) && val !== 'Lỗi' ? fmt(numVal) : esc(val);
+          return `<td style="border:1px solid #000;padding:4pt 6pt;text-align:${c.type === 'formula' ? 'right' : 'left'}">${displayVal}</td>`;
+        })
+        .join('');
+      return `
   <tr>
     <td style="border:1px solid #000;padding:4pt 6pt">${esc(i.date)}</td>
     <td style="border:1px solid #000;padding:4pt 6pt">${esc(i.name)}</td>
@@ -253,8 +332,9 @@ export function generateInvoicePDF(
     <td style="border:1px solid #000;padding:4pt 6pt;text-align:center">${i.qty}</td>
     <td style="border:1px solid #000;padding:4pt 6pt;text-align:right">${fmt(i.price)}</td>
     <td style="border:1px solid #000;padding:4pt 6pt;text-align:right;font-weight:600">${fmt(i.qty * i.price)}</td>
-  </tr>`,
-    )
+    ${customCells}
+  </tr>`;
+    })
     .join('');
 
   const logoHtml = logoDataUrl
@@ -286,6 +366,7 @@ export function generateInvoicePDF(
       <th style="border:1px solid #000;padding:5pt 6pt;text-align:center">SL</th>
       <th style="border:1px solid #000;padding:5pt 6pt;text-align:right">Đơn giá</th>
       <th style="border:1px solid #000;padding:5pt 6pt;text-align:right">Thành tiền</th>
+      ${customHeaders}
     </tr>
   </thead>
   <tbody>${itemRows}</tbody>
@@ -297,15 +378,15 @@ export function generateInvoicePDF(
     <td style="padding:4pt 8pt;text-align:right">${fmt(subtotal)} ₫</td>
   </tr>
   ${data.summaryRows
-    .filter((r) => r.label || r.value)
-    .map(
-      (r) => `
+      .filter((r) => r.label || r.value)
+      .map(
+        (r) => `
   <tr>
     <td style="padding:4pt 8pt">${esc(r.label)}</td>
     <td style="padding:4pt 8pt;text-align:right">${fmt(r.value)} ₫</td>
   </tr>`,
-    )
-    .join('')}
+      )
+      .join('')}
   <tr style="border-top:2px solid #000;">
     <td style="padding:4pt 8pt;font-weight:700;font-size:12pt">Còn lại</td>
     <td style="padding:4pt 8pt;text-align:right;font-weight:700;font-size:12pt">${fmt(remaining)} ₫</td>
@@ -327,5 +408,5 @@ ${data.note ? `<p style="margin-top:12pt"><strong>Ghi chú:</strong> ${esc(data.
   </tr>
 </table>`;
 
-  openPrintWindow(html, 'Hoá Đơn Bán Hàng');
+  openPrintWindow(html, 'Hoá Đơn Bán Hàng', scaleMode);
 }

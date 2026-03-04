@@ -8,6 +8,7 @@ import CT01Form from './pages/CT01Form';
 import InvoiceForm from './pages/InvoiceForm';
 import About from './pages/About';
 import SearchPage from './pages/SearchPage';
+import MilitaryDocForm from './pages/MilitaryDocForm';
 import NotFoundPage from './pages/NotFoundPage';
 import TemporaryResidence from './pages/guides/TemporaryResidence';
 import PermanentResidence from './pages/guides/PermanentResidence';
@@ -33,6 +34,7 @@ export default function App() {
           <Route path="/huong-dan/ct07" element={<CT07Guide />} />
           <Route path="/huong-dan/sang-ten-so-hong" element={<LandTitle />} />
           <Route path="/hoa-don-ban-hang" element={<InvoiceForm />} />
+          <Route path="/ho-so-sua-chua" element={<MilitaryDocForm />} />
           <Route path="/tim-kiem" element={<SearchPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
