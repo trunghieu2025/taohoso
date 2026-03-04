@@ -88,6 +88,15 @@ export default function Home() {
               </p>
               <span className="card-link">Tạo ngay →</span>
             </Link>
+            <Link to="/ho-so-sua-chua" className="tool-card">
+              <div className="card-icon">🏗️</div>
+              <h3>Hồ sơ sửa chữa công trình</h3>
+              <p>
+                Tạo bộ hồ sơ sửa chữa quân đội đầy đủ 6 mẫu biểu. Nhập thông
+                tin một lần, xuất file Word giữ nguyên 100% format.
+              </p>
+              <span className="card-link">Tạo ngay →</span>
+            </Link>
           </div>
         </div>
       </section>
