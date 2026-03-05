@@ -288,12 +288,61 @@ export function fillWordTable(
         }
     }
 
+    // Count available data rows
+    const availableDataRows = dataRowEnd - headerRowCount;
+
+    // If data has MORE rows than template, clone rows to fill the gap
+    if (data.length > availableDataRows) {
+        // Use the last available data row as template for cloning
+        const templateRowIdx = dataRowEnd - 1;
+        const templateRow = rows[templateRowIdx];
+        // Find the insertion point (before first summary row, or end of table)
+        const insertBefore = dataRowEnd < rows.length ? rows[dataRowEnd] : null;
+
+        const extraNeeded = data.length - availableDataRows;
+        for (let i = 0; i < extraNeeded; i++) {
+            const clonedRow = templateRow.cloneNode(true) as Element;
+            // Clear text in all cells of cloned row
+            const clonedCells = clonedRow.getElementsByTagNameNS(NS, 'tc');
+            for (let c = 0; c < clonedCells.length; c++) {
+                const paras = clonedCells[c].getElementsByTagNameNS(NS, 'p');
+                for (let p = 0; p < paras.length; p++) {
+                    const cRuns = directChildren(paras[p], 'r');
+                    for (const r of cRuns) {
+                        const tNodes = r.getElementsByTagNameNS(NS, 't');
+                        for (let t = 0; t < tNodes.length; t++) {
+                            tNodes[t].textContent = '';
+                        }
+                    }
+                }
+            }
+            if (insertBefore) {
+                tbl.insertBefore(clonedRow, insertBefore);
+            } else {
+                tbl.appendChild(clonedRow);
+            }
+        }
+    }
+
+    // Re-read rows after potential insertion
+    const allRows = directChildren(tbl, 'tr');
+
+    // Re-detect summary end
+    let newDataRowEnd = allRows.length;
+    for (let r = allRows.length - 1; r >= headerRowCount; r--) {
+        if (isSummaryRow(allRows[r])) {
+            newDataRowEnd = r;
+        } else {
+            break;
+        }
+    }
+
     // Fill data rows
     for (let dataIdx = 0; dataIdx < data.length; dataIdx++) {
         const rowIdx = headerRowCount + dataIdx;
-        if (rowIdx >= dataRowEnd) break;
+        if (rowIdx >= newDataRowEnd) break;
 
-        const gridCells = expandRowToGrid(rows[rowIdx], gridCols);
+        const gridCells = expandRowToGrid(allRows[rowIdx], gridCols);
         for (let c = 0; c < data[dataIdx].length && c < gridCols; c++) {
             const cell = gridCells[c];
             if (cell && !isVMergeContinuation(cell)) {
@@ -305,8 +354,8 @@ export function fillWordTable(
     // Remove empty rows (rows after filled data but before summary)
     const firstEmptyRow = headerRowCount + data.length;
     const rowsToRemove: Element[] = [];
-    for (let r = firstEmptyRow; r < dataRowEnd; r++) {
-        rowsToRemove.push(rows[r]);
+    for (let r = firstEmptyRow; r < newDataRowEnd; r++) {
+        rowsToRemove.push(allRows[r]);
     }
     for (const row of rowsToRemove) {
         row.parentNode?.removeChild(row);
