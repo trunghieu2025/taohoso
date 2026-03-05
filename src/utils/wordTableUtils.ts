@@ -124,6 +124,7 @@ export function fillWordTable(
 
 /**
  * Set text content of a table cell, preserving formatting of first run.
+ * If the cell has no runs, create new run + text elements.
  */
 function setCellText(cell: Element, text: string): void {
     const paras = cell.getElementsByTagNameNS(NS, 'p');
@@ -139,11 +140,27 @@ function setCellText(cell: Element, text: string): void {
         if (tNodes.length > 0) {
             tNodes[0].textContent = text;
             tNodes[0].setAttribute('xml:space', 'preserve');
+        } else {
+            // Run exists but has no <w:t> — create one
+            const doc = cell.ownerDocument;
+            const tEl = doc.createElementNS(NS, 'w:t');
+            tEl.setAttribute('xml:space', 'preserve');
+            tEl.textContent = text;
+            runs[0].appendChild(tEl);
         }
         // Clear other runs
         for (let i = runs.length - 1; i > 0; i--) {
             runs[i].parentNode?.removeChild(runs[i]);
         }
+    } else {
+        // No runs exist (empty cell) — create <w:r><w:t>text</w:t></w:r>
+        const doc = cell.ownerDocument;
+        const rEl = doc.createElementNS(NS, 'w:r');
+        const tEl = doc.createElementNS(NS, 'w:t');
+        tEl.setAttribute('xml:space', 'preserve');
+        tEl.textContent = text;
+        rEl.appendChild(tEl);
+        firstPara.appendChild(rEl);
     }
 
     // Remove extra paragraphs
