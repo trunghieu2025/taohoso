@@ -29,6 +29,9 @@ import {
     contractorToFormData, formDataToContractor,
     type Contractor,
 } from '../utils/contractorStorage';
+import { scanWordTables, fillWordTable, calculateTableData, type TableInfo, type TableConfig } from '../utils/wordTableUtils';
+import TableSetupModal from '../components/TableSetupModal';
+import TableEditor from '../components/TableEditor';
 
 /* ── Human-friendly labels for known MERGEFIELD tags ── */
 const TAG_LABELS: Record<string, string> = {
@@ -157,6 +160,12 @@ export default function MilitaryDocForm() {
 
     // Export history
     const [exportHistory, setExportHistory] = useState<{ date: string; type: string }[]>([]);
+
+    // Table state
+    const [detectedTables, setDetectedTables] = useState<TableInfo[]>([]);
+    const [showTableSetup, setShowTableSetup] = useState(false);
+    const [tableConfig, setTableConfig] = useState<TableConfig | null>(null);
+    const [tableData, setTableData] = useState<string[][]>([]);
 
     const zoomIn = () => setZoom(z => Math.min(z + 10, 150));
     const zoomOut = () => setZoom(z => Math.max(z - 10, 30));
@@ -290,7 +299,12 @@ export default function MilitaryDocForm() {
             if (fileType === 'excel') {
                 generateExcelDoc(data, templateBuffer);
             } else {
-                await generateMilitaryDoc(data, templateBuffer);
+                // If table config exists, fill table first, then fill tags
+                let buf = templateBuffer;
+                if (tableConfig && tableData.length > 0) {
+                    buf = fillWordTable(buf, tableConfig.tableIndex, tableData);
+                }
+                await generateMilitaryDoc(data, buf);
             }
         } catch (err) {
             alert('Lỗi khi xuất file: ' + (err as Error).message);
@@ -299,6 +313,32 @@ export default function MilitaryDocForm() {
         }
         // Track export
         setExportHistory(prev => [{ date: new Date().toISOString(), type: fileType }, ...prev].slice(0, 20));
+    };
+
+    // Table setup confirm
+    const handleTableConfigConfirm = (config: TableConfig) => {
+        setTableConfig(config);
+        setShowTableSetup(false);
+        // Initialize empty table data
+        const table = detectedTables.find(t => t.tableIndex === config.tableIndex);
+        if (table) {
+            const rows = Array.from({ length: table.dataRowCount }, () => config.columns.map(() => ''));
+            // Pre-fill with existing data from template
+            table.sampleData.forEach((sRow, ri) => {
+                if (ri < rows.length) {
+                    sRow.forEach((val, ci) => {
+                        if (ci < rows[ri].length) rows[ri][ci] = val;
+                    });
+                }
+            });
+            // Fill remaining rows from template if available
+            const allData = scanWordTables(templateBuffer!).find(t => t.tableIndex === config.tableIndex);
+            if (allData) {
+                // sampleData only has 3 rows, but we want all rows
+                // Re-scan won't give us more than sample... use dataRowCount
+            }
+            setTableData(calculateTableData(rows, config.columns));
+        }
     };
 
     const handleUploadTemplate = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -393,6 +433,18 @@ export default function MilitaryDocForm() {
                     setScanResults(results);
                     setShowScanModal(true);
                 }
+                // Scan for tables in Word file
+                try {
+                    const tables = scanWordTables(buf);
+                    if (tables.length > 0) {
+                        setDetectedTables(tables);
+                        setShowTableSetup(true);
+                    } else {
+                        setDetectedTables([]);
+                        setTableConfig(null);
+                        setTableData([]);
+                    }
+                } catch { setDetectedTables([]); }
             }
         } catch (err) {
             alert('Lỗi đọc file: ' + (err as Error).message);
@@ -734,6 +786,25 @@ export default function MilitaryDocForm() {
         });
     };
 
+    // Render table editor section
+    const renderTableEditor = () => {
+        if (!tableConfig || fileType !== 'word') return null;
+        return (
+            <div style={sectionStyle}>
+                <div style={{ ...sectionTitleStyle, justifyContent: 'space-between' }}>
+                    <span>📊 Bảng dữ liệu</span>
+                    <div style={{ display: 'flex', gap: '0.3rem' }}>
+                        <button className="btn btn-sm" onClick={() => setShowTableSetup(true)}
+                            style={{ padding: '0.15rem 0.5rem', fontSize: '0.7rem' }}>⚙️ Cấu hình lại</button>
+                        <button className="btn btn-sm" onClick={() => { setTableConfig(null); setTableData([]); }}
+                            style={{ padding: '0.15rem 0.5rem', fontSize: '0.7rem', color: '#ef4444' }}>✕ Xóa bảng</button>
+                    </div>
+                </div>
+                <TableEditor config={tableConfig} data={tableData} onChange={setTableData} />
+            </div>
+        );
+    };
+
     return (
         <>
             <div className="page-header">
@@ -867,6 +938,9 @@ export default function MilitaryDocForm() {
                                 {/* Form fields */}
                                 {renderFormFields()}
 
+                                {/* Table editor */}
+                                {renderTableEditor()}
+
                                 {/* Actions */}
                                 <div className="wizard-actions">
                                     <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
@@ -943,6 +1017,14 @@ export default function MilitaryDocForm() {
                     results={scanResults}
                     onConfirm={handleScanConfirm}
                     onCancel={handleScanCancel}
+                />
+            )}
+            {/* TABLE SETUP MODAL */}
+            {showTableSetup && detectedTables.length > 0 && (
+                <TableSetupModal
+                    tables={detectedTables}
+                    onConfirm={handleTableConfigConfirm}
+                    onClose={() => setShowTableSetup(false)}
                 />
             )}
         </>
