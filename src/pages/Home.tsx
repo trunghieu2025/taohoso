@@ -90,7 +90,7 @@ export default function Home() {
             </Link>
             <Link to="/ho-so-sua-chua" className="tool-card">
               <div className="card-icon">🏗️</div>
-              <h3>Hồ sơ sửa chữa công trình</h3>
+              <h3>Tự động hóa hồ sơ</h3>
               <p>
                 Tạo bộ hồ sơ sửa chữa quân đội đầy đủ 6 mẫu biểu. Nhập thông
                 tin một lần, xuất file Word giữ nguyên 100% format.

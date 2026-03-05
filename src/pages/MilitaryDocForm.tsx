@@ -931,7 +931,7 @@ export default function MilitaryDocForm() {
         <>
             <div className="page-header">
                 <div className="container">
-                    <h1>Hồ sơ sửa chữa công trình</h1>
+                    <h1>Tự động hóa hồ sơ</h1>
                     <p>Nhập thông tin một lần — xuất file Word / Excel đầy đủ mẫu biểu</p>
                 </div>
             </div>
@@ -995,6 +995,43 @@ export default function MilitaryDocForm() {
                                                     ↩️ Mẫu mặc định
                                                 </button>
                                             )}
+                                            <button
+                                                className="btn btn-sm"
+                                                onClick={() => {
+                                                    const w = window.open('', '_blank', 'width=700,height=600');
+                                                    if (w) {
+                                                        w.document.title = 'Hướng dẫn sử dụng';
+                                                        w.document.body.style.fontFamily = 'Inter, sans-serif';
+                                                        w.document.body.style.padding = '2rem';
+                                                        w.document.body.style.lineHeight = '1.7';
+                                                        w.document.body.style.color = '#1e293b';
+                                                        w.document.body.innerHTML = `
+<h2>📖 Hướng dẫn sử dụng</h2>
+<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%;font-size:14px;border-color:#e2e8f0">
+<tr style="background:#f0fdf4"><th>#</th><th>Tính năng</th><th>Mô tả</th></tr>
+<tr><td>1</td><td>📤 Tải mẫu</td><td>Upload Word/Excel → tự quét trường dữ liệu</td></tr>
+<tr><td>2</td><td>🔍 Quét bảng</td><td>Nhận diện bảng Word → cấu hình cột → nhập liệu. Tự thêm/xóa dòng</td></tr>
+<tr><td>3</td><td>📝 Điền form</td><td>Nhập dữ liệu → preview realtime bên phải</td></tr>
+<tr><td>4</td><td>💰 Số→Chữ</td><td>Nhập số tiền → tự viết bằng chữ Việt</td></tr>
+<tr><td>5</td><td>🏢 Nhà thầu</td><td>Lưu/chọn nhanh: 💾 Lưu NT → 📋 Chọn NT</td></tr>
+<tr><td>6</td><td>💾 Auto-save</td><td>Tự lưu mỗi 2 giây. Đóng tab → mở lại → data còn</td></tr>
+<tr><td>7</td><td>✏️ Đổi tên</td><td>Bấm ✏️ bên phải tên phiên đã lưu</td></tr>
+<tr><td>8</td><td>📋 Nhân bản</td><td>Copy hồ sơ → sửa vài chi tiết, nhanh 90%</td></tr>
+<tr><td>9</td><td>⚠️ Validation</td><td>Kiểm tra 3 trường bắt buộc (Công trình, Số tiền, Năm)</td></tr>
+<tr><td>10</td><td>📐 Dự toán</td><td>Bảng tính KL×ĐG=Thành tiền → tổng auto-fill Số tiền</td></tr>
+<tr><td>11</td><td>📥 Xuất Word</td><td>File .docx đúng format, font Times New Roman</td></tr>
+<tr><td>12</td><td>📄 Xuất PDF</td><td>Tạo PDF từ preview (format gần giống Word)</td></tr>
+<tr><td>13</td><td>📦 Xuất hàng loạt</td><td>Excel nhiều dòng → ZIP chứa N file Word</td></tr>
+<tr><td>14</td><td>📊 Import Excel</td><td>Import 1 dòng Excel → điền vào form</td></tr>
+<tr><td>15</td><td>📱 PWA</td><td>Cài app trên ĐT, dùng offline</td></tr>
+</table>
+<p style="margin-top:1rem;color:#64748b;font-size:13px">💡 Bấm <b>📝 Điền mẫu thử</b> để xem nhanh các tính năng hoạt động.</p>`;
+                                                    }
+                                                }}
+                                                style={{ background: '#dbeafe', color: '#1d4ed8' }}
+                                            >
+                                                📖 Hướng dẫn
+                                            </button>
                                             {rawUploadBuffer && (
                                                 <button
                                                     className="btn btn-sm"
