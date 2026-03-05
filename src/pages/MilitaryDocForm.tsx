@@ -16,6 +16,12 @@ import {
     generateExcelDoc,
 } from '../utils/excelTemplateGenerator';
 import type { ScanResult } from '../utils/militaryDocGenerator';
+import { numberToVietnamese } from '../utils/numberToVietnamese';
+import {
+    saveSession, loadSession, listSessions, deleteSession,
+    exportSessionToJSON, importFromJSON, getAutoSaveId, setAutoSaveId,
+    type SavedSession,
+} from '../utils/templateStorage';
 
 /* ── Human-friendly labels for known MERGEFIELD tags ── */
 const TAG_LABELS: Record<string, string> = {
@@ -127,15 +133,45 @@ export default function MilitaryDocForm() {
     const [zoom, setZoom] = useState(50);
     const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const jsonInputRef = useRef<HTMLInputElement>(null);
     const previewContainerRef = useRef<HTMLDivElement>(null);
+
+    // Auto-save & session state
+    const [currentSessionId, setCurrentSessionId] = useState<number | null>(null);
+    const [savedSessions, setSavedSessions] = useState<SavedSession[]>([]);
+    const [lastSaved, setLastSaved] = useState<string | null>(null);
+    const [showSessions, setShowSessions] = useState(false);
+    const autoSaveRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
     const zoomIn = () => setZoom(z => Math.min(z + 10, 150));
     const zoomOut = () => setZoom(z => Math.max(z - 10, 30));
     const zoomFit = () => setZoom(50);
 
-    // Load default template on mount
+    // Load saved session or default template on mount
     useEffect(() => {
         (async () => {
+            // Try to restore auto-saved session
+            const autoId = getAutoSaveId();
+            if (autoId) {
+                try {
+                    const session = await loadSession(autoId);
+                    if (session) {
+                        setTemplateBuffer(session.templateBuffer);
+                        setTemplateName(session.name);
+                        setTemplateTags(session.tags);
+                        setIsCustomTemplate(session.isCustomTemplate);
+                        setCustomLabels(session.labels);
+                        setFileType(session.fileType);
+                        setData(session.data);
+                        setCurrentSessionId(autoId);
+                        setLastSaved(session.updatedAt);
+                        // Load sessions list
+                        setSavedSessions(await listSessions());
+                        return;
+                    }
+                } catch { /* fall through to default */ }
+            }
+            // Load default template
             try {
                 const res = await fetch('/templates/template_nha_tap_the.docx');
                 if (!res.ok) return;
@@ -144,8 +180,37 @@ export default function MilitaryDocForm() {
                 const tags = extractTags(buf);
                 setTemplateTags(tags);
             } catch { /* ignore */ }
+            // Load sessions list
+            try { setSavedSessions(await listSessions()); } catch { /* ignore */ }
         })();
     }, []);
+
+    // Auto-save debounced
+    useEffect(() => {
+        if (!templateBuffer) return;
+        if (autoSaveRef.current) clearTimeout(autoSaveRef.current);
+        autoSaveRef.current = setTimeout(async () => {
+            try {
+                const id = await saveSession({
+                    ...(currentSessionId ? { id: currentSessionId } : {}),
+                    name: templateName,
+                    templateBuffer,
+                    tags: templateTags,
+                    labels: customLabels,
+                    data,
+                    fileType,
+                    isCustomTemplate,
+                });
+                setCurrentSessionId(id);
+                setAutoSaveId(id);
+                setLastSaved(new Date().toISOString());
+                setSavedSessions(await listSessions());
+            } catch (err) {
+                console.error('[auto-save]', err);
+            }
+        }, 2000);
+        return () => { if (autoSaveRef.current) clearTimeout(autoSaveRef.current); };
+    }, [data, templateBuffer, templateName, templateTags, customLabels, fileType, isCustomTemplate]);
 
     // Debounced preview update
     useEffect(() => {
@@ -191,7 +256,15 @@ export default function MilitaryDocForm() {
 
     const handleChange = useCallback((e: FormChangeEvent) => {
         const { name, value } = e.target;
-        setData((prev) => ({ ...prev, [name]: value }));
+        setData((prev) => {
+            const next = { ...prev, [name]: value };
+            // Auto-fill ST_BẰNG_CHỮ when SỐ_TIỀN changes
+            if (name === 'SỐ_TIỀN' && value) {
+                const text = numberToVietnamese(value);
+                if (text) next['ST_BẰNG_CHỮ'] = text;
+            }
+            return next;
+        });
     }, []);
 
     const handleExport = async () => {
@@ -374,6 +447,78 @@ export default function MilitaryDocForm() {
         setShowClearConfirm(false);
     };
 
+    // Fill demo data
+    const handleFillDemo = () => {
+        setData({ ...TAG_PLACEHOLDERS });
+    };
+
+    // JSON export
+    const handleExportJSON = async () => {
+        if (!currentSessionId) {
+            // Save first
+            try {
+                const id = await saveSession({
+                    name: templateName,
+                    templateBuffer: templateBuffer!,
+                    tags: templateTags,
+                    labels: customLabels,
+                    data,
+                    fileType,
+                    isCustomTemplate,
+                });
+                setCurrentSessionId(id);
+                const session = await loadSession(id);
+                if (session) exportSessionToJSON(session);
+            } catch { /* ignore */ }
+        } else {
+            const session = await loadSession(currentSessionId);
+            if (session) exportSessionToJSON(session);
+        }
+    };
+
+    // JSON import
+    const handleImportJSON = async (e: ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        try {
+            const imported = await importFromJSON(file);
+            setData(imported.data);
+            if (imported.labels && Object.keys(imported.labels).length > 0) {
+                setCustomLabels(imported.labels);
+            }
+            if (imported.tags.length > 0) {
+                setTemplateTags(imported.tags);
+            }
+            alert('✅ Đã khôi phục dữ liệu thành công!');
+        } catch (err) {
+            alert('❌ Lỗi đọc file: ' + (err as Error).message);
+        }
+        if (jsonInputRef.current) jsonInputRef.current.value = '';
+    };
+
+    // Load saved session
+    const handleLoadSession = async (session: SavedSession) => {
+        setTemplateBuffer(session.templateBuffer);
+        setTemplateName(session.name);
+        setTemplateTags(session.tags);
+        setIsCustomTemplate(session.isCustomTemplate);
+        setCustomLabels(session.labels);
+        setFileType(session.fileType);
+        setData(session.data);
+        setCurrentSessionId(session.id!);
+        setAutoSaveId(session.id!);
+        setLastSaved(session.updatedAt);
+        setPreviewReady(false);
+        setShowSessions(false);
+    };
+
+    // Delete saved session
+    const handleDeleteSession = async (id: number) => {
+        await deleteSession(id);
+        setSavedSessions(await listSessions());
+        if (currentSessionId === id) setCurrentSessionId(null);
+    };
+
     const sectionStyle: React.CSSProperties = {
         marginBottom: '1.5rem',
         padding: '1.25rem',
@@ -552,22 +697,89 @@ export default function MilitaryDocForm() {
                                     </div>
                                 </div>
 
+                                {/* Data management panel */}
+                                <div style={{
+                                    ...sectionStyle,
+                                    background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
+                                    borderColor: '#86efac',
+                                    padding: '0.75rem 1rem',
+                                }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                        <div>
+                                            <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#166534' }}>💾 Quản lý dữ liệu</div>
+                                            {lastSaved && (
+                                                <div style={{ fontSize: '0.75rem', color: '#16a34a', marginTop: 2 }}>
+                                                    ✅ Đã lưu tự động lúc {new Date(lastSaved).toLocaleTimeString('vi')}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                                            <button className="btn btn-sm" onClick={handleExportJSON} title="Tải file JSON về máy để sao lưu">
+                                                💾 Sao lưu
+                                            </button>
+                                            <input ref={jsonInputRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleImportJSON} />
+                                            <button className="btn btn-sm" onClick={() => jsonInputRef.current?.click()} title="Khôi phục dữ liệu từ file JSON">
+                                                📂 Khôi phục
+                                            </button>
+                                            <button className="btn btn-sm" onClick={() => setShowSessions(!showSessions)} title="Xem danh sách phiên đã lưu">
+                                                📑 Mẫu đã lưu ({savedSessions.length})
+                                            </button>
+                                        </div>
+                                    </div>
+                                    {/* Saved sessions list */}
+                                    {showSessions && savedSessions.length > 0 && (
+                                        <div style={{ marginTop: '0.5rem', borderTop: '1px solid #bbf7d0', paddingTop: '0.5rem' }}>
+                                            {savedSessions.map(s => (
+                                                <div key={s.id} style={{
+                                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                                    padding: '0.35rem 0.5rem', borderRadius: 6,
+                                                    background: currentSessionId === s.id ? '#bbf7d0' : 'transparent',
+                                                    marginBottom: 2, cursor: 'pointer',
+                                                }} onClick={() => handleLoadSession(s)}>
+                                                    <div>
+                                                        <div style={{ fontSize: '0.85rem', fontWeight: 500 }}>📄 {s.name}</div>
+                                                        <div style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                                                            {s.tags.length} trường · {new Date(s.updatedAt).toLocaleDateString('vi')}
+                                                        </div>
+                                                    </div>
+                                                    <button className="btn btn-sm" onClick={(e) => { e.stopPropagation(); handleDeleteSession(s.id!); }}
+                                                        style={{ padding: '0.1rem 0.4rem', fontSize: '0.75rem', color: '#ef4444' }} title="Xóa">
+                                                        ✕
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {showSessions && savedSessions.length === 0 && (
+                                        <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: '#64748b', fontStyle: 'italic' }}>
+                                            Chưa có phiên nào được lưu
+                                        </div>
+                                    )}
+                                </div>
+
                                 {/* Form fields */}
                                 {renderFormFields()}
 
                                 {/* Actions */}
                                 <div className="wizard-actions">
-                                    {showClearConfirm ? (
-                                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                                            <span style={{ fontSize: '0.9rem', color: 'var(--danger)' }}>Xóa tất cả?</span>
-                                            <button className="btn btn-sm" onClick={() => setShowClearConfirm(false)}>Hủy</button>
-                                            <button className="btn btn-sm btn-danger" onClick={confirmClear}>Xóa</button>
-                                        </div>
-                                    ) : (
-                                        <button className="btn btn-secondary" onClick={handleClear}>
-                                            🗑️ Xóa tất cả
-                                        </button>
-                                    )}
+                                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                        {showClearConfirm ? (
+                                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                                <span style={{ fontSize: '0.9rem', color: 'var(--danger)' }}>Xóa tất cả?</span>
+                                                <button className="btn btn-sm" onClick={() => setShowClearConfirm(false)}>Hủy</button>
+                                                <button className="btn btn-sm btn-danger" onClick={confirmClear}>Xóa</button>
+                                            </div>
+                                        ) : (
+                                            <button className="btn btn-secondary" onClick={handleClear}>
+                                                🗑️ Xóa tất cả
+                                            </button>
+                                        )}
+                                        {!isCustomTemplate && (
+                                            <button className="btn btn-secondary" onClick={handleFillDemo}>
+                                                📝 Điền mẫu thử
+                                            </button>
+                                        )}
+                                    </div>
                                     <button className="btn btn-primary" onClick={handleExport} disabled={loading || !templateBuffer}>
                                         {loading ? '⏳ Đang xuất...' : `📥 Xuất file ${fileType === 'excel' ? 'Excel (.xlsx)' : 'Word (.docx)'}`}
                                     </button>
