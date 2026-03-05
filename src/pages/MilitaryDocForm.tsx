@@ -1057,10 +1057,21 @@ export default function MilitaryDocForm() {
                                                             {s.tags.length} trường · {new Date(s.updatedAt).toLocaleDateString('vi')}
                                                         </div>
                                                     </div>
-                                                    <button className="btn btn-sm" onClick={(e) => { e.stopPropagation(); handleDeleteSession(s.id!); }}
-                                                        style={{ padding: '0.1rem 0.4rem', fontSize: '0.75rem', color: '#ef4444' }} title="Xóa">
-                                                        ✕
-                                                    </button>
+                                                    <div style={{ display: 'flex', gap: '0.3rem' }}>
+                                                        <button className="btn btn-sm" onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            const newName = prompt('Đổi tên:', s.name);
+                                                            if (newName && newName.trim() && newName !== s.name) {
+                                                                saveSession({ ...s, name: newName.trim(), id: s.id }).then(() => listSessions().then(setSavedSessions));
+                                                            }
+                                                        }} style={{ padding: '0.1rem 0.4rem', fontSize: '0.75rem', color: '#3b82f6' }} title="Đổi tên">
+                                                            ✏️
+                                                        </button>
+                                                        <button className="btn btn-sm" onClick={(e) => { e.stopPropagation(); handleDeleteSession(s.id!); }}
+                                                            style={{ padding: '0.1rem 0.4rem', fontSize: '0.75rem', color: '#ef4444' }} title="Xóa">
+                                                            ✕
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             ))}
                                         </div>
