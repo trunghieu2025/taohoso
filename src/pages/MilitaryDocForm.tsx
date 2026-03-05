@@ -22,6 +22,11 @@ import {
     exportSessionToJSON, importFromJSON, getAutoSaveId, setAutoSaveId,
     type SavedSession,
 } from '../utils/templateStorage';
+import {
+    saveContractor, listContractors, deleteContractor,
+    contractorToFormData, formDataToContractor,
+    type Contractor,
+} from '../utils/contractorStorage';
 
 /* ── Human-friendly labels for known MERGEFIELD tags ── */
 const TAG_LABELS: Record<string, string> = {
@@ -143,6 +148,10 @@ export default function MilitaryDocForm() {
     const [showSessions, setShowSessions] = useState(false);
     const autoSaveRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
+    // Contractor state
+    const [contractors, setContractors] = useState<Contractor[]>([]);
+    const [showContractorPicker, setShowContractorPicker] = useState(false);
+
     const zoomIn = () => setZoom(z => Math.min(z + 10, 150));
     const zoomOut = () => setZoom(z => Math.max(z - 10, 30));
     const zoomFit = () => setZoom(50);
@@ -182,6 +191,7 @@ export default function MilitaryDocForm() {
             } catch { /* ignore */ }
             // Load sessions list
             try { setSavedSessions(await listSessions()); } catch { /* ignore */ }
+            try { setContractors(await listContractors()); } catch { /* ignore */ }
         })();
     }, []);
 
@@ -452,6 +462,25 @@ export default function MilitaryDocForm() {
         setData({ ...TAG_PLACEHOLDERS });
     };
 
+    // Contractor management
+    const handleSaveContractor = async () => {
+        const c = formDataToContractor(data);
+        if (!c.name) { alert('Vui lòng nhập tên nhà thầu trước'); return; }
+        await saveContractor(c);
+        setContractors(await listContractors());
+        alert('✅ Đã lưu thông tin nhà thầu: ' + c.name);
+    };
+
+    const handleSelectContractor = (c: Contractor) => {
+        setData(prev => ({ ...prev, ...contractorToFormData(c) }));
+        setShowContractorPicker(false);
+    };
+
+    const handleDeleteContractor = async (id: number) => {
+        await deleteContractor(id);
+        setContractors(await listContractors());
+    };
+
     // JSON export
     const handleExportJSON = async () => {
         if (!currentSessionId) {
@@ -568,7 +597,48 @@ export default function MilitaryDocForm() {
 
             return (
                 <div key={group.title} style={sectionStyle}>
-                    <div style={sectionTitleStyle}>{group.icon} {group.title}</div>
+                    <div style={{ ...sectionTitleStyle, justifyContent: 'space-between' }}>
+                        <span>{group.icon} {group.title}</span>
+                        {/* Contractor picker for Nhà thầu section */}
+                        {group.title === 'Nhà thầu (Bên B)' && !isCustomTemplate && (
+                            <div style={{ display: 'flex', gap: '0.3rem', fontSize: '0.75rem', fontWeight: 400 }}>
+                                <button className="btn btn-sm" onClick={handleSaveContractor}
+                                    style={{ padding: '0.15rem 0.5rem', fontSize: '0.7rem' }} title="Lưu nhà thầu hiện tại">
+                                    💾 Lưu NT
+                                </button>
+                                <div style={{ position: 'relative' }}>
+                                    <button className="btn btn-sm" onClick={() => setShowContractorPicker(!showContractorPicker)}
+                                        style={{ padding: '0.15rem 0.5rem', fontSize: '0.7rem' }}
+                                        title={contractors.length > 0 ? 'Chọn nhà thầu đã lưu' : 'Chưa có nhà thầu nào'}>
+                                        📋 Chọn NT ({contractors.length})
+                                    </button>
+                                    {showContractorPicker && contractors.length > 0 && (
+                                        <div style={{
+                                            position: 'absolute', right: 0, top: '100%', zIndex: 100,
+                                            background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8,
+                                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)', minWidth: 250, padding: '0.25rem',
+                                        }}>
+                                            {contractors.map(c => (
+                                                <div key={c.id} style={{
+                                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                                    padding: '0.4rem 0.5rem', borderRadius: 6, cursor: 'pointer',
+                                                }} onClick={() => handleSelectContractor(c)}
+                                                    onMouseEnter={e => (e.currentTarget.style.background = '#f0f9ff')}
+                                                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                                                    <div>
+                                                        <div style={{ fontSize: '0.8rem', fontWeight: 500 }}>{c.name}</div>
+                                                        <div style={{ fontSize: '0.7rem', color: '#64748b' }}>MST: {c.taxCode}</div>
+                                                    </div>
+                                                    <button onClick={(e) => { e.stopPropagation(); handleDeleteContractor(c.id!); }}
+                                                        style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.75rem' }}>✕</button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
                     {group.rows ? (
                         group.rows.map((row, i) => {
                             const activeRowTags = row.filter(t => activeTags.includes(t));
