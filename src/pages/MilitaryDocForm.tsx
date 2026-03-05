@@ -265,7 +265,7 @@ export default function MilitaryDocForm() {
                     // Word: docx-preview (fill table data if configured)
                     let previewBuf = templateBuffer;
                     if (tableConfig && tableData.length > 0) {
-                        previewBuf = fillWordTable(previewBuf, tableConfig.tableIndex, tableData);
+                        previewBuf = fillWordTable(previewBuf, tableConfig.tableIndex, tableData, tableConfig.columns.map(c => c.header));
                     }
                     await renderDocxPreview(previewBuf, data, previewContainerRef.current!);
                 }
@@ -306,7 +306,7 @@ export default function MilitaryDocForm() {
                 // If table config exists, fill table first, then fill tags
                 let buf = templateBuffer;
                 if (tableConfig && tableData.length > 0) {
-                    buf = fillWordTable(buf, tableConfig.tableIndex, tableData);
+                    buf = fillWordTable(buf, tableConfig.tableIndex, tableData, tableConfig.columns.map(c => c.header));
                 }
                 await generateMilitaryDoc(data, buf);
             }

@@ -235,11 +235,13 @@ export function scanWordTables(buffer: ArrayBuffer): TableInfo[] {
  * Fill a Word table with data.
  * Replaces cell contents in the specified table with the provided data.
  * Handles merged cells (gridSpan) correctly.
+ * Optionally restores header row text (useful when headers were replaced by tags).
  */
 export function fillWordTable(
     buffer: ArrayBuffer,
     tableIndex: number,
     data: string[][],
+    headers?: string[],
 ): ArrayBuffer {
     const zip = new PizZip(buffer);
     const docXml = zip.file('word/document.xml')?.asText();
@@ -261,6 +263,19 @@ export function fillWordTable(
     let headerRowCount = 1;
     if (rows.length > 2 && isLikelyHeaderRow(rows[1])) {
         headerRowCount = 2;
+    }
+
+    // Restore header text if provided
+    if (headers && headers.length > 0) {
+        // Write headers into the LAST header row (or only header row)
+        const headerRowIdx = headerRowCount - 1;
+        const gridCells = expandRowToGrid(rows[headerRowIdx], gridCols);
+        for (let c = 0; c < headers.length && c < gridCols; c++) {
+            const cell = gridCells[c];
+            if (cell && headers[c]) {
+                setCellText(cell, headers[c]);
+            }
+        }
     }
 
     // Skip summary rows at bottom
