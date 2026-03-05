@@ -1352,3 +1352,148 @@ input, select, textarea {
   transform: translateY(-3px);
   box-shadow: var(--shadow-xl);
 }
+
+/* ============================================
+   MOBILE RESPONSIVE (≤768px)
+   ============================================ */
+@media (max-width: 768px) {
+  /* Container */
+  .container {
+    padding: 0 0.75rem;
+  }
+
+  /* Page header */
+  .page-header h1 {
+    font-size: 1.3rem;
+  }
+  .page-header p {
+    font-size: 0.85rem;
+  }
+
+  /* Sections */
+  .section {
+    padding: 1rem 0;
+  }
+
+  /* Form inputs - touch friendly */
+  .form-input,
+  .form-input input,
+  .form-input select,
+  .form-input textarea {
+    font-size: 16px !important; /* prevents iOS zoom */
+    min-height: 44px;
+  }
+
+  /* Buttons - touch friendly */
+  .btn {
+    min-height: 40px;
+    padding: 0.5rem 0.8rem;
+    font-size: 0.85rem;
+  }
+  .btn-sm {
+    min-height: 36px;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.78rem;
+  }
+
+  /* Wizard actions - stack vertically */
+  .wizard-actions {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .wizard-actions > div {
+    flex-wrap: wrap;
+  }
+  .wizard-actions .btn {
+    flex: 1;
+    min-width: 0;
+    text-align: center;
+  }
+
+  /* Contract preview body */
+  .contract-preview-body {
+    padding: 0.75rem;
+    max-height: 50vh;
+  }
+  .contract-preview-header {
+    padding: 0.6rem 0.75rem;
+    font-size: 0.82rem;
+  }
+
+  /* Tool cards grid */
+  .tools-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  /* Hero section */
+  .hero h1 {
+    font-size: 1.5rem;
+  }
+  .hero p {
+    font-size: 0.9rem;
+  }
+  .hero-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  /* Stats row */
+  .stats-row {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  /* Table editor - horizontal scroll */
+  .table-editor-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Modals full-screen on mobile */
+  .modal-overlay > div,
+  [style*="position: fixed"] > div {
+    max-width: 100% !important;
+    width: 100% !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Footer */
+  .footer .container {
+    flex-direction: column;
+    text-align: center;
+  }
+}
+
+/* ============================================
+   SMALL MOBILE (≤480px)
+   ============================================ */
+@media (max-width: 480px) {
+  .page-header {
+    padding: 1rem 0;
+  }
+  .page-header h1 {
+    font-size: 1.1rem;
+  }
+
+  /* Buttons even more compact */
+  .btn {
+    font-size: 0.8rem;
+    padding: 0.4rem 0.6rem;
+  }
+
+  /* Contract layout - hide preview by default (user scrolls to it) */
+  .contract-preview {
+    margin-top: 1rem;
+  }
+  .contract-preview-body {
+    max-height: 40vh;
+  }
+
+  /* Guide button text */
+  .wizard-content > div {
+    gap: 0.3rem !important;
+  }
+}

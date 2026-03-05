@@ -353,6 +353,7 @@ export default function MilitaryDocForm() {
     // Export history
     const [exportHistory, setExportHistory] = useState<{ date: string; type: string }[]>([]);
     const [showBatchExport, setShowBatchExport] = useState(false);
+    const [sessionSearch, setSessionSearch] = useState('');
 
     // Validation
     const REQUIRED_TAGS = ['CÔNG_TRÌNH', 'SỐ_TIỀN', 'NĂM'];
@@ -1234,36 +1235,50 @@ export default function MilitaryDocForm() {
                                     {/* Saved sessions list */}
                                     {showSessions && savedSessions.length > 0 && (
                                         <div style={{ marginTop: '0.5rem', borderTop: '1px solid #bbf7d0', paddingTop: '0.5rem' }}>
-                                            {savedSessions.map(s => (
-                                                <div key={s.id} style={{
-                                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                                    padding: '0.35rem 0.5rem', borderRadius: 6,
-                                                    background: currentSessionId === s.id ? '#bbf7d0' : 'transparent',
-                                                    marginBottom: 2, cursor: 'pointer',
-                                                }} onClick={() => handleLoadSession(s)}>
-                                                    <div>
-                                                        <div style={{ fontSize: '0.85rem', fontWeight: 500 }}>📄 {s.name}</div>
-                                                        <div style={{ fontSize: '0.7rem', color: '#64748b' }}>
-                                                            {s.tags.length} trường · {new Date(s.updatedAt).toLocaleDateString('vi')}
+                                            <input
+                                                type="text"
+                                                placeholder="🔍 Tìm hồ sơ..."
+                                                value={sessionSearch}
+                                                onChange={e => setSessionSearch(e.target.value)}
+                                                style={{
+                                                    width: '100%', padding: '0.4rem 0.6rem', borderRadius: 6,
+                                                    border: '1px solid #bbf7d0', fontSize: '0.82rem',
+                                                    marginBottom: '0.4rem', outline: 'none',
+                                                    background: '#f0fdf4',
+                                                }}
+                                            />
+                                            {savedSessions
+                                                .filter(s => !sessionSearch || s.name.toLowerCase().includes(sessionSearch.toLowerCase()))
+                                                .map(s => (
+                                                    <div key={s.id} style={{
+                                                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                                        padding: '0.35rem 0.5rem', borderRadius: 6,
+                                                        background: currentSessionId === s.id ? '#bbf7d0' : 'transparent',
+                                                        marginBottom: 2, cursor: 'pointer',
+                                                    }} onClick={() => handleLoadSession(s)}>
+                                                        <div>
+                                                            <div style={{ fontSize: '0.85rem', fontWeight: 500 }}>📄 {s.name}</div>
+                                                            <div style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                                                                {s.tags.length} trường · {new Date(s.updatedAt).toLocaleDateString('vi')}
+                                                            </div>
+                                                        </div>
+                                                        <div style={{ display: 'flex', gap: '0.3rem' }}>
+                                                            <button className="btn btn-sm" onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                const newName = prompt('Đổi tên:', s.name);
+                                                                if (newName && newName.trim() && newName !== s.name) {
+                                                                    saveSession({ ...s, name: newName.trim(), id: s.id }).then(() => listSessions().then(setSavedSessions));
+                                                                }
+                                                            }} style={{ padding: '0.1rem 0.4rem', fontSize: '0.75rem', color: '#3b82f6' }} title="Đổi tên">
+                                                                ✏️
+                                                            </button>
+                                                            <button className="btn btn-sm" onClick={(e) => { e.stopPropagation(); handleDeleteSession(s.id!); }}
+                                                                style={{ padding: '0.1rem 0.4rem', fontSize: '0.75rem', color: '#ef4444' }} title="Xóa">
+                                                                ✕
+                                                            </button>
                                                         </div>
                                                     </div>
-                                                    <div style={{ display: 'flex', gap: '0.3rem' }}>
-                                                        <button className="btn btn-sm" onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            const newName = prompt('Đổi tên:', s.name);
-                                                            if (newName && newName.trim() && newName !== s.name) {
-                                                                saveSession({ ...s, name: newName.trim(), id: s.id }).then(() => listSessions().then(setSavedSessions));
-                                                            }
-                                                        }} style={{ padding: '0.1rem 0.4rem', fontSize: '0.75rem', color: '#3b82f6' }} title="Đổi tên">
-                                                            ✏️
-                                                        </button>
-                                                        <button className="btn btn-sm" onClick={(e) => { e.stopPropagation(); handleDeleteSession(s.id!); }}
-                                                            style={{ padding: '0.1rem 0.4rem', fontSize: '0.75rem', color: '#ef4444' }} title="Xóa">
-                                                            ✕
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            ))}
+                                                ))}
                                         </div>
                                     )}
                                     {showSessions && savedSessions.length === 0 && (
