@@ -18,7 +18,7 @@ export default function TableSetupModal({ tables, onConfirm, onClose }: Props) {
         () => table.headers.map((h, i) => ({
             index: i,
             header: h,
-            type: guessColumnType(h, i, table.sampleData),
+            type: guessColumnType(h, i, table.allData),
             formula: guessFormula(h, table.headers),
         }))
     );
@@ -33,7 +33,7 @@ export default function TableSetupModal({ tables, onConfirm, onClose }: Props) {
         setColumns(t.headers.map((h, i) => ({
             index: i,
             header: h,
-            type: guessColumnType(h, i, t.sampleData),
+            type: guessColumnType(h, i, t.allData),
             formula: guessFormula(h, t.headers),
         })));
     };
@@ -105,7 +105,7 @@ export default function TableSetupModal({ tables, onConfirm, onClose }: Props) {
                                     )}
                                 </td>
                                 <td style={{ ...tdStyle, color: '#64748b', fontSize: '0.78rem', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                    {table.sampleData[0]?.[idx] || '—'}
+                                    {table.allData[0]?.[idx] || '—'}
                                 </td>
                             </tr>
                         ))}

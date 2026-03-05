@@ -262,8 +262,12 @@ export default function MilitaryDocForm() {
                         (c as HTMLElement).style.padding = '4px 6px';
                     });
                 } else {
-                    // Word: docx-preview
-                    await renderDocxPreview(templateBuffer, data, previewContainerRef.current!);
+                    // Word: docx-preview (fill table data if configured)
+                    let previewBuf = templateBuffer;
+                    if (tableConfig && tableData.length > 0) {
+                        previewBuf = fillWordTable(previewBuf, tableConfig.tableIndex, tableData);
+                    }
+                    await renderDocxPreview(previewBuf, data, previewContainerRef.current!);
                 }
                 setPreviewReady(true);
             } catch (err) {
@@ -277,7 +281,7 @@ export default function MilitaryDocForm() {
         }, 600);
 
         return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-    }, [data, templateBuffer, fileType]);
+    }, [data, templateBuffer, fileType, tableData, tableConfig]);
 
     const handleChange = useCallback((e: FormChangeEvent) => {
         const { name, value } = e.target;
@@ -319,24 +323,18 @@ export default function MilitaryDocForm() {
     const handleTableConfigConfirm = (config: TableConfig) => {
         setTableConfig(config);
         setShowTableSetup(false);
-        // Initialize empty table data
+        // Initialize table data from detected table
         const table = detectedTables.find(t => t.tableIndex === config.tableIndex);
         if (table) {
             const rows = Array.from({ length: table.dataRowCount }, () => config.columns.map(() => ''));
-            // Pre-fill with existing data from template
-            table.sampleData.forEach((sRow, ri) => {
+            // Pre-fill with existing data from template (allData has all rows)
+            table.allData.forEach((dataRow: string[], ri: number) => {
                 if (ri < rows.length) {
-                    sRow.forEach((val, ci) => {
+                    dataRow.forEach((val: string, ci: number) => {
                         if (ci < rows[ri].length) rows[ri][ci] = val;
                     });
                 }
             });
-            // Fill remaining rows from template if available
-            const allData = scanWordTables(templateBuffer!).find(t => t.tableIndex === config.tableIndex);
-            if (allData) {
-                // sampleData only has 3 rows, but we want all rows
-                // Re-scan won't give us more than sample... use dataRowCount
-            }
             setTableData(calculateTableData(rows, config.columns));
         }
     };

@@ -14,7 +14,7 @@ export interface TableInfo {
     tableIndex: number;
     headers: string[];
     dataRowCount: number;
-    sampleData: string[][]; // first 3 rows of data
+    allData: string[][]; // all data rows from table
 }
 
 export interface TableConfig {
@@ -81,7 +81,7 @@ export function scanWordTables(buffer: ArrayBuffer): TableInfo[] {
             tableIndex: ti,
             headers,
             dataRowCount: dataRows.length,
-            sampleData: dataRows.slice(0, 3),
+            allData: dataRows,
         });
     }
 
