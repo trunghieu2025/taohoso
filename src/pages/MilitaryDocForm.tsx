@@ -40,7 +40,182 @@ const TEMPLATE_LIBRARY = [
     { name: 'Mẫu mặc định (Nhà tập thể)', file: 'template_nha_tap_the.docx', desc: 'Hồ sơ sửa chữa nhà tập thể' },
 ];
 
-/* ── Estimate config (for dự toán chi tiết) ── */
+/* ── Guide HTML ── */
+const S = 'style';
+const H = (t: string) => `<h3 ${S}="color:#10b981;margin:1.5rem 0 0.5rem;border-bottom:2px solid #d1fae5;padding-bottom:0.3rem">${t}</h3>`;
+const EX = (t: string) => `<div ${S}="background:#f0fdf4;border-left:3px solid #10b981;padding:0.5rem 0.8rem;margin:0.4rem 0;font-size:13px;border-radius:0 6px 6px 0"><b>📌 Ví dụ:</b> ${t}</div>`;
+const TIP = (t: string) => `<div ${S}="background:#eff6ff;border-left:3px solid #3b82f6;padding:0.5rem 0.8rem;margin:0.4rem 0;font-size:13px;border-radius:0 6px 6px 0"><b>💡 Mẹo:</b> ${t}</div>`;
+const STEPS = (...s: string[]) => `<ol ${S}="margin:0.3rem 0;padding-left:1.5rem;font-size:14px">${s.map(x => `<li ${S}="margin:0.2rem 0">${x}</li>`).join('')}</ol>`;
+
+const GUIDE_HTML = `
+<h2 ${S}="text-align:center;color:#10b981;margin-bottom:0.5rem">📖 Hướng dẫn sử dụng TạoHồSơ</h2>
+<p ${S}="text-align:center;color:#64748b;font-size:14px;margin-bottom:1.5rem">Nhập thông tin một lần — xuất file Word / Excel đầy đủ mẫu biểu</p>
+
+<table border="1" cellpadding="6" cellspacing="0" ${S}="border-collapse:collapse;width:100%;font-size:13px;border-color:#e2e8f0;margin-bottom:1.5rem">
+<tr ${S}="background:#f0fdf4"><th>#</th><th>Tính năng</th><th>Mô tả ngắn</th></tr>
+<tr><td>1</td><td>📤 Tải mẫu</td><td>Upload Word/Excel → tự quét trường</td></tr>
+<tr><td>2</td><td>🔍 Quét bảng</td><td>Nhận diện bảng → cấu hình cột → nhập liệu</td></tr>
+<tr><td>3</td><td>📝 Điền form</td><td>Nhập dữ liệu → preview realtime</td></tr>
+<tr><td>4</td><td>💰 Số→Chữ</td><td>292.000.000 → "Hai trăm chín mươi hai triệu đồng"</td></tr>
+<tr><td>5</td><td>🏢 Nhà thầu</td><td>Lưu/chọn nhanh thông tin Bên B</td></tr>
+<tr><td>6</td><td>💾 Auto-save</td><td>Tự lưu liên tục, không mất data</td></tr>
+<tr><td>7</td><td>✏️ Đổi tên</td><td>Sửa tên phiên đã lưu</td></tr>
+<tr><td>8</td><td>📋 Nhân bản</td><td>Copy hồ sơ → sửa vài chi tiết</td></tr>
+<tr><td>9</td><td>⚠️ Validation</td><td>Kiểm tra trường bắt buộc</td></tr>
+<tr><td>10</td><td>📐 Dự toán</td><td>Bảng tính KL×ĐG → tổng auto-fill</td></tr>
+<tr><td>11</td><td>📥 Xuất Word</td><td>File .docx giữ đúng format</td></tr>
+<tr><td>12</td><td>📄 Xuất PDF</td><td>Tạo PDF từ preview</td></tr>
+<tr><td>13</td><td>📦 Xuất hàng loạt</td><td>N dòng Excel → ZIP chứa N file Word</td></tr>
+<tr><td>14</td><td>📊 Import Excel</td><td>1 dòng Excel → điền vào form</td></tr>
+<tr><td>15</td><td>📱 PWA</td><td>Cài app, dùng offline</td></tr>
+</table>
+
+<hr ${S}="border:none;border-top:2px solid #e2e8f0;margin:1rem 0">
+<h2 ${S}="color:#1e293b;text-align:center">📋 Chi tiết từng tính năng</h2>
+
+${H('1. 📤 Tải mẫu Word/Excel')}
+<p>Upload file mẫu có chứa <code>{TÊN_TRƯỜNG}</code> — hệ thống tự tạo form nhập liệu.</p>
+${STEPS(
+    'Bấm <b>📤 Tải mẫu khác</b>',
+    'Chọn file <b>.docx</b> hoặc <b>.xlsx</b>',
+    'Hệ thống quét tìm <code>{tag}</code> hoặc giá trị lặp lại → hiện modal chọn trường',
+    'Tick ✅ trường muốn dùng → bấm <b>Xác nhận</b> → form tự tạo'
+)}
+${EX('File Word có <code>{CÔNG_TRÌNH}</code>, <code>{SỐ_TIỀN}</code>, <code>{NĂM}</code> → form hiện 3 ô nhập tương ứng')}
+${TIP('Dùng cú pháp <code>{TÊN_TRƯỜNG}</code> trong Word để đánh dấu. VD: <code>{ĐƠN_VỊ}</code>, <code>{NGÀY_THÁNG}</code>')}
+
+${H('2. 🔍 Quét bảng tự động')}
+<p>Khi file Word có bảng → hệ thống nhận diện và cho phép nhập dữ liệu vào bảng.</p>
+${STEPS(
+    'Upload Word có bảng → modal <b>⚙️ Cấu hình cột</b> hiện ra',
+    'Với mỗi cột, chọn chế độ:<br>• <b>✏️ Nhập tay</b> — bạn gõ<br>• <b>🔢 Tự đánh số</b> — STT tăng dần<br>• <b>🧮 Tự tính</b> — nhập công thức',
+    'Bấm <b>✅ Xác nhận</b> → bảng nhập liệu hiện ra',
+    'Nhập dữ liệu → xuất file → bảng Word tự điền'
+)}
+${EX('Bảng có cột: TT | Danh mục | ĐVT | KL | ĐG | Thành tiền<br>→ Cấu hình: TT=🔢 tự đánh | Thành tiền=🧮 công thức <code>KL * ĐG</code>')}
+${TIP('Nếu nhập <b>nhiều hơn</b> số dòng mẫu → <b>tự thêm dòng</b>. Nhập <b>ít hơn</b> → <b>tự xóa dòng thừa</b>. Font <b>Times New Roman</b> tự động.')}
+
+${H('3. 📝 Điền form & Preview')}
+<p>Nhập dữ liệu vào các trường → preview bên phải cập nhật realtime.</p>
+${STEPS(
+    'Nhập vào từng ô trên form bên trái',
+    'Preview bên phải tự cập nhật khi bạn gõ',
+    'Giãn/thu preview bằng nút <b>+ / −</b> zoom'
+)}
+${EX('Nhập ô "Công trình": <code>Nhà tập thể A</code> → preview hiện ngay "Nhà tập thể A" ở đúng vị trí trong mẫu')}
+
+${H('4. 💰 Số tiền → Bằng chữ')}
+<p>Tự động chuyển số tiền sang tiếng Việt.</p>
+${EX('Nhập: <code>292.000.000</code> → Kết quả: <b>"Hai trăm chín mươi hai triệu đồng"</b><br>Nhập: <code>1.500.000</code> → <b>"Một triệu năm trăm nghìn đồng"</b>')}
+${TIP('Chỉ cần nhập số (có hoặc không có dấu chấm). Ô "Bằng chữ" tự động cập nhật.')}
+
+${H('5. 🏢 Quản lý nhà thầu')}
+<p>Lưu thông tin nhà thầu thường dùng, chọn nhanh khi cần.</p>
+${STEPS(
+    'Nhập đủ thông tin Bên B (tên, MST, đại diện, chức vụ, tài khoản, ngân hàng, địa chỉ)',
+    'Bấm <b>💾 Lưu NT</b> → nhà thầu được lưu vĩnh viễn',
+    'Lần sau: bấm <b>📋 Chọn NT</b> → click tên → <b>7 trường tự điền</b>',
+    'Bấm <b>✕</b> để xóa nhà thầu không cần'
+)}
+${EX('Lưu "Công ty TNHH ABC" → lần sau chỉ cần 1 click để điền MST, TK ngân hàng, người đại diện...')}
+
+${H('6. 💾 Auto-save & Quản lý phiên')}
+<p>Không bao giờ mất dữ liệu.</p>
+${STEPS(
+    '<b>Auto-save</b>: tự lưu mỗi 2 giây. Đóng tab → mở lại → data còn nguyên',
+    '<b>📂 Mẫu đã lưu</b>: xem danh sách tất cả phiên. Click để chuyển phiên',
+    '<b>💾 Sao lưu</b>: tải file <code>.json</code> về máy (backup)',
+    '<b>📂 Khôi phục</b>: chọn file <code>.json</code> để phục hồi dữ liệu'
+)}
+${TIP('Mỗi khi upload mẫu mới → tạo phiên mới. Các phiên cũ vẫn giữ nguyên.')}
+
+${H('7. ✏️ Đổi tên phiên đã lưu')}
+${STEPS(
+    'Bấm <b>📂 Mẫu đã lưu</b> → danh sách hiện ra',
+    'Bấm <b>✏️</b> bên phải tên phiên',
+    'Nhập tên mới → OK → cập nhật ngay'
+)}
+${EX('"MUA SẮM DOANH CỤ gửi nhà thầu.docx (bản sao)" → đổi thành "MS Doanh cụ - CT XYZ"')}
+
+${H('8. 📋 Nhân bản hồ sơ')}
+<p>Copy toàn bộ hồ sơ hiện tại → sửa ít, xuất file mới.</p>
+${STEPS(
+    'Bấm <b>📋 Nhân bản</b> ở thanh hành động',
+    'Bản sao tạo ra với tên <code>"... (bản sao)"</code>',
+    'Sửa vài trường cần thay đổi → xuất file'
+)}
+${EX('Hoàn thành hồ sơ Nhà A → nhân bản → chỉ sửa tên công trình + số tiền → xuất hồ sơ Nhà B. <b>Nhanh gấp 10 lần!</b>')}
+
+${H('9. ⚠️ Validation (Kiểm tra bắt buộc)')}
+<p>Đảm bảo không quên điền trường quan trọng.</p>
+${STEPS(
+    'Bấm <b>📥 Xuất file</b> khi chưa điền đủ',
+    'Hệ thống cảnh báo + <b>viền đỏ</b> trường thiếu',
+    'Điền đủ → viền đỏ tự mất → xuất file bình thường'
+)}
+${EX('3 trường bắt buộc: <b>Công trình</b>, <b>Số tiền</b>, <b>Năm</b>. Quên điền 1 trường → viền đỏ nhấp nháy.')}
+
+${H('10. 📐 Dự toán chi tiết')}
+<p>Bảng tính nhỏ tích hợp — tự tính thành tiền và tổng.</p>
+${STEPS(
+    'Bấm <b>📐 Dự toán chi tiết</b> → mở bảng tính',
+    'Nhập: Hạng mục | ĐVT | Khối lượng | Đơn giá',
+    '<b>Thành tiền</b> = KL × ĐG (tự tính)',
+    'Bấm <b>➕ Thêm dòng</b> nếu cần thêm',
+    '<b>Tổng</b> tự điền vào ô "Số tiền" và "Bằng chữ"'
+)}
+${EX('Nhập: Bàn trợ lý | Cái | 2 | 7.500.000<br>→ Thành tiền tự tính: <b>15.000.000</b><br>→ Tổng tất cả hạng mục auto-fill vào ô "Số tiền"')}
+
+${H('11. 📥 Xuất Word (.docx)')}
+${STEPS(
+    'Bấm <b>📥 Xuất file Word</b>',
+    'File <code>.docx</code> tải về với dữ liệu đã điền',
+    'Bảng: dòng thừa tự xóa, dòng thiếu tự thêm, font <b>Times New Roman</b>'
+)}
+${TIP('File xuất ra giữ <b>100% format</b> gốc (viền, màu, header, footer...)')}
+
+${H('12. 📄 Xuất PDF')}
+${STEPS(
+    'Bấm <b>📄 Xuất PDF</b>',
+    'Tạo file PDF từ preview hiện tại, khổ A4'
+)}
+${TIP('PDF có thể hơi khác Word về bảng/font. Nên ưu tiên xuất Word nếu cần chính xác 100%.')}
+
+${H('13. 📦 Xuất hàng loạt (ZIP)')}
+<p>Tạo hàng loạt file Word từ 1 file Excel.</p>
+${STEPS(
+    'Bấm <b>📦 Xuất hàng loạt</b>',
+    'Chọn file Excel — <b>mỗi dòng = 1 công trình</b>',
+    'Preview hiện danh sách N công trình',
+    'Bấm <b>📦 Xuất tất cả</b> → tải 1 file <code>.zip</code> chứa N file Word'
+)}
+${EX('File Excel có 20 dòng (20 công trình) → bấm 1 nút → tải về <code>HoSo_HangLoat_20_files.zip</code> chứa 20 file Word đã điền đầy đủ.')}
+<div ${S}="background:#fef3c7;border-left:3px solid #f59e0b;padding:0.5rem 0.8rem;margin:0.4rem 0;font-size:13px;border-radius:0 6px 6px 0">
+<b>⚠️ Yêu cầu Excel:</b> Hàng 1 = tiêu đề cột (Công trình, Số tiền, Năm...). Hàng 2+ = dữ liệu.
+</div>
+
+${H('14. 📊 Import dữ liệu từ Excel')}
+<p>Điền form nhanh từ file Excel (1 dòng).</p>
+${STEPS(
+    'Bấm <b>📊 Nhập từ Excel</b> trong panel "Quản lý dữ liệu"',
+    'Chọn file Excel → hệ thống tự khớp cột → điền vào form'
+)}
+${EX('Excel có cột "Công trình" = "Nhà A", "Số tiền" = "150.000.000" → form tự điền 2 trường đó.')}
+${TIP('Khác <b>Xuất hàng loạt</b>: Import chỉ điền 1 dòng vào form hiện tại, không tạo nhiều file.')}
+
+${H('15. 📱 PWA — Cài app & Dùng offline')}
+<p>Dùng web như app native, hoạt động cả khi mất mạng.</p>
+${STEPS(
+    '<b>Trên ĐT:</b> Mở Chrome → menu ⋮ → "Thêm vào màn hình chính"',
+    '<b>Trên PC:</b> Thanh địa chỉ Chrome → icon 📥 → "Cài đặt"',
+    'App hiện trên home/desktop, mở như app bình thường',
+    '<b>Offline:</b> sau lần mở đầu, dùng được cả khi mất mạng'
+)}
+${TIP('Data lưu trong IndexedDB trên thiết bị → không mất khi offline.')}
+
+<hr ${S}="border:none;border-top:2px solid #e2e8f0;margin:1.5rem 0 1rem">
+<p ${S}="text-align:center;color:#64748b;font-size:13px">💡 Bấm <b>📝 Điền mẫu thử</b> trên form để xem nhanh các tính năng hoạt động.</p>
+`;/* ── Estimate config (for dự toán chi tiết) ── */
 const ESTIMATE_COLUMNS: TableColumn[] = [
     { index: 0, header: 'STT', type: 'auto_number' },
     { index: 1, header: 'Hạng mục', type: 'manual' },
@@ -998,34 +1173,12 @@ export default function MilitaryDocForm() {
                                             <button
                                                 className="btn btn-sm"
                                                 onClick={() => {
-                                                    const w = window.open('', '_blank', 'width=700,height=600');
+                                                    const w = window.open('', '_blank', 'width=900,height=700');
                                                     if (w) {
-                                                        w.document.title = 'Hướng dẫn sử dụng';
-                                                        w.document.body.style.fontFamily = 'Inter, sans-serif';
-                                                        w.document.body.style.padding = '2rem';
-                                                        w.document.body.style.lineHeight = '1.7';
-                                                        w.document.body.style.color = '#1e293b';
-                                                        w.document.body.innerHTML = `
-<h2>📖 Hướng dẫn sử dụng</h2>
-<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%;font-size:14px;border-color:#e2e8f0">
-<tr style="background:#f0fdf4"><th>#</th><th>Tính năng</th><th>Mô tả</th></tr>
-<tr><td>1</td><td>📤 Tải mẫu</td><td>Upload Word/Excel → tự quét trường dữ liệu</td></tr>
-<tr><td>2</td><td>🔍 Quét bảng</td><td>Nhận diện bảng Word → cấu hình cột → nhập liệu. Tự thêm/xóa dòng</td></tr>
-<tr><td>3</td><td>📝 Điền form</td><td>Nhập dữ liệu → preview realtime bên phải</td></tr>
-<tr><td>4</td><td>💰 Số→Chữ</td><td>Nhập số tiền → tự viết bằng chữ Việt</td></tr>
-<tr><td>5</td><td>🏢 Nhà thầu</td><td>Lưu/chọn nhanh: 💾 Lưu NT → 📋 Chọn NT</td></tr>
-<tr><td>6</td><td>💾 Auto-save</td><td>Tự lưu mỗi 2 giây. Đóng tab → mở lại → data còn</td></tr>
-<tr><td>7</td><td>✏️ Đổi tên</td><td>Bấm ✏️ bên phải tên phiên đã lưu</td></tr>
-<tr><td>8</td><td>📋 Nhân bản</td><td>Copy hồ sơ → sửa vài chi tiết, nhanh 90%</td></tr>
-<tr><td>9</td><td>⚠️ Validation</td><td>Kiểm tra 3 trường bắt buộc (Công trình, Số tiền, Năm)</td></tr>
-<tr><td>10</td><td>📐 Dự toán</td><td>Bảng tính KL×ĐG=Thành tiền → tổng auto-fill Số tiền</td></tr>
-<tr><td>11</td><td>📥 Xuất Word</td><td>File .docx đúng format, font Times New Roman</td></tr>
-<tr><td>12</td><td>📄 Xuất PDF</td><td>Tạo PDF từ preview (format gần giống Word)</td></tr>
-<tr><td>13</td><td>📦 Xuất hàng loạt</td><td>Excel nhiều dòng → ZIP chứa N file Word</td></tr>
-<tr><td>14</td><td>📊 Import Excel</td><td>Import 1 dòng Excel → điền vào form</td></tr>
-<tr><td>15</td><td>📱 PWA</td><td>Cài app trên ĐT, dùng offline</td></tr>
-</table>
-<p style="margin-top:1rem;color:#64748b;font-size:13px">💡 Bấm <b>📝 Điền mẫu thử</b> để xem nhanh các tính năng hoạt động.</p>`;
+                                                        w.document.title = 'Hướng dẫn sử dụng — TạoHồSơ';
+                                                        w.document.head.innerHTML = '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">';
+                                                        w.document.body.style.cssText = 'font-family:Inter,sans-serif;padding:2rem;line-height:1.8;color:#1e293b;max-width:850px;margin:0 auto';
+                                                        w.document.body.innerHTML = GUIDE_HTML;
                                                     }
                                                 }}
                                                 style={{ background: '#dbeafe', color: '#1d4ed8' }}
