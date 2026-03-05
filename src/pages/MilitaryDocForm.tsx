@@ -33,6 +33,7 @@ import { scanWordTables, fillWordTable, calculateTableData, type TableInfo, type
 import TableSetupModal from '../components/TableSetupModal';
 import TableEditor from '../components/TableEditor';
 import html2pdf from 'html2pdf.js';
+import BatchExportPanel from '../components/BatchExportPanel';
 
 /* ── Template library ── */
 const TEMPLATE_LIBRARY = [
@@ -176,6 +177,7 @@ export default function MilitaryDocForm() {
 
     // Export history
     const [exportHistory, setExportHistory] = useState<{ date: string; type: string }[]>([]);
+    const [showBatchExport, setShowBatchExport] = useState(false);
 
     // Validation
     const REQUIRED_TAGS = ['CÔNG_TRÌNH', 'SỐ_TIỀN', 'NĂM'];
@@ -1164,6 +1166,9 @@ export default function MilitaryDocForm() {
                                         <button className="btn btn-secondary" onClick={handleClone} disabled={!templateBuffer}>
                                             📋 Nhân bản
                                         </button>
+                                        <button className="btn btn-secondary" onClick={() => setShowBatchExport(true)} disabled={!templateBuffer}>
+                                            📦 Xuất hàng loạt
+                                        </button>
                                     </div>
                                     <button className="btn btn-primary" onClick={handleExport} disabled={loading || !templateBuffer}>
                                         {loading ? '⏳ Đang xuất...' : `📥 Xuất file ${fileType === 'excel' ? 'Excel (.xlsx)' : 'Word (.docx)'}`}
@@ -1233,6 +1238,14 @@ export default function MilitaryDocForm() {
                     tables={detectedTables}
                     onConfirm={handleTableConfigConfirm}
                     onClose={() => setShowTableSetup(false)}
+                />
+            )}
+            {/* BATCH EXPORT MODAL */}
+            {showBatchExport && (
+                <BatchExportPanel
+                    templateBuffer={templateBuffer}
+                    templateTags={templateTags}
+                    onClose={() => setShowBatchExport(false)}
                 />
             )}
         </>

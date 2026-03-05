@@ -266,7 +266,7 @@ export function extractTags(templateBuffer: ArrayBuffer): string[] {
  * Fill a template buffer with data using docxtemplater.
  * Returns the filled ArrayBuffer.
  */
-function fillTemplate(templateBuffer: ArrayBuffer, data: Record<string, string>): ArrayBuffer {
+export function fillTemplate(templateBuffer: ArrayBuffer, data: Record<string, string>): ArrayBuffer {
     const zip = new PizZip(templateBuffer);
     const doc = new Docxtemplater(zip, {
         nullGetter() { return ''; },
