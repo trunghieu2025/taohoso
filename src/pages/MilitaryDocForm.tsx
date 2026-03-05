@@ -553,7 +553,7 @@ export default function MilitaryDocForm() {
             const labels = isCustomTemplate ? customLabels : TAG_LABELS;
             const mapped = mapExcelToTags(rows[0], templateTags, labels);
             if (Object.keys(mapped).length === 0) {
-                alert('Không khớp được cột nào với trường form. Hãng 1 cần chứa tiêu đề khớp với tên trường.');
+                alert('Không khớp được cột nào với trường form. Hàng 1 cần chứa tiêu đề khớp với tên trường.');
                 return;
             }
             setData(prev => ({ ...prev, ...mapped }));
