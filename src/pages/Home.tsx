@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom';
-import FAQ from '../components/FAQ';
 
 export default function Home() {
   return (
@@ -98,77 +97,6 @@ export default function Home() {
               <span className="card-link">Tạo ngay →</span>
             </Link>
           </div>
-        </div>
-      </section>
-
-      {/* GUIDES */}
-      <section
-        className="section"
-        style={{ background: 'var(--bg-secondary)' }}
-      >
-        <div className="container">
-          <h2 className="section-title">Hướng dẫn thủ tục</h2>
-          <p className="section-subtitle">
-            Hướng dẫn chi tiết từng bước cho các thủ tục hành chính phổ biến
-            nhất
-          </p>
-          <div className="guides-grid">
-            <Link
-              to="/huong-dan/tam-tru"
-              className="card"
-              style={{ textDecoration: 'none', color: 'var(--text)' }}
-            >
-              <div className="card-icon">🏠</div>
-              <div className="card-title">Đăng ký tạm trú</div>
-              <div className="card-desc">
-                Hướng dẫn đầy đủ quy trình, hồ sơ cần thiết và cách nộp online
-              </div>
-            </Link>
-            <Link
-              to="/huong-dan/thuong-tru"
-              className="card"
-              style={{ textDecoration: 'none', color: 'var(--text)' }}
-            >
-              <div className="card-icon">🏡</div>
-              <div className="card-title">Đăng ký thường trú</div>
-              <div className="card-desc">
-                Điều kiện, thủ tục và giấy tờ cần chuẩn bị để đăng ký thường trú
-              </div>
-            </Link>
-            <Link
-              to="/huong-dan/ct07"
-              className="card"
-              style={{ textDecoration: 'none', color: 'var(--text)' }}
-            >
-              <div className="card-icon">📋</div>
-              <div className="card-title">Xin giấy CT07</div>
-              <div className="card-desc">
-                Giấy xác nhận cư trú CT07 là gì, khi nào cần và cách xin online
-              </div>
-            </Link>
-            <Link
-              to="/huong-dan/sang-ten-so-hong"
-              className="card"
-              style={{ textDecoration: 'none', color: 'var(--text)' }}
-            >
-              <div className="card-icon">🏘️</div>
-              <div className="card-title">Sang tên sổ hồng</div>
-              <div className="card-desc">
-                Chi phí, quy trình và bộ hồ sơ sang tên sổ hồng năm 2026
-              </div>
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* FAQ */}
-      <section className="section">
-        <div className="container">
-          <h2 className="section-title">Câu hỏi thường gặp</h2>
-          <p className="section-subtitle">
-            Giải đáp các thắc mắc phổ biến về thủ tục cư trú và hồ sơ hành chính
-          </p>
-          <FAQ />
         </div>
       </section>
 

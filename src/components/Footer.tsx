@@ -25,16 +25,6 @@ export default function Footer() {
                     </div>
 
                     <div>
-                        <h4 className="footer-title">Hướng dẫn</h4>
-                        <ul className="footer-links">
-                            <li><Link to="/huong-dan/tam-tru">Đăng ký tạm trú</Link></li>
-                            <li><Link to="/huong-dan/thuong-tru">Đăng ký thường trú</Link></li>
-                            <li><Link to="/huong-dan/ct07">Xin giấy CT07</Link></li>
-                            <li><Link to="/huong-dan/sang-ten-so-hong">Sang tên sổ hồng</Link></li>
-                        </ul>
-                    </div>
-
-                    <div>
                         <h4 className="footer-title">Liên kết</h4>
                         <ul className="footer-links">
                             <li><Link to="/gioi-thieu">Giới thiệu</Link></li>
