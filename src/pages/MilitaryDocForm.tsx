@@ -161,6 +161,10 @@ export default function MilitaryDocForm() {
     // Export history
     const [exportHistory, setExportHistory] = useState<{ date: string; type: string }[]>([]);
 
+    // Validation
+    const REQUIRED_TAGS = ['TÊN_CT', 'SỐ_TIỀN', 'NĂM'];
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
     // Table state (multi-table support)
     const [detectedTables, setDetectedTables] = useState<TableInfo[]>([]);
     const [showTableSetup, setShowTableSetup] = useState(false);
@@ -301,6 +305,21 @@ export default function MilitaryDocForm() {
 
     const handleExport = async () => {
         if (!templateBuffer) return;
+        // Validation
+        if (!isCustomTemplate) {
+            const errors: Record<string, string> = {};
+            REQUIRED_TAGS.forEach(tag => {
+                if (templateTags.includes(tag) && !data[tag]?.trim()) {
+                    errors[tag] = 'Trường bắt buộc';
+                }
+            });
+            if (Object.keys(errors).length > 0) {
+                setFieldErrors(errors);
+                alert(`⚠️ Vui lòng điền ${Object.keys(errors).length} trường bắt buộc (đánh dấu đỏ)`);
+                return;
+            }
+        }
+        setFieldErrors({});
         setLoading(true);
         try {
             if (fileType === 'excel') {
@@ -444,8 +463,8 @@ export default function MilitaryDocForm() {
                         setShowTableSetup(true);
                     } else {
                         setDetectedTables([]);
-                        setTableConfig(null);
-                        setTableData([]);
+                        setTableConfigs({});
+                        setTableDataMap({});
                     }
                 } catch { setDetectedTables([]); }
             }
@@ -523,6 +542,27 @@ export default function MilitaryDocForm() {
     // Fill demo data
     const handleFillDemo = () => {
         setData({ ...TAG_PLACEHOLDERS });
+        setFieldErrors({});
+    };
+
+    // Clone session
+    const handleClone = async () => {
+        if (!templateBuffer) return;
+        try {
+            const id = await saveSession({
+                name: templateName + ' (bản sao)',
+                templateBuffer,
+                tags: templateTags,
+                labels: customLabels,
+                data,
+                fileType,
+                isCustomTemplate,
+            });
+            setCurrentSessionId(id);
+            setAutoSaveId(id);
+            setSavedSessions(await listSessions());
+            alert('✅ Đã nhân bản hồ sơ!');
+        } catch { /* ignore */ }
     };
 
     // Contractor management
@@ -741,6 +781,8 @@ export default function MilitaryDocForm() {
                                         value={data[tag] || ''}
                                         onChange={handleChange}
                                         placeholder={TAG_PLACEHOLDERS[tag] || ''}
+                                        error={fieldErrors[tag]}
+                                        required={REQUIRED_TAGS.includes(tag)}
                                     />
                                 );
                             }
@@ -754,6 +796,8 @@ export default function MilitaryDocForm() {
                                             value={data[tag] || ''}
                                             onChange={handleChange}
                                             placeholder={TAG_PLACEHOLDERS[tag] || ''}
+                                            error={fieldErrors[tag]}
+                                            required={REQUIRED_TAGS.includes(tag)}
                                         />
                                     ))}
                                 </div>
@@ -768,6 +812,8 @@ export default function MilitaryDocForm() {
                                 value={data[tag] || ''}
                                 onChange={handleChange}
                                 placeholder={TAG_PLACEHOLDERS[tag] || ''}
+                                error={fieldErrors[tag]}
+                                required={REQUIRED_TAGS.includes(tag)}
                             />
                         ))
                     )}
@@ -782,6 +828,8 @@ export default function MilitaryDocForm() {
                                 value={data[tag] || ''}
                                 onChange={handleChange}
                                 placeholder={TAG_PLACEHOLDERS[tag] || ''}
+                                error={fieldErrors[tag]}
+                                required={REQUIRED_TAGS.includes(tag)}
                             />
                         ))}
                 </div>
@@ -949,6 +997,12 @@ export default function MilitaryDocForm() {
                                             Chưa có phiên nào được lưu
                                         </div>
                                     )}
+                                    {/* Stats */}
+                                    <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem', borderTop: '1px solid #bbf7d0', paddingTop: '0.5rem' }}>
+                                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>📑 {savedSessions.length} hồ sơ</div>
+                                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>🏢 {contractors.length} nhà thầu</div>
+                                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>📥 {exportHistory.length} lần xuất</div>
+                                    </div>
                                 </div>
 
                                 {/* Form fields */}
@@ -983,6 +1037,9 @@ export default function MilitaryDocForm() {
                                                 📝 Điền mẫu thử
                                             </button>
                                         )}
+                                        <button className="btn btn-secondary" onClick={handleClone} disabled={!templateBuffer}>
+                                            📋 Nhân bản
+                                        </button>
                                     </div>
                                     <button className="btn btn-primary" onClick={handleExport} disabled={loading || !templateBuffer}>
                                         {loading ? '⏳ Đang xuất...' : `📥 Xuất file ${fileType === 'excel' ? 'Excel (.xlsx)' : 'Word (.docx)'}`}
