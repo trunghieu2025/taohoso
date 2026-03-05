@@ -56,7 +56,7 @@ export default function Header() {
             </div>
           </div>
 
-          <div className="nav-item">
+          {/* <div className="nav-item">
             <span className="nav-link">Hướng dẫn ▾</span>
             <div className="nav-dropdown">
               <Link
@@ -81,7 +81,7 @@ export default function Header() {
                 🏘️ Sang tên sổ hồng
               </Link>
             </div>
-          </div>
+          </div> */}
 
           <Link
             to="/gioi-thieu"

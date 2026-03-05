@@ -92,8 +92,8 @@ export default function Home() {
               <div className="card-icon">🏗️</div>
               <h3>Hồ sơ sửa chữa công trình</h3>
               <p>
-                Tạo bộ hồ sơ sửa chữa quân đội đầy đủ 6 mẫu biểu. Nhập thông
-                tin một lần, xuất file Word giữ nguyên 100% format.
+                Tạo bộ hồ sơ sửa chữa quân đội đầy đủ 6 mẫu biểu. Nhập thông tin
+                một lần, xuất file Word giữ nguyên 100% format.
               </p>
               <span className="card-link">Tạo ngay →</span>
             </Link>
@@ -102,7 +102,7 @@ export default function Home() {
       </section>
 
       {/* GUIDES */}
-      <section
+      {/* <section
         className="section"
         style={{ background: 'var(--bg-secondary)' }}
       >
@@ -159,10 +159,10 @@ export default function Home() {
             </Link>
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* FAQ */}
-      <section className="section">
+      {/* <section className="section">
         <div className="container">
           <h2 className="section-title">Câu hỏi thường gặp</h2>
           <p className="section-subtitle">
@@ -170,7 +170,7 @@ export default function Home() {
           </p>
           <FAQ />
         </div>
-      </section>
+      </section> */}
 
       {/* CTA */}
       <section className="cta-section">
