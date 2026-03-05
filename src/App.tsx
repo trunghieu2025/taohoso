@@ -24,7 +24,7 @@ export default function App() {
       <main>
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/hop-dong-thue-nha1" element={<RentalContract />} />
+          <Route path="/hop-dong-thue-nha" element={<RentalContract />} />
           <Route path="/dien-form-ct01" element={<CT01Form />} />
           <Route path="/gioi-thieu" element={<About />} />
           <Route path="/huong-dan/tam-tru" element={<TemporaryResidence />} />
