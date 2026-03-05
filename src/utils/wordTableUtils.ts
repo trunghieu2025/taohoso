@@ -302,6 +302,16 @@ export function fillWordTable(
         }
     }
 
+    // Remove empty rows (rows after filled data but before summary)
+    const firstEmptyRow = headerRowCount + data.length;
+    const rowsToRemove: Element[] = [];
+    for (let r = firstEmptyRow; r < dataRowEnd; r++) {
+        rowsToRemove.push(rows[r]);
+    }
+    for (const row of rowsToRemove) {
+        row.parentNode?.removeChild(row);
+    }
+
     const serializer = new XMLSerializer();
     zip.file('word/document.xml', serializer.serializeToString(doc));
     return zip.generate({ type: 'arraybuffer' });
@@ -338,9 +348,17 @@ function setCellText(cell: Element, text: string): void {
             runs[i].parentNode?.removeChild(runs[i]);
         }
     } else {
-        // No runs exist (empty cell) — create <w:r><w:t>text</w:t></w:r>
+        // No runs exist (empty cell) — create <w:r> with Times New Roman font
         const doc = cell.ownerDocument;
         const rEl = doc.createElementNS(NS, 'w:r');
+        // Set font to Times New Roman
+        const rPr = doc.createElementNS(NS, 'w:rPr');
+        const rFonts = doc.createElementNS(NS, 'w:rFonts');
+        rFonts.setAttribute('w:ascii', 'Times New Roman');
+        rFonts.setAttribute('w:hAnsi', 'Times New Roman');
+        rFonts.setAttribute('w:cs', 'Times New Roman');
+        rPr.appendChild(rFonts);
+        rEl.appendChild(rPr);
         const tEl = doc.createElementNS(NS, 'w:t');
         tEl.setAttribute('xml:space', 'preserve');
         tEl.textContent = text;
