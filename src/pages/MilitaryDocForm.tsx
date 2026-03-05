@@ -161,11 +161,11 @@ export default function MilitaryDocForm() {
     // Export history
     const [exportHistory, setExportHistory] = useState<{ date: string; type: string }[]>([]);
 
-    // Table state
+    // Table state (multi-table support)
     const [detectedTables, setDetectedTables] = useState<TableInfo[]>([]);
     const [showTableSetup, setShowTableSetup] = useState(false);
-    const [tableConfig, setTableConfig] = useState<TableConfig | null>(null);
-    const [tableData, setTableData] = useState<string[][]>([]);
+    const [tableConfigs, setTableConfigs] = useState<Record<number, TableConfig>>({});
+    const [tableDataMap, setTableDataMap] = useState<Record<number, string[][]>>({});
 
     const zoomIn = () => setZoom(z => Math.min(z + 10, 150));
     const zoomOut = () => setZoom(z => Math.max(z - 10, 30));
@@ -262,10 +262,13 @@ export default function MilitaryDocForm() {
                         (c as HTMLElement).style.padding = '4px 6px';
                     });
                 } else {
-                    // Word: docx-preview (fill table data if configured)
+                    // Word: docx-preview (fill ALL configured tables)
                     let previewBuf = templateBuffer;
-                    if (tableConfig && tableData.length > 0) {
-                        previewBuf = fillWordTable(previewBuf, tableConfig.tableIndex, tableData, tableConfig.columns.map(c => c.header));
+                    for (const [ti, cfg] of Object.entries(tableConfigs)) {
+                        const tData = tableDataMap[Number(ti)];
+                        if (tData && tData.length > 0) {
+                            previewBuf = fillWordTable(previewBuf, cfg.tableIndex, tData, cfg.columns.map(c => c.header));
+                        }
                     }
                     await renderDocxPreview(previewBuf, data, previewContainerRef.current!);
                 }
@@ -281,7 +284,7 @@ export default function MilitaryDocForm() {
         }, 600);
 
         return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-    }, [data, templateBuffer, fileType, tableData, tableConfig]);
+    }, [data, templateBuffer, fileType, tableDataMap, tableConfigs]);
 
     const handleChange = useCallback((e: FormChangeEvent) => {
         const { name, value } = e.target;
@@ -303,10 +306,13 @@ export default function MilitaryDocForm() {
             if (fileType === 'excel') {
                 generateExcelDoc(data, templateBuffer);
             } else {
-                // If table config exists, fill table first, then fill tags
+                // Fill ALL configured tables, then fill tags
                 let buf = templateBuffer;
-                if (tableConfig && tableData.length > 0) {
-                    buf = fillWordTable(buf, tableConfig.tableIndex, tableData, tableConfig.columns.map(c => c.header));
+                for (const [ti, cfg] of Object.entries(tableConfigs)) {
+                    const tData = tableDataMap[Number(ti)];
+                    if (tData && tData.length > 0) {
+                        buf = fillWordTable(buf, cfg.tableIndex, tData, cfg.columns.map(c => c.header));
+                    }
                 }
                 await generateMilitaryDoc(data, buf);
             }
@@ -319,15 +325,14 @@ export default function MilitaryDocForm() {
         setExportHistory(prev => [{ date: new Date().toISOString(), type: fileType }, ...prev].slice(0, 20));
     };
 
-    // Table setup confirm
+    // Table setup confirm — add ONE table config (can be called multiple times)
     const handleTableConfigConfirm = (config: TableConfig) => {
-        setTableConfig(config);
+        setTableConfigs(prev => ({ ...prev, [config.tableIndex]: config }));
         setShowTableSetup(false);
         // Initialize table data from detected table
         const table = detectedTables.find(t => t.tableIndex === config.tableIndex);
         if (table) {
             const rows = Array.from({ length: table.dataRowCount }, () => config.columns.map(() => ''));
-            // Pre-fill with existing data from template (allData has all rows)
             table.allData.forEach((dataRow: string[], ri: number) => {
                 if (ri < rows.length) {
                     dataRow.forEach((val: string, ci: number) => {
@@ -335,7 +340,7 @@ export default function MilitaryDocForm() {
                     });
                 }
             });
-            setTableData(calculateTableData(rows, config.columns));
+            setTableDataMap(prev => ({ ...prev, [config.tableIndex]: calculateTableData(rows, config.columns) }));
         }
     };
 
@@ -784,23 +789,36 @@ export default function MilitaryDocForm() {
         });
     };
 
-    // Render table editor section
-    const renderTableEditor = () => {
-        if (!tableConfig || fileType !== 'word') return null;
-        return (
-            <div style={sectionStyle}>
-                <div style={{ ...sectionTitleStyle, justifyContent: 'space-between' }}>
-                    <span>📊 Bảng dữ liệu</span>
-                    <div style={{ display: 'flex', gap: '0.3rem' }}>
-                        <button className="btn btn-sm" onClick={() => setShowTableSetup(true)}
-                            style={{ padding: '0.15rem 0.5rem', fontSize: '0.7rem' }}>⚙️ Cấu hình lại</button>
-                        <button className="btn btn-sm" onClick={() => { setTableConfig(null); setTableData([]); }}
-                            style={{ padding: '0.15rem 0.5rem', fontSize: '0.7rem', color: '#ef4444' }}>✕ Xóa bảng</button>
+    // Render ALL table editor sections
+    const renderTableEditors = () => {
+        const cfgEntries = Object.entries(tableConfigs);
+        if (cfgEntries.length === 0 || fileType !== 'word') return null;
+        return cfgEntries.map(([tiStr, cfg]) => {
+            const ti = Number(tiStr);
+            const tData = tableDataMap[ti] || [];
+            const tableLabel = cfgEntries.length > 1 ? ` (Bảng ${ti + 1})` : '';
+            return (
+                <div key={ti} style={sectionStyle}>
+                    <div style={{ ...sectionTitleStyle, justifyContent: 'space-between' }}>
+                        <span>📊 Bảng dữ liệu{tableLabel}</span>
+                        <div style={{ display: 'flex', gap: '0.3rem' }}>
+                            {detectedTables.length > cfgEntries.length && (
+                                <button className="btn btn-sm" onClick={() => setShowTableSetup(true)}
+                                    style={{ padding: '0.15rem 0.5rem', fontSize: '0.7rem' }}>➕ Thêm bảng</button>
+                            )}
+                            <button className="btn btn-sm" onClick={() => setShowTableSetup(true)}
+                                style={{ padding: '0.15rem 0.5rem', fontSize: '0.7rem' }}>⚙️ Cấu hình lại</button>
+                            <button className="btn btn-sm" onClick={() => {
+                                setTableConfigs(prev => { const next = { ...prev }; delete next[ti]; return next; });
+                                setTableDataMap(prev => { const next = { ...prev }; delete next[ti]; return next; });
+                            }}
+                                style={{ padding: '0.15rem 0.5rem', fontSize: '0.7rem', color: '#ef4444' }}>✕ Xóa</button>
+                        </div>
                     </div>
+                    <TableEditor config={cfg} data={tData} onChange={(newData) => setTableDataMap(prev => ({ ...prev, [ti]: newData }))} />
                 </div>
-                <TableEditor config={tableConfig} data={tableData} onChange={setTableData} />
-            </div>
-        );
+            );
+        });
     };
 
     return (
@@ -936,8 +954,15 @@ export default function MilitaryDocForm() {
                                 {/* Form fields */}
                                 {renderFormFields()}
 
-                                {/* Table editor */}
-                                {renderTableEditor()}
+                                {/* Table editors (multi-table) */}
+                                {renderTableEditors()}
+                                {/* Add more tables button */}
+                                {detectedTables.length > Object.keys(tableConfigs).length && Object.keys(tableConfigs).length > 0 && fileType === 'word' && (
+                                    <div style={{ textAlign: 'center', padding: '0.5rem' }}>
+                                        <button className="btn btn-sm" onClick={() => setShowTableSetup(true)}
+                                            style={{ fontSize: '0.8rem' }}>➕ Cấu hình thêm bảng ({detectedTables.length - Object.keys(tableConfigs).length} bảng còn lại)</button>
+                                    </div>
+                                )}
 
                                 {/* Actions */}
                                 <div className="wizard-actions">
