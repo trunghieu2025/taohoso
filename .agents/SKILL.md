@@ -93,3 +93,16 @@ public/
 - Word chia text thành nhiều `<w:t>` nodes → replace text phải cẩn thận
 - Template có text bị split trong XML → một số tag không thể tự động thêm bằng script
 - Git có 2 branch remote: `main` (Vercel) và `master` (cũ, không dùng)
+
+## ⚠️ QUY TẮC AN TOÀN
+
+> **Web đang được KHÁCH HÀNG dùng thử.**
+>
+> AI **BẮT BUỘC** phải hỏi user xác nhận trước khi:
+>
+> - Push code lên branch `main`
+> - Deploy lên Vercel  
+> - Sửa/xóa file template production
+> - Thực hiện bất kỳ thao tác nào ảnh hưởng đến bản web khách đang dùng
+>
+> **KHÔNG BAO GIỜ** tự ý deploy mà không có sự đồng ý của user.

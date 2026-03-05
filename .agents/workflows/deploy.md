@@ -1,34 +1,46 @@
 ---
 description: Cách deploy web lên Vercel qua GitHub
 ---
-// turbo-all
 
 # Deploy lên Vercel
 
-1. Thêm tất cả thay đổi vào git:
+> ⚠️ **QUAN TRỌNG**: Web đang được khách hàng dùng thử.
+> PHẢI HỎI USER XÁC NHẬN trước khi deploy. KHÔNG tự ý push lên `main`.
+
+## Bước 1: Kiểm tra trước khi deploy
+
+1. Chạy build local để đảm bảo không lỗi:
+// turbo
+
+```bash
+npm run build
+```
+
+1. Nếu build lỗi → sửa lỗi trước, KHÔNG deploy
+
+## Bước 2: Hỏi user xác nhận
+
+**BẮT BUỘC** — Hỏi user:
+> "Bạn có muốn deploy lên web cho khách dùng không? Thay đổi gồm: [liệt kê thay đổi]"
+
+Chỉ tiếp tục khi user đồng ý.
+
+## Bước 3: Commit và push
 
 ```bash
 git add -A
-```
-
-1. Commit với message mô tả:
-
-```bash
 git commit -m "feat: mô tả thay đổi"
+git push origin hieu1
+git push origin hieu1:main
 ```
 
-1. Push lên branch `main` (Vercel theo dõi branch này):
-
-```bash
-git push origin HEAD:main
-```
-
-> **Lưu ý**: Nếu bị lỗi non-fast-forward, dùng `--force`:
+> Nếu lỗi non-fast-forward:
 >
 > ```bash
-> git push origin HEAD:main --force
+> git push origin hieu1:main --force
 > ```
 
-1. Đợi 2-3 phút để Vercel build xong
+## Bước 4: Xác nhận
 
-2. Kiểm tra tại: <https://taohoso-six.vercel.app>
+- Đợi 2-3 phút để Vercel build
+- Kiểm tra tại: <https://taohoso-six.vercel.app>
