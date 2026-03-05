@@ -29,9 +29,25 @@ import {
     contractorToFormData, formDataToContractor,
     type Contractor,
 } from '../utils/contractorStorage';
-import { scanWordTables, fillWordTable, calculateTableData, type TableInfo, type TableConfig } from '../utils/wordTableUtils';
+import { scanWordTables, fillWordTable, calculateTableData, type TableInfo, type TableConfig, type TableColumn } from '../utils/wordTableUtils';
 import TableSetupModal from '../components/TableSetupModal';
 import TableEditor from '../components/TableEditor';
+import html2pdf from 'html2pdf.js';
+
+/* ── Template library ── */
+const TEMPLATE_LIBRARY = [
+    { name: 'Mẫu mặc định (Nhà tập thể)', file: 'template_nha_tap_the.docx', desc: 'Hồ sơ sửa chữa nhà tập thể' },
+];
+
+/* ── Estimate config (for dự toán chi tiết) ── */
+const ESTIMATE_COLUMNS: TableColumn[] = [
+    { index: 0, header: 'STT', type: 'auto_number' },
+    { index: 1, header: 'Hạng mục', type: 'manual' },
+    { index: 2, header: 'ĐVT', type: 'manual' },
+    { index: 3, header: 'Khối lượng', type: 'manual' },
+    { index: 4, header: 'Đơn giá', type: 'manual' },
+    { index: 5, header: 'Thành tiền', type: 'auto_calc', formula: 'KHOI_LUONG * DON_GIA' },
+];
 
 /* ── Human-friendly labels for known MERGEFIELD tags ── */
 const TAG_LABELS: Record<string, string> = {
@@ -162,8 +178,13 @@ export default function MilitaryDocForm() {
     const [exportHistory, setExportHistory] = useState<{ date: string; type: string }[]>([]);
 
     // Validation
-    const REQUIRED_TAGS = ['TÊN_CT', 'SỐ_TIỀN', 'NĂM'];
+    const REQUIRED_TAGS = ['CÔNG_TRÌNH', 'SỐ_TIỀN', 'NĂM'];
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+    // Estimate (dự toán chi tiết)
+    const [showEstimate, setShowEstimate] = useState(false);
+    const ESTIMATE_CONFIG: TableConfig = { tableIndex: -1, columns: ESTIMATE_COLUMNS };
+    const [estimateData, setEstimateData] = useState<string[][]>([ESTIMATE_COLUMNS.map(() => '')]);
 
     // Table state (multi-table support)
     const [detectedTables, setDetectedTables] = useState<TableInfo[]>([]);
@@ -565,6 +586,41 @@ export default function MilitaryDocForm() {
         } catch { /* ignore */ }
     };
 
+    // PDF export
+    const handleExportPDF = async () => {
+        const el = previewContainerRef.current;
+        if (!el) return;
+        setLoading(true);
+        try {
+            const filename = `HoSo_${(data['CÔNG_TRÌNH'] || 'document').replace(/\s+/g, '_')}.pdf`;
+            await html2pdf().set({
+                margin: 5,
+                filename,
+                image: { type: 'jpeg', quality: 0.95 },
+                html2canvas: { scale: 2, useCORS: true },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+            }).from(el).save();
+            setExportHistory(prev => [...prev, { date: new Date().toISOString(), type: 'PDF' }]);
+        } catch (err) {
+            alert('❌ Lỗi xuất PDF: ' + (err as Error).message);
+        }
+        setLoading(false);
+    };
+
+    // Template library
+    const handleSelectTemplate = async (file: string, name: string) => {
+        try {
+            const res = await fetch(`/templates/${file}`);
+            if (!res.ok) return;
+            const buf = await res.arrayBuffer();
+            setTemplateBuffer(buf);
+            setTemplateName(name);
+            setTemplateTags(extractTags(buf));
+            setIsCustomTemplate(false);
+            setFileType('word');
+        } catch { /* ignore */ }
+    };
+
     // Contractor management
     const handleSaveContractor = async () => {
         const c = formDataToContractor(data);
@@ -914,6 +970,21 @@ export default function MilitaryDocForm() {
                                             >
                                                 📤 Tải mẫu khác
                                             </button>
+                                            {TEMPLATE_LIBRARY.length > 1 && (
+                                                <select
+                                                    onChange={e => {
+                                                        const t = TEMPLATE_LIBRARY[Number(e.target.value)];
+                                                        if (t) handleSelectTemplate(t.file, t.name);
+                                                    }}
+                                                    style={{ padding: '0.35rem 0.5rem', borderRadius: 6, border: '1px solid #cbd5e1', fontSize: '0.8rem' }}
+                                                    defaultValue=""
+                                                >
+                                                    <option value="" disabled>📂 Chọn mẫu</option>
+                                                    {TEMPLATE_LIBRARY.map((t, i) => (
+                                                        <option key={i} value={i}>{t.name}</option>
+                                                    ))}
+                                                </select>
+                                            )}
                                             {isCustomTemplate && (
                                                 <button
                                                     className="btn btn-sm"
@@ -1008,6 +1079,59 @@ export default function MilitaryDocForm() {
                                 {/* Form fields */}
                                 {renderFormFields()}
 
+                                {/* Estimate section */}
+                                {!isCustomTemplate && (
+                                    <div style={{
+                                        marginBottom: '1.5rem', padding: '1.25rem',
+                                        borderRadius: 'var(--radius, 8px)', border: '1px solid var(--border, #e2e8f0)',
+                                        background: 'var(--bg, #fff)',
+                                    }}>
+                                        <div style={{
+                                            fontSize: '1.05rem', fontWeight: 600, marginBottom: showEstimate ? '0.75rem' : 0,
+                                            paddingBottom: showEstimate ? '0.4rem' : 0,
+                                            borderBottom: showEstimate ? '2px solid var(--primary, #4f46e5)' : 'none',
+                                            color: 'var(--primary, #4f46e5)',
+                                            display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer',
+                                        }} onClick={() => setShowEstimate(!showEstimate)}>
+                                            <span>📐 Dự toán chi tiết</span>
+                                            <span style={{ fontSize: '0.8rem', color: '#94a3b8', marginLeft: 'auto' }}>
+                                                {showEstimate ? '▲ Thu gọn' : '▼ Mở rộng'}
+                                            </span>
+                                        </div>
+                                        {showEstimate && (
+                                            <div style={{ marginTop: '0.5rem' }}>
+                                                <TableEditor
+                                                    config={ESTIMATE_CONFIG}
+                                                    data={estimateData}
+                                                    onChange={(newData) => {
+                                                        setEstimateData(newData);
+                                                        // Sync total to SỐ_TIỀN
+                                                        const totalCol = ESTIMATE_COLUMNS.findIndex(c => c.type === 'auto_calc');
+                                                        if (totalCol >= 0) {
+                                                            const total = newData.reduce((sum, row) => {
+                                                                const val = parseFloat((row[totalCol] || '0').replace(/\./g, '').replace(',', '.'));
+                                                                return sum + (isNaN(val) ? 0 : val);
+                                                            }, 0);
+                                                            if (total > 0) {
+                                                                const formatted = total.toLocaleString('vi-VN');
+                                                                const text = numberToVietnamese(formatted);
+                                                                setData(prev => ({
+                                                                    ...prev,
+                                                                    'SỐ_TIỀN': formatted,
+                                                                    ...(text ? { 'ST_BẰNG_CHỮ': text } : {}),
+                                                                }));
+                                                            }
+                                                        }
+                                                    }}
+                                                />
+                                                <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.4rem' }}>
+                                                    💡 Tổng thành tiền sẽ tự động điền vào trường "Số tiền"
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
                                 {/* Table editors (multi-table) */}
                                 {renderTableEditors()}
                                 {/* Add more tables button */}
@@ -1043,6 +1167,10 @@ export default function MilitaryDocForm() {
                                     </div>
                                     <button className="btn btn-primary" onClick={handleExport} disabled={loading || !templateBuffer}>
                                         {loading ? '⏳ Đang xuất...' : `📥 Xuất file ${fileType === 'excel' ? 'Excel (.xlsx)' : 'Word (.docx)'}`}
+                                    </button>
+                                    <button className="btn btn-secondary" onClick={handleExportPDF} disabled={loading || !previewReady}
+                                        style={{ fontSize: '0.85rem' }}>
+                                        📄 Xuất PDF
                                     </button>
                                 </div>
                             </div>
