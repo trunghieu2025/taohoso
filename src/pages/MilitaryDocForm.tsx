@@ -47,8 +47,7 @@ const TAG_LABELS: Record<string, string> = {
     'Về_việc': 'Về việc (đề xuất)',
     'Căn_cứ_dự_toán_mua': 'Căn cứ dự toán',
     'Căn_cứ_hợp_đồng_số': 'Căn cứ HĐ số',
-    'Tờ_trình_phê_duyện_kh_lcnt_và_dự_toán': 'Tờ trình phê duyệt',
-    'thương_thảo_hđ': 'Thương thảo HĐ',
+
     'Tên_công_ty_hoặc_cửa_hàng': 'Tên công ty nhà thầu',
     'Đại_điện_ÔNG': 'Đại diện nhà thầu',
     'Chức_vụ_của_công_ty': 'Chức vụ đại diện',
@@ -90,8 +89,7 @@ const TAG_PLACEHOLDERS: Record<string, string> = {
     'Về_việc': 'Sửa chữa nhà kho vật tư',
     'Căn_cứ_dự_toán_mua': 'Công trình: Kho vật tư đơn vị',
     'Căn_cứ_hợp_đồng_số': '/2026/HĐ-SC',
-    'Tờ_trình_phê_duyện_kh_lcnt_và_dự_toán': 'V/v Phê duyệt dự toán sửa chữa',
-    'thương_thảo_hđ': 'Thi công sửa chữa mái tôn',
+
     'Tên_công_ty_hoặc_cửa_hàng': 'Công ty CP Xây dựng Hoàng Long',
     'Đại_điện_ÔNG': 'Trần Văn Hùng',
     'Chức_vụ_của_công_ty': 'Giám đốc',
@@ -120,15 +118,15 @@ const TAG_GROUPS = [
     {
         icon: '🏗️',
         title: 'Công trình & Tài chính',
-        tags: ['TÊN_GÓI_THẦU', 'NỘI_DUNG_CHI_TIÊU', 'Về_việc', 'SỐ', 'SỐ_TIỀN', 'ST_BẰNG_CHỮ', 'TỔNG_CỘNG', 'ẤN_ĐỊNH_SỐ_TIỀN', 'KHOẢN', 'KINH_PHÍ', 'Mục_', 'Tiểu_mục', 'QUÝ', 'Căn_cứ_dự_toán_mua', 'Căn_cứ_hợp_đồng_số', 'Tờ_trình_phê_duyện_kh_lcnt_và_dự_toán', 'thương_thảo_hđ', 'ngày_khởi_công', 'tháng_khỏi_công'],
+        tags: ['TÊN_GÓI_THẦU', 'NỘI_DUNG_CHI_TIÊU', 'Về_việc', 'SỐ', 'SỐ_TIỀN', 'ST_BẰNG_CHỮ', 'TỔNG_CỘNG', 'ẤN_ĐỊNH_SỐ_TIỀN', 'KHOẢN', 'KINH_PHÍ', 'Mục_', 'Tiểu_mục', 'QUÝ', 'Căn_cứ_dự_toán_mua', 'Căn_cứ_hợp_đồng_số', 'ngày_khởi_công', 'tháng_khỏi_công'],
         rows: [
             ['Về_việc', 'SỐ'],
             ['SỐ_TIỀN', 'ST_BẰNG_CHỮ'],
             ['TỔNG_CỘNG', 'ẤN_ĐỊNH_SỐ_TIỀN'],
             ['KHOẢN', 'KINH_PHÍ'],
             ['Mục_', 'Tiểu_mục', 'QUÝ'],
-            ['Căn_cứ_hợp_đồng_số', 'Tờ_trình_phê_duyện_kh_lcnt_và_dự_toán'],
-            ['thương_thảo_hđ', 'ngày_khởi_công', 'tháng_khỏi_công'],
+            ['Căn_cứ_hợp_đồng_số', 'Căn_cứ_dự_toán_mua'],
+            ['ngày_khởi_công', 'tháng_khỏi_công'],
         ],
     },
     {
