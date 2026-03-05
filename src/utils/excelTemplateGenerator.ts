@@ -254,3 +254,72 @@ function textToTag(text: string): string {
         .toUpperCase()
         .slice(0, 40);
 }
+
+/**
+ * Read data from an Excel file for form auto-fill.
+ * Expects row 1 = headers (labels), row 2+ = data.
+ * Returns array of objects mapping header→value for each row.
+ */
+export function readExcelData(buffer: ArrayBuffer): Record<string, string>[] {
+    const wb = XLSX.read(buffer, { type: 'array' });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    if (!ws) return [];
+
+    const rows: Record<string, string>[][] = [];
+    const jsonData = XLSX.utils.sheet_to_json<Record<string, string>>(ws, { header: 1, defval: '' });
+    if (jsonData.length < 2) return [];
+
+    const headers = (jsonData[0] as unknown as string[]).map(h => String(h).trim());
+
+    for (let i = 1; i < jsonData.length; i++) {
+        const row = jsonData[i] as unknown as string[];
+        const obj: Record<string, string> = {};
+        let hasData = false;
+        headers.forEach((h, idx) => {
+            const val = String(row[idx] ?? '').trim();
+            if (val) hasData = true;
+            obj[h] = val;
+        });
+        if (hasData) rows.push([obj]);
+    }
+
+    return rows.map(r => r[0]);
+}
+
+/**
+ * Map imported Excel data to form tags.
+ * Tries matching by: exact tag name, label text, or normalized text.
+ */
+export function mapExcelToTags(
+    excelRow: Record<string, string>,
+    tags: string[],
+    labels: Record<string, string>,
+): Record<string, string> {
+    const result: Record<string, string> = {};
+    const reversedLabels: Record<string, string> = {};
+    for (const [tag, label] of Object.entries(labels)) {
+        reversedLabels[label.toLowerCase()] = tag;
+    }
+
+    for (const [header, value] of Object.entries(excelRow)) {
+        if (!value) continue;
+        const headerLower = header.toLowerCase();
+        const headerTag = textToTag(header);
+
+        // Try exact tag match
+        if (tags.includes(header)) { result[header] = value; continue; }
+        // Try tag from header text
+        if (tags.includes(headerTag)) { result[headerTag] = value; continue; }
+        // Try label match
+        if (reversedLabels[headerLower]) { result[reversedLabels[headerLower]] = value; continue; }
+        // Fuzzy: find tag whose label contains header
+        for (const [tag, label] of Object.entries(labels)) {
+            if (label.toLowerCase().includes(headerLower) || headerLower.includes(label.toLowerCase())) {
+                result[tag] = value;
+                break;
+            }
+        }
+    }
+
+    return result;
+}

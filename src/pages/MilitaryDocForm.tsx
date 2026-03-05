@@ -14,6 +14,8 @@ import {
     createExcelTemplate,
     renderExcelPreview,
     generateExcelDoc,
+    readExcelData,
+    mapExcelToTags,
 } from '../utils/excelTemplateGenerator';
 import type { ScanResult } from '../utils/militaryDocGenerator';
 import { numberToVietnamese } from '../utils/numberToVietnamese';
@@ -139,6 +141,7 @@ export default function MilitaryDocForm() {
     const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const jsonInputRef = useRef<HTMLInputElement>(null);
+    const excelDataInputRef = useRef<HTMLInputElement>(null);
     const previewContainerRef = useRef<HTMLDivElement>(null);
 
     // Auto-save & session state
@@ -151,6 +154,9 @@ export default function MilitaryDocForm() {
     // Contractor state
     const [contractors, setContractors] = useState<Contractor[]>([]);
     const [showContractorPicker, setShowContractorPicker] = useState(false);
+
+    // Export history
+    const [exportHistory, setExportHistory] = useState<{ date: string; type: string }[]>([]);
 
     const zoomIn = () => setZoom(z => Math.min(z + 10, 150));
     const zoomOut = () => setZoom(z => Math.max(z - 10, 30));
@@ -291,6 +297,8 @@ export default function MilitaryDocForm() {
         } finally {
             setLoading(false);
         }
+        // Track export
+        setExportHistory(prev => [{ date: new Date().toISOString(), type: fileType }, ...prev].slice(0, 20));
     };
 
     const handleUploadTemplate = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -479,6 +487,31 @@ export default function MilitaryDocForm() {
     const handleDeleteContractor = async (id: number) => {
         await deleteContractor(id);
         setContractors(await listContractors());
+    };
+
+    // Excel data import
+    const handleImportExcelData = async (e: ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        try {
+            const buf = await file.arrayBuffer();
+            const rows = readExcelData(buf);
+            if (rows.length === 0) {
+                alert('Không tìm thấy dữ liệu trong file Excel.');
+                return;
+            }
+            const labels = isCustomTemplate ? customLabels : TAG_LABELS;
+            const mapped = mapExcelToTags(rows[0], templateTags, labels);
+            if (Object.keys(mapped).length === 0) {
+                alert('Không khớp được cột nào với trường form. Hãng 1 cần chứa tiêu đề khớp với tên trường.');
+                return;
+            }
+            setData(prev => ({ ...prev, ...mapped }));
+            alert(`✅ Đã nhập ${Object.keys(mapped).length} trường từ Excel!`);
+        } catch (err) {
+            alert('❌ Lỗi đọc file: ' + (err as Error).message);
+        }
+        if (excelDataInputRef.current) excelDataInputRef.current.value = '';
     };
 
     // JSON export
@@ -790,6 +823,10 @@ export default function MilitaryDocForm() {
                                             <input ref={jsonInputRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleImportJSON} />
                                             <button className="btn btn-sm" onClick={() => jsonInputRef.current?.click()} title="Khôi phục dữ liệu từ file JSON">
                                                 📂 Khôi phục
+                                            </button>
+                                            <input ref={excelDataInputRef} type="file" accept=".xlsx,.xls" style={{ display: 'none' }} onChange={handleImportExcelData} />
+                                            <button className="btn btn-sm" onClick={() => excelDataInputRef.current?.click()} title="Nhập dữ liệu từ file Excel (hàng 1 = tiêu đề, hàng 2 = dữ liệu)">
+                                                📊 Nhập từ Excel
                                             </button>
                                             <button className="btn btn-sm" onClick={() => setShowSessions(!showSessions)} title="Xem danh sách phiên đã lưu">
                                                 📑 Mẫu đã lưu ({savedSessions.length})
