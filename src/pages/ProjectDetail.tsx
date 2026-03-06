@@ -238,6 +238,56 @@ export default function ProjectDetail() {
                         )}
                     </div>
 
+                    {/* Deadline */}
+                    <div style={{
+                        ...sectionStyle,
+                        ...(project.deadline && (() => {
+                            const diff = Math.ceil((new Date(project.deadline).getTime() - Date.now()) / 86400000);
+                            if (diff < 0) return { background: 'linear-gradient(135deg, #fef2f2, #fff)', borderColor: '#fca5a5' };
+                            if (diff <= 3) return { background: 'linear-gradient(135deg, #fffbeb, #fff)', borderColor: '#fcd34d' };
+                            return {};
+                        })()),
+                    }}>
+                        <div style={sectionTitle}>⏰ Hạn nộp hồ sơ</div>
+                        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                            <div style={{ flex: '0 0 auto' }}>
+                                <div style={fieldLabel}>Nhãn</div>
+                                <input style={{ ...inputStyle, width: 180 }}
+                                    value={project.deadlineLabel || ''}
+                                    onChange={e => updateField('deadlineLabel', e.target.value)}
+                                    placeholder="VD: Hạn nộp hồ sơ" />
+                            </div>
+                            <div style={{ flex: '0 0 auto' }}>
+                                <div style={fieldLabel}>Ngày hạn</div>
+                                <input type="date" style={{ ...inputStyle, width: 160 }}
+                                    value={project.deadline || ''}
+                                    onChange={e => updateField('deadline', e.target.value)} />
+                            </div>
+                            {project.deadline && (() => {
+                                const diff = Math.ceil((new Date(project.deadline).getTime() - Date.now()) / 86400000);
+                                if (diff < 0) return (
+                                    <div style={{ padding: '0.3rem 0.75rem', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 8, color: '#dc2626', fontWeight: 700, fontSize: '0.85rem' }}>
+                                        🔴 Quá hạn {-diff} ngày!
+                                    </div>
+                                );
+                                if (diff <= 3) return (
+                                    <div style={{ padding: '0.3rem 0.75rem', background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 8, color: '#d97706', fontWeight: 600, fontSize: '0.85rem' }}>
+                                        🟡 Còn {diff} ngày
+                                    </div>
+                                );
+                                return (
+                                    <div style={{ padding: '0.3rem 0.75rem', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 8, color: '#059669', fontSize: '0.85rem' }}>
+                                        ✅ Còn {diff} ngày
+                                    </div>
+                                );
+                            })()}
+                            {project.deadline && (
+                                <button onClick={() => { updateField('deadline', ''); updateField('deadlineLabel', ''); }}
+                                    style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '0.8rem' }}>✕ Xóa</button>
+                            )}
+                        </div>
+                    </div>
+
                     {/* Contract/Form data */}
                     {project.formData && Object.keys(project.formData).length > 0 && (
                         <div style={{ ...sectionStyle, background: 'linear-gradient(135deg, #eff6ff, #fff)', borderColor: '#93c5fd' }}>

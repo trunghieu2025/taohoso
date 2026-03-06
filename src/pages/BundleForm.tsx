@@ -877,14 +877,27 @@ export default function BundleForm() {
                                     </span>
                                     {allTags.length > 5 && (
                                         <input type="text" value={fieldSearch} onChange={e => setFieldSearch(e.target.value)}
-                                            placeholder="🔍 Tìm trường..."
-                                            style={{ fontSize: '0.8rem', padding: '0.25rem 0.5rem', border: '1px solid #c7d2fe', borderRadius: 6, width: 150 }} />
+                                            onKeyDown={e => {
+                                                if (e.key === 'Enter' && fieldSearch) {
+                                                    const match = allTags.find(t => (labels[t] || t).toLowerCase().includes(fieldSearch.toLowerCase()));
+                                                    if (match) {
+                                                        const el = document.getElementById(`field-${match}`);
+                                                        if (el) {
+                                                            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                                            el.style.background = '#fef08a';
+                                                            setTimeout(() => { el.style.background = ''; }, 1500);
+                                                        }
+                                                    }
+                                                }
+                                            }}
+                                            placeholder="🔍 Tìm trường... (Enter để cuộn)"
+                                            style={{ fontSize: '0.8rem', padding: '0.25rem 0.5rem', border: '1px solid #c7d2fe', borderRadius: 6, width: 180 }} />
                                     )}
                                 </div>
                                 {allTags
                                     .filter(tag => !fieldSearch || (labels[tag] || tag).toLowerCase().includes(fieldSearch.toLowerCase()))
                                     .map(tag => (
-                                        <div key={tag}>
+                                        <div key={tag} id={`field-${tag}`} style={{ transition: 'background 0.3s' }}>
                                             <FormInput label={labels[tag] || tag.replace(/_/g, ' ')} name={tag}
                                                 value={data[tag] || ''} onChange={handleChange}
                                                 placeholder={`Nhập ${(labels[tag] || tag).toLowerCase()}`} />

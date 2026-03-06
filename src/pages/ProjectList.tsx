@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { listProjects, deleteProject, type Project } from '../utils/projectStorage';
+import { listProjects, deleteProject, cloneProject, type Project } from '../utils/projectStorage';
 
 const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }> = {
     new: { label: '⚪ Mới', color: '#64748b', bg: '#f1f5f9' },
@@ -36,6 +36,11 @@ export default function ProjectList() {
         await reload();
     };
 
+    const handleClone = async (id: number) => {
+        await cloneProject(id);
+        await reload();
+    };
+
     // Filters
     const filtered = projects.filter(p => {
         if (filterStatus !== 'all' && p.status !== filterStatus) return false;
@@ -47,7 +52,13 @@ export default function ProjectList() {
                 || p.location.toLowerCase().includes(q);
         }
         return true;
-    }).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+    }).sort((a, b) => {
+        // Overdue projects first
+        const aOverdue = a.deadline && new Date(a.deadline) <= new Date() ? 1 : 0;
+        const bOverdue = b.deadline && new Date(b.deadline) <= new Date() ? 1 : 0;
+        if (aOverdue !== bOverdue) return bOverdue - aOverdue;
+        return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+    });
 
     // Stats
     const totalAmount = projects.reduce((sum, p) => {
@@ -144,7 +155,7 @@ export default function ProjectList() {
                                 <th style={thStyle}>Giá trị</th>
                                 <th style={thStyle}>Checklist</th>
                                 <th style={thStyle}>Trạng thái</th>
-                                <th style={thStyle}>Ngày cập nhật</th>
+                                <th style={thStyle}>Hạn nộp</th>
                                 <th style={{ ...thStyle, textAlign: 'center' }}>Hành động</th>
                             </tr>
                         </thead>
@@ -176,9 +187,25 @@ export default function ProjectList() {
                                             </span>
                                         </td>
                                         <td style={tdStyle}>
-                                            {new Date(p.updatedAt).toLocaleDateString('vi-VN')}
+                                            {(() => {
+                                                if (!p.deadline) return <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>—</span>;
+                                                const dl = new Date(p.deadline);
+                                                const now = new Date();
+                                                const diff = Math.ceil((dl.getTime() - now.getTime()) / 86400000);
+                                                const color = diff < 0 ? '#dc2626' : diff <= 3 ? '#d97706' : '#059669';
+                                                const icon = diff < 0 ? '🔴' : diff <= 3 ? '🟡' : '';
+                                                return (
+                                                    <span style={{ color, fontWeight: diff <= 3 ? 700 : 400, fontSize: '0.8rem' }}>
+                                                        {icon} {dl.toLocaleDateString('vi-VN')}
+                                                        {diff < 0 && <div style={{ fontSize: '0.7rem' }}>Quá hạn {-diff} ngày</div>}
+                                                        {diff >= 0 && diff <= 3 && <div style={{ fontSize: '0.7rem' }}>Còn {diff} ngày</div>}
+                                                    </span>
+                                                );
+                                            })()}
                                         </td>
                                         <td style={{ ...tdStyle, textAlign: 'center' }}>
+                                            <button className="btn btn-sm" onClick={(e) => { e.stopPropagation(); handleClone(p.id!); }}
+                                                title="Nhân bản" style={{ fontSize: '0.7rem', padding: '0.15rem 0.4rem', color: '#2563eb', marginRight: 4 }}>📋</button>
                                             <button className="btn btn-sm" onClick={(e) => { e.stopPropagation(); handleDelete(p.id!); }}
                                                 style={{ fontSize: '0.7rem', padding: '0.15rem 0.4rem', color: '#ef4444' }}>🗑️</button>
                                         </td>

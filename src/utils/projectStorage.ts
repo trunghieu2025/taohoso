@@ -60,6 +60,10 @@ export interface Project {
     sessionIds: number[];
     bundleSessionIds: string[];
 
+    // Deadline
+    deadline?: string;      // ISO date string for submission deadline
+    deadlineLabel?: string; // e.g. "Hạn nộp hồ sơ"
+
     // Full form data (all fields from source form)
     formData?: Record<string, string>;
     formLabels?: Record<string, string>;
@@ -172,6 +176,18 @@ export async function deleteProject(id: number): Promise<void> {
         const req = tx.objectStore(STORE_PROJECTS).delete(id);
         req.onsuccess = () => resolve();
         req.onerror = () => reject(req.error);
+    });
+}
+
+/** Clone a project — creates a copy with "(Bản sao)" suffix */
+export async function cloneProject(id: number): Promise<number> {
+    const original = await loadProject(id);
+    if (!original) throw new Error('Project not found');
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { id: _id, createdAt: _ca, updatedAt: _ua, ...rest } = original;
+    return saveProject({
+        ...rest,
+        name: original.name + ' (Bản sao)',
     });
 }
 
