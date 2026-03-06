@@ -245,15 +245,24 @@ export function createProjectFromFormData(
     sessionId?: number,
     labels?: Record<string, string>,
 ): Omit<Project, 'id' | 'createdAt' | 'updatedAt'> {
+    // Helper: find first non-empty value matching any of the key patterns
+    const find = (patterns: RegExp[]): string => {
+        for (const p of patterns) {
+            const key = Object.keys(data).find(k => p.test(k) && data[k]?.trim());
+            if (key) return data[key].trim();
+        }
+        return '';
+    };
+
     return {
-        name: data['TÊN_CT'] || data['TÊN_CÔNG_TRÌNH'] || data['CÔNG_TRÌNH'] || 'Dự án mới',
-        year: data['NĂM'] || new Date().getFullYear().toString(),
-        location: data['ĐỊA_CHỈ'] || '',
+        name: find([/TÊN_CT/i, /TÊN_CÔNG_TRÌNH/i, /CÔNG_TRÌNH/i, /cải_tạo/i, /sửa_chữa/i]) || 'Dự án mới',
+        year: find([/^NĂM$/i]) || new Date().getFullYear().toString(),
+        location: find([/ĐỊA_CHỈ/i, /ĐỊA_ĐIỂM/i, /xã/i, /huyện/i, /tỉnh/i, /PHƯỜNG/i]),
         status: 'new',
-        totalAmount: data['SỐ_TIỀN'] || '',
-        amountInWords: data['ST_BẰNG_CHỮ'] || '',
-        fundingSource: data['NGUỒN_KP'] || data['NGUỒN_KINH_PHÍ'] || '',
-        contractorName: data['TÊN_NHÀ_THẦU'] || '',
+        totalAmount: find([/SỐ_TIỀN/i, /GIÁ_TRỊ/i, /KINH_PHÍ/i, /10\.256/i, /đồng/i]),
+        amountInWords: find([/ST_BẰNG_CHỮ/i, /BẰNG_CHỮ/i]),
+        fundingSource: find([/NGUỒN_KP/i, /NGUỒN_KINH_PHÍ/i, /NGÂN_SÁCH/i]),
+        contractorName: find([/TÊN_NHÀ_THẦU/i, /NHÀ_THẦU/i, /ĐƠN_VỊ_THI_CÔNG/i, /tư_vấn/i, /ĐẠI_DIỆN/i]),
         checklist: DEFAULT_CHECKLIST.map(c => ({ ...c })),
         milestones: DEFAULT_MILESTONES.map(m => ({ ...m })),
         customFields: [],
