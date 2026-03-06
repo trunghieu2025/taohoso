@@ -21,6 +21,17 @@ export default function Footer() {
                         <ul className="footer-links">
                             <li><Link to="/hop-dong-thue-nha">Hợp đồng thuê nhà</Link></li>
                             <li><Link to="/dien-form-ct01">Điền form CT01</Link></li>
+                            <li><Link to="/hoa-don-ban-hang">Hoá đơn bán hàng</Link></li>
+                            <li><Link to="/ho-so-sua-chua">Tự động hóa hồ sơ</Link></li>
+                            <li><Link to="/goi-mau">Gói mẫu nhiều file</Link></li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h4 className="footer-title">Quản lý</h4>
+                        <ul className="footer-links">
+                            <li><Link to="/quan-ly-du-an">Quản lý dự án</Link></li>
+                            <li><Link to="/danh-ba-nha-thau">Danh bạ nhà thầu</Link></li>
                         </ul>
                     </div>
 
