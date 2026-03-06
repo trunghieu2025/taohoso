@@ -53,6 +53,22 @@ export default function Header() {
               <Link to="/hoa-don-ban-hang" onClick={() => setMobileOpen(false)}>
                 🧾 Hoá đơn bán hàng
               </Link>
+              <Link to="/ho-so-sua-chua" onClick={() => setMobileOpen(false)}>
+                🏗️ Tự động hóa hồ sơ
+              </Link>
+              <Link to="/goi-mau" onClick={() => setMobileOpen(false)}>
+                📦 Gói mẫu nhiều file
+              </Link>
+              <div style={{ borderTop: '1px solid #e2e8f0', margin: '0.25rem 0' }} />
+              <Link to="/quan-ly-du-an" onClick={() => setMobileOpen(false)}>
+                📊 Quản lý dự án
+              </Link>
+              <Link to="/danh-ba-nha-thau" onClick={() => setMobileOpen(false)}>
+                📋 Danh bạ nhà thầu
+              </Link>
+              <Link to="/tra-cuu-du-an" onClick={() => setMobileOpen(false)}>
+                🔍 Tra cứu dự án
+              </Link>
             </div>
           </div>
 

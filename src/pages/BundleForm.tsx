@@ -1,0 +1,1036 @@
+import { useState, useRef, ChangeEvent, useCallback, useEffect } from 'react';
+import {
+    scanDuplicateTexts,
+    extractTags,
+    createTemplateWithTags,
+    fillTemplate,
+    renderDocxPreview,
+} from '../utils/militaryDocGenerator';
+import type { ScanResult } from '../utils/militaryDocGenerator';
+import { FormInput } from '../components/FormField';
+import ScanReviewModal from '../components/ScanReviewModal';
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
+import html2pdf from 'html2pdf.js';
+import { scanWordTables, fillWordTable, calculateTableData } from '../utils/wordTableUtils';
+import type { TableInfo, TableConfig, TableColumn } from '../utils/wordTableUtils';
+import TableSetupModal from '../components/TableSetupModal';
+import TableEditor from '../components/TableEditor';
+import FieldSelectorModal from '../components/FieldSelectorModal';
+import { numberToVietnamese } from '../utils/numberToVietnamese';
+import { useNavigate } from 'react-router-dom';
+import { saveProject, createProjectFromFormData } from '../utils/projectStorage';
+
+/* ── Types ── */
+interface BundleFile {
+    name: string;
+    folder: string;
+    buffer: ArrayBuffer;
+    tags: string[];
+    templateBuffer: ArrayBuffer;
+    selected: boolean;
+}
+
+interface BundleSession {
+    id: string;
+    name: string;
+    date: string;
+    data: Record<string, string>;
+    labels: Record<string, string>;
+    allTags: string[];
+    fileNames: string[];
+}
+
+type FormChangeEvent = ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>;
+
+/* ── Guide HTML ── */
+const GUIDE_HTML = `
+<h2 style="color:#0369a1;margin:0 0 0.75rem;font-size:1.3rem">📦 Hướng dẫn Gói mẫu nhiều file</h2>
+
+<div style="background:#f0f9ff;border-radius:8px;padding:0.75rem;margin-bottom:1rem;border-left:4px solid #0ea5e9">
+<b style="color:#0369a1">💡 Tính năng này dùng để làm gì?</b><br>
+Khi làm hồ sơ dự án, bạn có <b>nhiều file Word</b> (HĐ giám sát, HĐ quản lý, BB thương thảo, QĐ, Bìa HĐ...) cùng chia sẻ <b>dữ liệu giống nhau</b> (tên công trình, nhà thầu, số tiền...). Thay vì mở từng file để sửa, bạn <b>điền 1 lần → xuất tất cả</b>.
+</div>
+
+<h3 style="color:#1e293b;margin:0.75rem 0 0.4rem;font-size:1.05rem">📌 Bước 1: Upload file</h3>
+<table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:0.5rem">
+<tr style="background:#e0f2fe"><td style="padding:6px;border:1px solid #bae6fd;width:40%"><b>📄 Thêm file lẻ</b></td><td style="padding:6px;border:1px solid #bae6fd">Chọn từng file .docx riêng lẻ</td></tr>
+<tr><td style="padding:6px;border:1px solid #bae6fd"><b>📁 Thêm thư mục</b></td><td style="padding:6px;border:1px solid #bae6fd">Chọn cả thư mục → tự lọc file .docx</td></tr>
+</table>
+<div style="background:#fef3c7;padding:0.5rem;border-radius:6px;font-size:13px;margin-bottom:0.5rem">
+<b>Ví dụ:</b> Bạn có 3 thư mục: <code>Giám Sát/</code>, <code>QLDA/</code>, <code>Xây Lắp/</code><br>
+→ Bấm <b>📁 Thêm thư mục</b> 3 lần, mỗi lần chọn 1 thư mục<br>
+→ Hệ thống tự gộp tất cả file .docx lại (bỏ file trùng tên)
+</div>
+
+<h3 style="color:#1e293b;margin:0.75rem 0 0.4rem;font-size:1.05rem">📌 Bước 2: Quét & tạo form</h3>
+<p style="font-size:13px;margin:0 0 0.3rem">Khi có ≥2 file → bấm <b style="color:#10b981">🔍 Quét & tạo form</b></p>
+<div style="background:#fef3c7;padding:0.5rem;border-radius:6px;font-size:13px;margin-bottom:0.5rem">
+<b>Ví dụ:</b> Hệ thống phát hiện <i>"Bộ Chỉ huy Công ty XY"</i> xuất hiện trong <b>cả 8 file</b><br>
+→ Tự động đề xuất tạo trường <b>TEN_CONG_TRINH</b><br>
+→ Bạn chỉ cần tích ✅ các trường cần tự động hóa
+</div>
+
+<h3 style="color:#1e293b;margin:0.75rem 0 0.4rem;font-size:1.05rem">📌 Bước 3: Điền form</h3>
+<p style="font-size:13px;margin:0 0 0.3rem">Nhập dữ liệu <b>1 lần</b> → áp dụng cho <b>TẤT CẢ</b> file cùng lúc.</p>
+<div style="background:#fef3c7;padding:0.5rem;border-radius:6px;font-size:13px;margin-bottom:0.5rem">
+<b>Ví dụ:</b><br>
+• Tên công trình: <i>"Sửa chữa nhà kho K59"</i><br>
+• Nhà thầu: <i>"Công ty TNHH ABC"</i><br>
+• Giá trị HĐ: <i>"1.500.000.000"</i><br>
+→ Tất cả 8 file HĐ, BB, QĐ đều tự điền cùng lúc!
+</div>
+
+<h3 style="color:#1e293b;margin:0.75rem 0 0.4rem;font-size:1.05rem">📌 Bước 4: Bảng dữ liệu (nếu có)</h3>
+<p style="font-size:13px;margin:0 0 0.3rem">Nếu file Word chứa <b>bảng</b> (bảng khối lượng, bảng dự toán...) → tự quét:</p>
+<div style="background:#fef3c7;padding:0.5rem;border-radius:6px;font-size:13px;margin-bottom:0.5rem">
+<b>Ví dụ:</b> File "Bảng khối lượng.docx" có bảng 6 cột:<br>
+<table style="width:100%;border-collapse:collapse;font-size:12px;margin:0.3rem 0">
+<tr style="background:#e2e8f0"><td style="padding:3px 6px;border:1px solid #cbd5e1"><b>TT</b></td><td style="padding:3px 6px;border:1px solid #cbd5e1"><b>Danh mục</b></td><td style="padding:3px 6px;border:1px solid #cbd5e1"><b>ĐVT</b></td><td style="padding:3px 6px;border:1px solid #cbd5e1"><b>Khối lượng</b></td><td style="padding:3px 6px;border:1px solid #cbd5e1"><b>Đơn giá</b></td><td style="padding:3px 6px;border:1px solid #cbd5e1"><b>Thành tiền</b></td></tr>
+<tr><td style="padding:3px 6px;border:1px solid #cbd5e1">1</td><td style="padding:3px 6px;border:1px solid #cbd5e1">Xi măng</td><td style="padding:3px 6px;border:1px solid #cbd5e1">Tấn</td><td style="padding:3px 6px;border:1px solid #cbd5e1">50</td><td style="padding:3px 6px;border:1px solid #cbd5e1">2.000.000</td><td style="padding:3px 6px;border:1px solid #cbd5e1"><i>tự tính</i></td></tr>
+</table>
+→ Cấu hình: TT = <b>Tự đánh số</b>, Thành tiền = <b>Tự tính</b> (KHỐI_LƯỢNG × ĐƠN_GIÁ)<br>
+→ <b>📊 Nhập từ Excel</b> để paste dữ liệu bảng nhanh
+</div>
+
+<h3 style="color:#1e293b;margin:0.75rem 0 0.4rem;font-size:1.05rem">📌 Bước 5: Xem trước & Xuất</h3>
+<table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:0.5rem">
+<tr style="background:#e0f2fe"><td style="padding:6px;border:1px solid #bae6fd;width:35%"><b>👁️ Xem trước</b></td><td style="padding:6px;border:1px solid #bae6fd">Bấm tab tên file, dùng <b>−/+</b> để zoom</td></tr>
+<tr><td style="padding:6px;border:1px solid #bae6fd"><b>📦 Xuất ZIP</b></td><td style="padding:6px;border:1px solid #bae6fd">Tải tất cả file đã chọn → 1 file ZIP</td></tr>
+<tr style="background:#e0f2fe"><td style="padding:6px;border:1px solid #bae6fd"><b>⬇️ Xuất riêng</b></td><td style="padding:6px;border:1px solid #bae6fd">Xuất từng file Word riêng lẻ</td></tr>
+<tr><td style="padding:6px;border:1px solid #bae6fd"><b>📄 Xuất PDF</b></td><td style="padding:6px;border:1px solid #bae6fd">Xuất file đang preview thành PDF</td></tr>
+</table>
+
+<h3 style="color:#1e293b;margin:0.75rem 0 0.4rem;font-size:1.05rem">📌 Quản lý dữ liệu</h3>
+<table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:0.5rem">
+<tr style="background:#dcfce7"><td style="padding:5px 8px;border:1px solid #86efac;width:35%"><b>💾 Sao lưu</b></td><td style="padding:5px 8px;border:1px solid #86efac">Xuất dữ liệu → file JSON (backup)</td></tr>
+<tr><td style="padding:5px 8px;border:1px solid #86efac"><b>📂 Khôi phục</b></td><td style="padding:5px 8px;border:1px solid #86efac">Tải lại từ file JSON đã backup</td></tr>
+<tr style="background:#dcfce7"><td style="padding:5px 8px;border:1px solid #86efac"><b>📊 Nhập từ Excel</b></td><td style="padding:5px 8px;border:1px solid #86efac">Map dữ liệu Excel vào form tự động</td></tr>
+<tr><td style="padding:5px 8px;border:1px solid #86efac"><b>💿 Lưu phiên</b></td><td style="padding:5px 8px;border:1px solid #86efac">Lưu session vào trình duyệt</td></tr>
+<tr style="background:#dcfce7"><td style="padding:5px 8px;border:1px solid #86efac"><b>📋 Nhân bản</b></td><td style="padding:5px 8px;border:1px solid #86efac">Copy session → session mới</td></tr>
+<tr><td style="padding:5px 8px;border:1px solid #86efac"><b>🗑️ Xóa tất cả</b></td><td style="padding:5px 8px;border:1px solid #86efac">Reset toàn bộ form</td></tr>
+</table>
+
+<div style="background:#fef2f2;border-radius:6px;padding:0.5rem;font-size:13px;border-left:4px solid #ef4444">
+<b style="color:#dc2626">⚠️ Lưu ý quan trọng:</b><br>
+• Chỉ hỗ trợ file <b>.docx</b> (Word 2007+), không hỗ trợ .doc cũ<br>
+• Dữ liệu xử lý <b>100% trên trình duyệt</b> — không upload lên server<br>
+• Nên <b>💾 Sao lưu</b> thường xuyên để không mất dữ liệu<br>
+• Dữ liệu <b>tự lưu mỗi 2 giây</b>, đóng trình duyệt mở lại vẫn còn
+</div>`;
+
+/* ── localStorage helpers ── */
+const STORAGE_KEY = 'bundle_sessions';
+const AUTOSAVE_KEY = 'bundle_autosave';
+const PRESETS_KEY = 'bundle_presets';
+
+interface FilePreset { id: string; name: string; date: string; fileNames: string[] }
+
+function saveBundleSessions(sessions: BundleSession[]) { localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions)); }
+function loadBundleSessions(): BundleSession[] { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch { return []; } }
+function savePresets(p: FilePreset[]) { localStorage.setItem(PRESETS_KEY, JSON.stringify(p)); }
+function loadPresets(): FilePreset[] { try { return JSON.parse(localStorage.getItem(PRESETS_KEY) || '[]'); } catch { return []; } }
+
+/* ── Number detection for auto Vietnamese text ── */
+const NUMBER_KEYWORDS = ['GIA_TRI', 'THANH_TIEN', 'TONG', 'SO_TIEN', 'GIA', 'CHI_PHI', 'KINH_PHI', 'DU_TOAN', 'PHI'];
+function isMoneyField(tag: string): boolean {
+    const upper = tag.toUpperCase();
+    return NUMBER_KEYWORDS.some(k => upper.includes(k));
+}
+
+export default function BundleForm() {
+    const navigate = useNavigate();
+    /* ── State ── */
+    const [files, setFiles] = useState<BundleFile[]>([]);
+    const [allTags, setAllTags] = useState<string[]>([]);
+    const [labels, setLabels] = useState<Record<string, string>>({});
+    const [data, setData] = useState<Record<string, string>>({});
+    const [stagedFiles, setStagedFiles] = useState<{ name: string; folder: string; buffer: ArrayBuffer }[]>([]);
+
+    // Scan
+    const [scanning, setScanning] = useState(false);
+    const [showScanModal, setShowScanModal] = useState(false);
+    const [scanResults, setScanResults] = useState<ScanResult[]>([]);
+
+    // Preview
+    const [activePreview, setActivePreview] = useState(0);
+    const [previewLoading, setPreviewLoading] = useState(false);
+    const [zoom, setZoom] = useState(50);
+    const previewRef = useRef<HTMLDivElement>(null);
+
+    // Refs
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const folderInputRef = useRef<HTMLInputElement>(null);
+    const excelInputRef = useRef<HTMLInputElement>(null);
+
+    // Table state
+    const [fileTableInfos, setFileTableInfos] = useState<Record<string, TableInfo[]>>({});
+    const [fileTableConfigs, setFileTableConfigs] = useState<Record<string, TableConfig>>({});
+    const [fileTableData, setFileTableData] = useState<Record<string, string[][]>>({});
+    const [showTableSetup, setShowTableSetup] = useState(false);
+    const [tableSetupFile, setTableSetupFile] = useState('');
+    const [activeTableFile, setActiveTableFile] = useState('');
+
+    // UI
+    const [step, setStep] = useState<'upload' | 'form'>('upload');
+    const [exporting, setExporting] = useState(false);
+    const [exportCount, setExportCount] = useState(0);
+    const [showGuide, setShowGuide] = useState(false);
+    const [savedSessions, setSavedSessions] = useState<BundleSession[]>([]);
+    const [showMobilePreview, setShowMobilePreview] = useState(false);
+    const [fieldSearch, setFieldSearch] = useState('');
+    const [dragOver, setDragOver] = useState(false);
+    const [presets, setPresets] = useState<FilePreset[]>([]);
+
+    // Load sessions + presets on mount
+    useEffect(() => { setSavedSessions(loadBundleSessions()); setPresets(loadPresets()); }, []);
+
+    // Auto-save
+    useEffect(() => {
+        if (step !== 'form' || allTags.length === 0) return;
+        const timer = setTimeout(() => {
+            const session: BundleSession = {
+                id: '__autosave__',
+                name: 'Tự động lưu',
+                date: new Date().toISOString(),
+                data, labels, allTags,
+                fileNames: files.map(f => f.name),
+            };
+            localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(session));
+        }, 2000);
+        return () => clearTimeout(timer);
+    }, [data, step, allTags, labels, files]);
+
+    /* ── Upload (accumulative) ── */
+    const handleUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+        const fileList = e.target.files;
+        if (!fileList || fileList.length === 0) return;
+        const newFiles: { name: string; folder: string; buffer: ArrayBuffer }[] = [];
+        for (let i = 0; i < fileList.length; i++) {
+            const f = fileList[i];
+            if (!f.name.endsWith('.docx') || f.name.startsWith('~')) continue;
+            const buf = await f.arrayBuffer();
+            const relPath = (f as any).webkitRelativePath || '';
+            const folder = relPath ? relPath.split('/').slice(0, -1).join('/') : '';
+            newFiles.push({ name: f.name, folder, buffer: buf });
+        }
+        if (newFiles.length === 0) { alert('Không tìm thấy file .docx nào.'); return; }
+        setStagedFiles(prev => {
+            const existing = new Set(prev.map(f => f.name));
+            const unique = newFiles.filter(f => !existing.has(f.name));
+            if (unique.length < newFiles.length) alert(`Bỏ qua ${newFiles.length - unique.length} file trùng tên.`);
+            return [...prev, ...unique];
+        });
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        if (folderInputRef.current) folderInputRef.current.value = '';
+    };
+
+    /* ── Drag & Drop ── */
+    const handleDrop = async (e: React.DragEvent) => {
+        e.preventDefault();
+        setDragOver(false);
+        const items = e.dataTransfer.items;
+        const newFiles: { name: string; folder: string; buffer: ArrayBuffer }[] = [];
+        for (let i = 0; i < items.length; i++) {
+            const entry = items[i].webkitGetAsEntry?.();
+            if (entry) {
+                const files = await readEntry(entry);
+                newFiles.push(...files);
+            } else {
+                const f = items[i].getAsFile();
+                if (f && f.name.endsWith('.docx') && !f.name.startsWith('~')) {
+                    newFiles.push({ name: f.name, folder: '', buffer: await f.arrayBuffer() });
+                }
+            }
+        }
+        if (newFiles.length === 0) { alert('Không tìm thấy file .docx nào.'); return; }
+        setStagedFiles(prev => {
+            const existing = new Set(prev.map(f => f.name));
+            const unique = newFiles.filter(f => !existing.has(f.name));
+            if (unique.length < newFiles.length) alert(`Bỏ qua ${newFiles.length - unique.length} file trùng tên.`);
+            return [...prev, ...unique];
+        });
+    };
+
+    const readEntry = async (entry: any): Promise<{ name: string; folder: string; buffer: ArrayBuffer }[]> => {
+        if (entry.isFile) {
+            return new Promise(resolve => {
+                entry.file(async (f: File) => {
+                    if (f.name.endsWith('.docx') && !f.name.startsWith('~')) {
+                        resolve([{ name: f.name, folder: entry.fullPath.replace('/' + f.name, '').replace(/^\//, ''), buffer: await f.arrayBuffer() }]);
+                    } else resolve([]);
+                });
+            });
+        }
+        if (entry.isDirectory) {
+            const reader = entry.createReader();
+            return new Promise(resolve => {
+                reader.readEntries(async (entries: any[]) => {
+                    const all = await Promise.all(entries.map(readEntry));
+                    resolve(all.flat());
+                });
+            });
+        }
+        return [];
+    };
+
+    const removeStagedFile = (idx: number) => setStagedFiles(prev => prev.filter((_, i) => i !== idx));
+
+    /* ── Scan ── */
+    const handleStartScan = () => {
+        if (stagedFiles.length === 0) return;
+        setScanning(true);
+        const allScanResults = new Map<string, ScanResult>();
+        const crossFileValues = new Map<string, Set<string>>();
+        for (const f of stagedFiles) {
+            const results = scanDuplicateTexts(f.buffer);
+            for (const r of results) {
+                const existing = allScanResults.get(r.text);
+                if (existing) {
+                    existing.count += r.count;
+                    existing.locations.push(...r.locations.map(l => `[${f.name}] ${l}`));
+                } else {
+                    allScanResults.set(r.text, { ...r, locations: r.locations.map(l => `[${f.name}] ${l}`) });
+                }
+                if (!crossFileValues.has(r.text)) crossFileValues.set(r.text, new Set());
+                crossFileValues.get(r.text)!.add(f.name);
+            }
+        }
+        // Set crossFileCount and boost score for cross-file values
+        for (const [text, fns] of crossFileValues) {
+            const entry = allScanResults.get(text);
+            if (entry) {
+                entry.crossFileCount = fns.size;
+                if (fns.size > 1) {
+                    // Cross-file values are much more likely to be real data
+                    entry.dataScore = Math.min(100, entry.dataScore + 20);
+                    entry.category = entry.dataScore >= 50 ? 'data' : 'boilerplate';
+                    entry.selected = entry.category === 'data';
+                }
+            }
+        }
+        // Sort: cross-file data first, then single-file, by score
+        const sorted = [...allScanResults.values()].sort((a, b) => {
+            const aCross = (a.crossFileCount || 1) > 1 ? 1 : 0;
+            const bCross = (b.crossFileCount || 1) > 1 ? 1 : 0;
+            if (aCross !== bCross) return bCross - aCross;
+            if (a.category !== b.category) return a.category === 'data' ? -1 : 1;
+            return b.dataScore - a.dataScore || b.count - a.count;
+        });
+        setScanResults(sorted);
+        setShowScanModal(true);
+        setScanning(false);
+    };
+
+    /* ── Scan confirm ── */
+    const handleScanConfirm = (selected: { text: string; tag: string; label: string }[]) => {
+        const replacements = selected.map(r => ({ text: r.text, tag: r.tag }));
+        if (replacements.length === 0) { alert('Vui lòng chọn ít nhất 1 trường.'); return; }
+        const bundleFiles: BundleFile[] = stagedFiles.map(f => {
+            const templateBuffer = createTemplateWithTags(f.buffer, replacements);
+            const tags = extractTags(templateBuffer);
+            return { name: f.name, folder: f.folder, buffer: f.buffer, templateBuffer, tags, selected: true };
+        });
+        const tagSet = new Set<string>();
+        bundleFiles.forEach(f => f.tags.forEach(t => tagSet.add(t)));
+        const newLabels: Record<string, string> = {};
+        for (const r of selected) newLabels[r.tag] = r.label || r.text.slice(0, 50);
+        setFiles(bundleFiles);
+        setAllTags([...tagSet].sort());
+        setLabels(newLabels);
+        setData({});
+        setShowScanModal(false);
+        setStep('form');
+
+        // Auto-scan tables in each file
+        const infos: Record<string, TableInfo[]> = {};
+        for (const bf of bundleFiles) {
+            try {
+                const tables = scanWordTables(bf.templateBuffer);
+                if (tables.length > 0) infos[bf.name] = tables;
+            } catch { /* skip files without tables */ }
+        }
+        setFileTableInfos(infos);
+        setFileTableConfigs({});
+        setFileTableData({});
+    };
+
+    /* ── Table config confirm ── */
+    const handleTableConfigConfirm = (config: TableConfig) => {
+        setFileTableConfigs(prev => ({ ...prev, [tableSetupFile]: config }));
+        // Init empty data rows based on table data
+        const tables = fileTableInfos[tableSetupFile];
+        if (tables && tables[config.tableIndex]) {
+            const t = tables[config.tableIndex];
+            const rowCount = Math.max(t.dataRowCount, 1);
+            const colCount = config.columns.length;
+            const initData = Array.from({ length: rowCount }, (_, ri) =>
+                Array.from({ length: colCount }, (_, ci) =>
+                    t.allData[ri]?.[ci] || ''
+                )
+            );
+            setFileTableData(prev => ({ ...prev, [tableSetupFile]: initData }));
+        }
+        setShowTableSetup(false);
+    };
+
+    /* ── Table data change ── */
+    const handleTableDataChange = (fileName: string, newData: string[][]) => {
+        setFileTableData(prev => ({ ...prev, [fileName]: newData }));
+    };
+
+    /* ── Fill template with both tags AND table data ── */
+    const fillFileComplete = (f: BundleFile): ArrayBuffer => {
+        // First fill text tags
+        let result = fillTemplate(f.templateBuffer, data);
+        // Then fill table if configured
+        const config = fileTableConfigs[f.name];
+        const tData = fileTableData[f.name];
+        if (config && tData) {
+            const calculated = calculateTableData(tData, config.columns);
+            result = fillWordTable(result, config.tableIndex, calculated);
+        }
+        return result;
+    };
+
+    /* ── Form with auto number-to-text ── */
+    const handleChange = useCallback((e: FormChangeEvent) => {
+        const { name, value } = e.target;
+        setData(prev => {
+            const next = { ...prev, [name]: value };
+            // Auto-fill "bằng chữ" field for money fields
+            if (isMoneyField(name)) {
+                const textTag = name + '_BANG_CHU';
+                const vn = numberToVietnamese(value);
+                if (vn) next[textTag] = vn;
+            }
+            return next;
+        });
+    }, []);
+
+    /* ── Preset management ── */
+    const handleSavePreset = () => {
+        const name = prompt('Đặt tên cho bộ file mẫu:');
+        if (!name) return;
+        const preset: FilePreset = { id: Date.now().toString(), name, date: new Date().toISOString(), fileNames: stagedFiles.map(f => f.name) };
+        const updated = [...presets, preset];
+        savePresets(updated);
+        setPresets(updated);
+        alert(`Đã lưu bộ mẫu "${name}" (${stagedFiles.length} file).`);
+    };
+
+    const handleDeletePreset = (id: string) => {
+        const updated = presets.filter(p => p.id !== id);
+        savePresets(updated);
+        setPresets(updated);
+    };
+
+    /* ── Batch export from Excel ── */
+    const handleBatchExport = async (e: ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || files.length === 0) return;
+        const selectedFiles = files.filter(f => f.selected);
+        if (selectedFiles.length === 0) { alert('Chọn ít nhất 1 file.'); return; }
+        setExporting(true);
+        try {
+            const XLSX = await import('xlsx');
+            const buf = await file.arrayBuffer();
+            const wb = XLSX.read(buf, { type: 'array' });
+            const ws = wb.Sheets[wb.SheetNames[0]];
+            const rows = XLSX.utils.sheet_to_json<Record<string, string>>(ws, { defval: '' });
+            if (rows.length === 0) { alert('File Excel rỗng.'); setExporting(false); return; }
+
+            const zip = new JSZip();
+            for (let ri = 0; ri < rows.length; ri++) {
+                const rowData: Record<string, string> = { ...data };
+                // Map Excel columns to tags
+                for (const tag of allTags) {
+                    const tagLower = tag.toLowerCase().replace(/_/g, ' ');
+                    for (const [col, val] of Object.entries(rows[ri])) {
+                        if (col.toLowerCase().includes(tagLower) || tagLower.includes(col.toLowerCase())) {
+                            rowData[tag] = String(val);
+                            if (isMoneyField(tag)) {
+                                const vn = numberToVietnamese(String(val));
+                                if (vn) rowData[tag + '_BANG_CHU'] = vn;
+                            }
+                            break;
+                        }
+                    }
+                }
+                const folderName = `Bo_${ri + 1}_${Object.values(rows[ri])[0] || ''}`
+                    .replace(/[^a-zA-Z0-9_\-\u00C0-\u024F\u1E00-\u1EFF ]/g, '').slice(0, 60);
+                for (const f of selectedFiles) {
+                    let filled = fillTemplate(f.templateBuffer, rowData);
+                    const config = fileTableConfigs[f.name];
+                    const tData = fileTableData[f.name];
+                    if (config && tData) {
+                        const calculated = calculateTableData(tData, config.columns);
+                        filled = fillWordTable(filled, config.tableIndex, calculated);
+                    }
+                    zip.file(`${folderName}/${f.name}`, new Blob([filled]));
+                }
+            }
+            const zipBlob = await zip.generateAsync({ type: 'blob' });
+            saveAs(zipBlob, `HangLoat_${rows.length}bo_${selectedFiles.length}file.zip`);
+            setExportCount(prev => prev + rows.length);
+            alert(`Đã xuất ${rows.length} bộ × ${selectedFiles.length} file = ${rows.length * selectedFiles.length} file!`);
+        } catch (err) { alert('Lỗi xuất hàng loạt: ' + (err as Error).message); }
+        setExporting(false);
+        if (e.target) e.target.value = '';
+    };
+
+    /* ── Preview ── */
+    const handlePreview = async (idx: number) => {
+        if (!files[idx] || !previewRef.current) return;
+        setActivePreview(idx);
+        setPreviewLoading(true);
+        try { await renderDocxPreview(files[idx].templateBuffer, data, previewRef.current); }
+        catch (err) { previewRef.current.innerHTML = `<p style="color:red">Lỗi: ${(err as Error).message}</p>`; }
+        setPreviewLoading(false);
+    };
+
+    /* ── File selection ── */
+    const toggleFileSelection = (idx: number) => setFiles(prev => prev.map((f, i) => i === idx ? { ...f, selected: !f.selected } : f));
+    const selectAll = () => setFiles(prev => prev.map(f => ({ ...f, selected: true })));
+    const deselectAll = () => setFiles(prev => prev.map(f => ({ ...f, selected: false })));
+
+    /* ── Clear all data ── */
+    const handleClearAll = () => {
+        if (!confirm('Xóa tất cả dữ liệu đã nhập?')) return;
+        setData({});
+    };
+
+    /* ── Clone session ── */
+    const handleClone = () => {
+        const session: BundleSession = {
+            id: Date.now().toString(),
+            name: `Bản sao ${new Date().toLocaleString('vi-VN')}`,
+            date: new Date().toISOString(),
+            data: { ...data }, labels: { ...labels }, allTags: [...allTags],
+            fileNames: files.map(f => f.name),
+        };
+        const sessions = [...savedSessions, session];
+        saveBundleSessions(sessions);
+        setSavedSessions(sessions);
+        alert('Đã nhân bản thành công!');
+    };
+
+    /* ── Save/Load sessions ── */
+    const handleSaveSession = () => {
+        const name = prompt('Đặt tên cho phiên này:');
+        if (!name) return;
+        const session: BundleSession = {
+            id: Date.now().toString(), name, date: new Date().toISOString(),
+            data: { ...data }, labels: { ...labels }, allTags: [...allTags],
+            fileNames: files.map(f => f.name),
+        };
+        const sessions = [...savedSessions, session];
+        saveBundleSessions(sessions);
+        setSavedSessions(sessions);
+        alert('Đã lưu!');
+    };
+
+    const handleLoadSession = (session: BundleSession) => {
+        setData(session.data);
+        setLabels(session.labels);
+        setAllTags(session.allTags);
+        alert(`Đã tải "${session.name}". Lưu ý: cần upload lại file template nếu chưa có.`);
+    };
+
+    const handleDeleteSession = (id: string) => {
+        const sessions = savedSessions.filter(s => s.id !== id);
+        saveBundleSessions(sessions);
+        setSavedSessions(sessions);
+    };
+
+    /* ── Backup/Restore JSON ── */
+    const handleBackup = () => {
+        const backup = { data, labels, allTags, fileNames: files.map(f => f.name), date: new Date().toISOString() };
+        const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+        saveAs(blob, `GoiMau_backup_${new Date().toISOString().slice(0, 10)}.json`);
+    };
+
+    const handleRestore = (e: ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+            try {
+                const backup = JSON.parse(reader.result as string);
+                if (backup.data) setData(backup.data);
+                if (backup.labels) setLabels(backup.labels);
+                if (backup.allTags) setAllTags(backup.allTags);
+                alert('Đã khôi phục dữ liệu! Cần upload lại file template nếu chưa có.');
+            } catch { alert('File JSON không hợp lệ.'); }
+        };
+        reader.readAsText(file);
+    };
+
+    /* ── Excel import ── */
+    const handleExcelImport = async (e: ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        try {
+            const XLSX = await import('xlsx');
+            const buf = await file.arrayBuffer();
+            const wb = XLSX.read(buf, { type: 'array' });
+            const ws = wb.Sheets[wb.SheetNames[0]];
+            const rows = XLSX.utils.sheet_to_json<Record<string, string>>(ws, { defval: '' });
+            if (rows.length === 0) { alert('File Excel rỗng.'); return; }
+            // Map first row values to tags
+            const firstRow = rows[0];
+            const newData: Record<string, string> = { ...data };
+            for (const tag of allTags) {
+                const tagLower = tag.toLowerCase().replace(/_/g, ' ');
+                for (const [col, val] of Object.entries(firstRow)) {
+                    if (col.toLowerCase().includes(tagLower) || tagLower.includes(col.toLowerCase())) {
+                        newData[tag] = String(val);
+                        break;
+                    }
+                }
+            }
+            setData(newData);
+            alert(`Đã nhập dữ liệu từ "${file.name}" (${Object.keys(firstRow).length} cột).`);
+        } catch (err) { alert('Lỗi đọc Excel: ' + (err as Error).message); }
+        if (excelInputRef.current) excelInputRef.current.value = '';
+    };
+
+    /* ── Export ZIP ── */
+    const handleExportZIP = async () => {
+        const selectedFiles = files.filter(f => f.selected);
+        if (selectedFiles.length === 0) { alert('Chọn ít nhất 1 file.'); return; }
+        setExporting(true);
+        try {
+            const zip = new JSZip();
+            for (const f of selectedFiles) {
+                const filled = fillFileComplete(f);
+                const blob = new Blob([filled], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+                zip.file(f.folder ? `${f.folder}/${f.name}` : f.name, blob);
+            }
+            const zipBlob = await zip.generateAsync({ type: 'blob' });
+            saveAs(zipBlob, `GoiMau_${selectedFiles.length}file_${new Date().toISOString().slice(0, 10)}.zip`);
+            setExportCount(prev => prev + 1);
+        } catch (err) { alert('Lỗi xuất: ' + (err as Error).message); }
+        setExporting(false);
+    };
+
+    /* ── Export single ── */
+    const handleExportSingle = (idx: number) => {
+        const f = files[idx];
+        if (!f) return;
+        const filled = fillFileComplete(f);
+        saveAs(new Blob([filled], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }), f.name);
+        setExportCount(prev => prev + 1);
+    };
+
+    /* ── Export PDF ── */
+    const handleExportPDF = async () => {
+        if (!previewRef.current) return;
+        setExporting(true);
+        try {
+            await html2pdf().set({
+                margin: 5, filename: `${files[activePreview]?.name || 'preview'}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+            }).from(previewRef.current).save();
+        } catch (err) { alert('Lỗi xuất PDF: ' + (err as Error).message); }
+        setExporting(false);
+    };
+
+    /* ── Save to project ── */
+    const [showFieldSelector, setShowFieldSelector] = useState(false);
+
+    const handleSaveToProject = () => {
+        setShowFieldSelector(true);
+    };
+
+    const handleFieldSelectConfirm = async (selectedKeys: string[], projectName: string) => {
+        setShowFieldSelector(false);
+        try {
+            const projectData = createProjectFromFormData(data, undefined, labels);
+            projectData.name = projectName;
+            projectData.selectedFields = selectedKeys;
+            projectData.bundleSessionIds = savedSessions.map(s => s.id);
+            const projectId = await saveProject(projectData);
+            alert('✅ Đã lưu vào dự án!');
+            navigate(`/du-an/${projectId}`);
+        } catch (err) {
+            alert('❌ Lỗi: ' + (err as Error).message);
+        }
+    };
+
+    /* ── Styles ── */
+    const S: React.CSSProperties = { marginBottom: '0.75rem', padding: '0.75rem', borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff' };
+    const btnSm: React.CSSProperties = { fontSize: '0.75rem', padding: '0.25rem 0.5rem', cursor: 'pointer' };
+    const selectedCount = files.filter(f => f.selected).length;
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
+    return (
+        <div className="app-layout" style={{ maxWidth: 1400, margin: '0 auto', padding: '0.75rem' }}>
+            {/* ── Header ── */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <div>
+                    <h1 style={{ fontSize: '1.3rem', fontWeight: 700, margin: 0, color: '#1e293b' }}>📦 Gói mẫu nhiều file</h1>
+                    <p style={{ color: '#64748b', fontSize: '0.8rem', margin: 0 }}>
+                        Upload nhiều file Word → điền 1 lần → xuất tất cả
+                    </p>
+                </div>
+                <button className="btn btn-sm" onClick={() => setShowGuide(true)} style={{ ...btnSm, background: '#dbeafe', color: '#1d4ed8' }}>
+                    ❓ Hướng dẫn
+                </button>
+            </div>
+
+            {/* ── Stats bar ── */}
+            {step === 'form' && (
+                <div style={{
+                    ...S, display: 'flex', gap: '1.5rem', flexWrap: 'wrap', alignItems: 'center',
+                    background: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)', borderColor: '#6ee7b7',
+                    fontSize: '0.85rem', padding: '0.5rem 1rem',
+                }}>
+                    <span>📄 <b>{files.length}</b> file</span>
+                    <span>📋 <b>{allTags.length}</b> trường</span>
+                    <span>📤 <b>{exportCount}</b> lần xuất</span>
+                    <span>✅ <b>{selectedCount}</b> file đã chọn</span>
+                </div>
+            )}
+
+            {/* ═══════ UPLOAD STEP ═══════ */}
+            {step === 'upload' && (
+                <div
+                    style={{
+                        ...S,
+                        background: dragOver
+                            ? 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)'
+                            : 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
+                        borderColor: dragOver ? '#3b82f6' : '#7dd3fc',
+                        borderStyle: dragOver ? 'dashed' : 'solid',
+                        borderWidth: dragOver ? 3 : 1,
+                        textAlign: 'center', padding: '2rem',
+                        transition: 'all 0.2s ease',
+                    }}
+                    onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+                    onDragLeave={() => setDragOver(false)}
+                    onDrop={handleDrop}
+                >
+                    <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>{dragOver ? '📥' : '📁'}</div>
+                    <h2 style={{ fontSize: '1.2rem', marginBottom: '0.5rem', color: '#0369a1' }}>
+                        {dragOver ? 'Thả file vào đây!' : 'Chọn file .docx'}
+                    </h2>
+                    <p style={{ color: '#64748b', marginBottom: '1rem', fontSize: '0.85rem' }}>
+                        Kéo thả file/thư mục vào đây, hoặc bấm nút bên dưới.
+                    </p>
+
+                    <input ref={fileInputRef} type="file" accept=".docx" multiple style={{ display: 'none' }} onChange={handleUpload} />
+                    {/* @ts-ignore */}
+                    <input ref={folderInputRef} type="file" accept=".docx" webkitdirectory="" multiple style={{ display: 'none' }} onChange={handleUpload} />
+
+                    <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                        <button className="btn btn-primary" onClick={() => fileInputRef.current?.click()} disabled={scanning}
+                            style={{ fontSize: '1rem', padding: '0.6rem 1.5rem' }}>📄 Thêm file lẻ</button>
+                        <button className="btn btn-primary" onClick={() => folderInputRef.current?.click()} disabled={scanning}
+                            style={{ fontSize: '1rem', padding: '0.6rem 1.5rem', background: '#7c3aed' }}>📁 Thêm thư mục</button>
+                        {stagedFiles.length >= 2 && (
+                            <button className="btn btn-primary" onClick={handleStartScan} disabled={scanning}
+                                style={{ fontSize: '1rem', padding: '0.6rem 1.5rem', background: '#10b981' }}>
+                                {scanning ? '⏳ Đang quét...' : `🔍 Quét & tạo form (${stagedFiles.length} file)`}
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Presets */}
+                    {presets.length > 0 && (
+                        <div style={{ marginTop: '1rem', textAlign: 'left', background: '#fff', borderRadius: 8, padding: '0.5rem', border: '1px solid #e0f2fe' }}>
+                            <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#0369a1', marginBottom: '0.3rem' }}>📦 Bộ mẫu đã lưu</div>
+                            {presets.map(p => (
+                                <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem', padding: '0.15rem 0' }}>
+                                    <span style={{ flex: 1, color: '#334155' }}>📄 {p.name} ({p.fileNames.length} file)</span>
+                                    <button onClick={() => handleDeletePreset(p.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '0.7rem' }}>✕</button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    {stagedFiles.length >= 2 && (
+                        <div style={{ marginTop: '0.5rem' }}>
+                            <button className="btn btn-sm" onClick={handleSavePreset}
+                                style={{ fontSize: '0.8rem', padding: '0.25rem 0.75rem', background: '#fef3c7', color: '#92400e' }}>
+                                💾 Lưu bộ file mẫu
+                            </button>
+                        </div>
+                    )}
+
+                    {stagedFiles.length > 0 && (
+                        <div style={{ marginTop: '1.5rem', textAlign: 'left', background: '#fff', borderRadius: 8, padding: '0.75rem', border: '1px solid #bae6fd' }}>
+                            <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem', color: '#0369a1' }}>
+                                📑 Đã chọn {stagedFiles.length} file:
+                            </div>
+                            {stagedFiles.map((f, i) => (
+                                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.3rem 0.5rem', fontSize: '0.85rem', borderRadius: 4, background: i % 2 === 0 ? '#f0f9ff' : 'transparent' }}>
+                                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        📄 {f.name}
+                                        {f.folder && <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}> ({f.folder})</span>}
+                                    </span>
+                                    <button onClick={() => removeStagedFile(i)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '0.9rem' }} title="Xóa">✕</button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    <div style={{ marginTop: '1rem', fontSize: '0.8rem', color: '#94a3b8' }}>💡 Bấm "Thêm file" nhiều lần để chọn từ các thư mục khác nhau</div>
+                </div>
+            )}
+
+            {/* ═══════ FORM STEP ═══════ */}
+            {step === 'form' && files.length > 0 && (
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+                    gap: '1rem',
+                }}>
+                    {/* ── LEFT COLUMN ── */}
+                    <div>
+                        {/* Data management panel */}
+                        <div style={{ ...S, background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)', borderColor: '#86efac' }}>
+                            <div style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.5rem', color: '#166534' }}>📊 Quản lý dữ liệu</div>
+                            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                                <button className="btn btn-sm" onClick={handleBackup} style={btnSm}>💾 Sao lưu</button>
+                                <label className="btn btn-sm" style={{ ...btnSm, display: 'inline-flex', alignItems: 'center', cursor: 'pointer' }}>
+                                    📂 Khôi phục
+                                    <input type="file" accept=".json" style={{ display: 'none' }} onChange={handleRestore} />
+                                </label>
+                                <label className="btn btn-sm" style={{ ...btnSm, display: 'inline-flex', alignItems: 'center', cursor: 'pointer' }}>
+                                    📊 Nhập từ Excel
+                                    <input ref={excelInputRef} type="file" accept=".xlsx,.xls" style={{ display: 'none' }} onChange={handleExcelImport} />
+                                </label>
+                                <button className="btn btn-sm" onClick={handleSaveSession} style={btnSm}>💿 Lưu phiên</button>
+                                <button className="btn btn-sm" onClick={handleClone} style={btnSm}>📋 Nhân bản</button>
+                                <button className="btn btn-sm" onClick={handleClearAll} style={{ ...btnSm, color: '#ef4444' }}>🗑️ Xóa tất cả</button>
+                            </div>
+                            {savedSessions.length > 0 && (
+                                <div style={{ marginTop: '0.5rem', borderTop: '1px solid #bbf7d0', paddingTop: '0.5rem' }}>
+                                    <div style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.3rem' }}>📁 Phiên đã lưu ({savedSessions.length})</div>
+                                    {savedSessions.map(s => (
+                                        <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem', padding: '0.2rem 0' }}>
+                                            <span style={{ flex: 1, cursor: 'pointer', color: '#166534' }} onClick={() => handleLoadSession(s)}>
+                                                📄 {s.name} <span style={{ color: '#94a3b8', fontSize: '0.7rem' }}>({new Date(s.date).toLocaleDateString('vi-VN')})</span>
+                                            </span>
+                                            <button onClick={() => handleDeleteSession(s.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '0.8rem' }}>✕</button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* File list */}
+                        <div style={{ ...S, background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)', borderColor: '#fbbf24' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>📑 Danh sách file ({files.length})</span>
+                                <div style={{ display: 'flex', gap: '0.3rem' }}>
+                                    <button className="btn btn-sm" onClick={selectAll} style={btnSm}>✅ Tất cả</button>
+                                    <button className="btn btn-sm" onClick={deselectAll} style={btnSm}>⬜ Bỏ chọn</button>
+                                </div>
+                            </div>
+                            {files.map((f, i) => (
+                                <div key={i} style={{
+                                    display: 'flex', alignItems: 'center', gap: '0.4rem',
+                                    padding: '0.3rem 0.4rem', borderRadius: 6,
+                                    background: activePreview === i ? '#fef9c3' : 'transparent',
+                                    cursor: 'pointer', fontSize: '0.8rem',
+                                }} onClick={() => handlePreview(i)}>
+                                    <input type="checkbox" checked={f.selected} onChange={() => toggleFileSelection(i)} onClick={e => e.stopPropagation()} style={{ cursor: 'pointer' }} />
+                                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>📄 {f.name}</span>
+                                    <span style={{ fontSize: '0.65rem', color: '#64748b' }}>{f.tags.length}t</span>
+                                    <button className="btn btn-sm" onClick={(e) => { e.stopPropagation(); handleExportSingle(i); }}
+                                        style={{ fontSize: '0.6rem', padding: '0.1rem 0.2rem' }} title="Xuất riêng">⬇️</button>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Export buttons */}
+                        <div style={{ ...S, display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                            <button className="btn btn-primary" onClick={handleExportZIP} disabled={exporting || selectedCount === 0}
+                                style={{ fontSize: '0.9rem', padding: '0.5rem 1rem' }}>
+                                {exporting ? '⏳...' : `📦 Xuất ZIP (${selectedCount}/${files.length})`}
+                            </button>
+                            <label className="btn btn-secondary" style={{ fontSize: '0.85rem', padding: '0.5rem 1rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}>
+                                🚀 Xuất hàng loạt
+                                <input type="file" accept=".xlsx,.xls" style={{ display: 'none' }} onChange={handleBatchExport} />
+                            </label>
+                            <button className="btn btn-secondary" onClick={handleExportPDF} disabled={exporting}
+                                style={{ fontSize: '0.85rem', padding: '0.5rem 1rem' }}>📄 Xuất PDF</button>
+                            <button className="btn btn-secondary" onClick={handleSaveToProject}
+                                style={{ fontSize: '0.85rem', padding: '0.5rem 1rem', background: '#eff6ff', borderColor: '#93c5fd', color: '#2563eb' }}>
+                                📊 Lưu vào dự án
+                            </button>
+                            <button className="btn btn-secondary" onClick={() => { setStep('upload'); setFiles([]); setStagedFiles([]); }}
+                                style={{ fontSize: '0.85rem' }}>↩️ Upload lại</button>
+                            {isMobile && (
+                                <button className="btn btn-sm" onClick={() => setShowMobilePreview(!showMobilePreview)}
+                                    style={{ ...btnSm, background: '#dbeafe' }}>{showMobilePreview ? '📋 Form' : '👁️ Preview'}</button>
+                            )}
+                        </div>
+
+                        {/* Form fields (hide on mobile when preview is shown) */}
+                        {(!isMobile || !showMobilePreview) && (
+                            <div style={S}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                    <span style={{ fontSize: '0.95rem', fontWeight: 600, color: '#4f46e5' }}>
+                                        📋 Trường dữ liệu ({allTags.length})
+                                    </span>
+                                    {allTags.length > 5 && (
+                                        <input type="text" value={fieldSearch} onChange={e => setFieldSearch(e.target.value)}
+                                            placeholder="🔍 Tìm trường..."
+                                            style={{ fontSize: '0.8rem', padding: '0.25rem 0.5rem', border: '1px solid #c7d2fe', borderRadius: 6, width: 150 }} />
+                                    )}
+                                </div>
+                                {allTags
+                                    .filter(tag => !fieldSearch || (labels[tag] || tag).toLowerCase().includes(fieldSearch.toLowerCase()))
+                                    .map(tag => (
+                                        <div key={tag}>
+                                            <FormInput label={labels[tag] || tag.replace(/_/g, ' ')} name={tag}
+                                                value={data[tag] || ''} onChange={handleChange}
+                                                placeholder={`Nhập ${(labels[tag] || tag).toLowerCase()}`} />
+                                            {isMoneyField(tag) && data[tag] && (
+                                                <div style={{ fontSize: '0.75rem', color: '#059669', marginTop: '-0.3rem', marginBottom: '0.4rem', paddingLeft: '0.5rem', fontStyle: 'italic' }}>
+                                                    💰 {numberToVietnamese(data[tag])}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                            </div>
+                        )}
+
+                        {/* Table data section */}
+                        {(!isMobile || !showMobilePreview) && Object.keys(fileTableInfos).length > 0 && (
+                            <div style={{ ...S, background: 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)', borderColor: '#a78bfa' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                    <span style={{ fontWeight: 600, fontSize: '0.9rem', color: '#5b21b6' }}>
+                                        📊 Bảng dữ liệu ({Object.keys(fileTableInfos).length} file có bảng)
+                                    </span>
+                                </div>
+
+                                {/* File tabs for tables */}
+                                <div style={{ display: 'flex', gap: '0.2rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+                                    {Object.keys(fileTableInfos).map(fn => (
+                                        <button key={fn}
+                                            className={`btn btn-sm ${activeTableFile === fn ? 'btn-primary' : ''}`}
+                                            onClick={() => setActiveTableFile(fn)}
+                                            style={{ fontSize: '0.7rem', padding: '0.15rem 0.4rem' }}>
+                                            {fn.length > 20 ? fn.slice(0, 18) + '…' : fn}
+                                            {fileTableConfigs[fn] ? ' ✅' : ' ⚙️'}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {/* Active file table */}
+                                {activeTableFile && fileTableInfos[activeTableFile] && (
+                                    <div>
+                                        {!fileTableConfigs[activeTableFile] ? (
+                                            <div style={{ textAlign: 'center', padding: '1rem' }}>
+                                                <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '0.5rem' }}>
+                                                    Tìm thấy {fileTableInfos[activeTableFile].length} bảng trong file này.
+                                                </p>
+                                                <button className="btn btn-primary"
+                                                    onClick={() => { setTableSetupFile(activeTableFile); setShowTableSetup(true); }}
+                                                    style={{ fontSize: '0.85rem', padding: '0.4rem 1rem' }}>
+                                                    ⊞ Cấu hình bảng
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div>
+                                                <div style={{ display: 'flex', gap: '0.3rem', marginBottom: '0.5rem' }}>
+                                                    <button className="btn btn-sm"
+                                                        onClick={() => { setTableSetupFile(activeTableFile); setShowTableSetup(true); }}
+                                                        style={btnSm}>⚙️ Cấu hình lại</button>
+                                                </div>
+                                                <TableEditor
+                                                    config={fileTableConfigs[activeTableFile]}
+                                                    data={fileTableData[activeTableFile] || []}
+                                                    onChange={(d) => handleTableDataChange(activeTableFile, d)}
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* ── RIGHT COLUMN: Preview ── */}
+                    {(!isMobile || showMobilePreview) && (
+                        <div style={{ position: isMobile ? 'static' : 'sticky', top: '1rem', alignSelf: 'start' }}>
+                            {/* Tab selector */}
+                            <div style={{ display: 'flex', gap: '0.2rem', marginBottom: '0.4rem', flexWrap: 'wrap', overflowX: 'auto' }}>
+                                {files.map((f, i) => (
+                                    <button key={i} className={`btn btn-sm ${activePreview === i ? 'btn-primary' : ''}`}
+                                        onClick={() => handlePreview(i)}
+                                        style={{ fontSize: '0.65rem', padding: '0.15rem 0.4rem', opacity: f.selected ? 1 : 0.5, whiteSpace: 'nowrap' }}
+                                        title={f.name}>
+                                        {f.name.length > 18 ? f.name.slice(0, 16) + '…' : f.name}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Zoom controls */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem', fontSize: '0.8rem' }}>
+                                <span style={{ fontWeight: 600 }}>👁️ Xem trước</span>
+                                <button className="btn btn-sm" onClick={() => setZoom(z => Math.max(20, z - 10))} style={btnSm}>−</button>
+                                <span style={{ minWidth: 35, textAlign: 'center' }}>{zoom}%</span>
+                                <button className="btn btn-sm" onClick={() => setZoom(z => Math.min(100, z + 10))} style={btnSm}>+</button>
+                                {previewLoading && <span style={{ color: '#64748b' }}>⏳</span>}
+                            </div>
+
+                            <div style={{ ...S, height: isMobile ? '60vh' : 'calc(100vh - 200px)', overflow: 'auto' }}>
+                                <div ref={previewRef} style={{ zoom: zoom / 100 }} />
+                                {!previewRef.current?.innerHTML && (
+                                    <div style={{ textAlign: 'center', color: '#94a3b8', padding: '2rem' }}>Bấm vào tên file để xem trước</div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* ── Scan Modal ── */}
+            {showScanModal && (
+                <ScanReviewModal results={scanResults} onConfirm={handleScanConfirm}
+                    onCancel={() => { setShowScanModal(false); setStep('upload'); }} />
+            )}
+
+            {/* ── Table Setup Modal ── */}
+            {showTableSetup && fileTableInfos[tableSetupFile] && (
+                <TableSetupModal
+                    tables={fileTableInfos[tableSetupFile]}
+                    onConfirm={handleTableConfigConfirm}
+                    onClose={() => setShowTableSetup(false)}
+                />
+            )}
+
+            {/* ── Guide Modal ── */}
+            {showGuide && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999 }}
+                    onClick={() => setShowGuide(false)}>
+                    <div style={{ background: '#fff', borderRadius: 12, padding: '1.5rem', maxWidth: 750, width: '92%', maxHeight: '85vh', overflow: 'auto' }}
+                        onClick={e => e.stopPropagation()}>
+                        <div dangerouslySetInnerHTML={{ __html: GUIDE_HTML }} />
+                        <div style={{ textAlign: 'right', marginTop: '1rem' }}>
+                            <button className="btn btn-primary" onClick={() => setShowGuide(false)}>Đóng</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Field Selector Modal */}
+            {showFieldSelector && (
+                <FieldSelectorModal
+                    fields={Object.keys(data).filter(k => data[k]?.trim()).map(k => ({
+                        key: k,
+                        label: labels[k] || k.replace(/_/g, ' '),
+                        value: data[k] || '',
+                    }))}
+                    defaultName={data['TÊN_CT'] || data['TÊN_CÔNG_TRÌNH'] || data['CÔNG_TRÌNH'] || ''}
+                    onConfirm={handleFieldSelectConfirm}
+                    onCancel={() => setShowFieldSelector(false)}
+                />
+            )}
+        </div>
+    );
+}

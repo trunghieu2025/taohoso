@@ -13,6 +13,10 @@ export interface ScanResult {
     suggestedTag: string; // Auto-generated tag name
     suggestedLabel: string; // Human-readable label
     selected: boolean;   // Whether user wants this as a placeholder
+    category: 'data' | 'boilerplate'; // Smart classification
+    dataScore: number;   // 0-100 likelihood of being real project data
+    crossFileCount?: number; // How many different files contain this value
+    contextLabel?: string; // Label extracted from surrounding context (e.g. "Đại diện")
 }
 
 /* ── Common Vietnamese stop words to ignore ── */
@@ -30,10 +34,15 @@ const STOP_WORDS = new Set([
 /**
  * Scan a raw .docx for duplicate text segments.
  * Returns text values appearing ≥2 times, filtered and sorted by frequency.
+ * 
+ * Enhanced: Also extracts sub-paragraph segments (split by : ; , tab)
+ * to detect values like names, phone numbers, addresses embedded in
+ * longer paragraphs.
  */
 export function scanDuplicateTexts(buffer: ArrayBuffer): ScanResult[] {
     const zip = new PizZip(buffer);
     const textSegments: { text: string; location: string }[] = [];
+    const contextLabels = new Map<string, string>(); // text → label
 
     // Parse document.xml
     const docXml = zip.file('word/document.xml')?.asText();
@@ -57,11 +66,12 @@ export function scanDuplicateTexts(buffer: ArrayBuffer): ScanResult[] {
             paraIdx++;
             const text = getTextFromParagraph(node, ns);
             if (text.trim()) {
-                textSegments.push({ text: text.trim(), location: `Dòng ${paraIdx}` });
+                const loc = `Dòng ${paraIdx}`;
+                textSegments.push({ text: text.trim(), location: loc });
+                extractSubSegments(text.trim(), loc, textSegments, contextLabels);
             }
         } else if (node.tagName === 'w:tbl' || node.localName === 'tbl') {
             tableIdx++;
-            // Extract from table rows/cells
             const rows = node.getElementsByTagNameNS(ns, 'tr');
             for (let r = 0; r < rows.length; r++) {
                 const cells = rows[r].getElementsByTagNameNS(ns, 'tc');
@@ -70,10 +80,9 @@ export function scanDuplicateTexts(buffer: ArrayBuffer): ScanResult[] {
                     for (let p = 0; p < paras.length; p++) {
                         const text = getTextFromParagraph(paras[p], ns);
                         if (text.trim()) {
-                            textSegments.push({
-                                text: text.trim(),
-                                location: `Bảng ${tableIdx}, dòng ${r + 1}, cột ${c + 1}`,
-                            });
+                            const loc = `Bảng ${tableIdx}, dòng ${r + 1}, cột ${c + 1}`;
+                            textSegments.push({ text: text.trim(), location: loc });
+                            extractSubSegments(text.trim(), loc, textSegments, contextLabels);
                         }
                     }
                 }
@@ -90,7 +99,7 @@ export function scanDuplicateTexts(buffer: ArrayBuffer): ScanResult[] {
         }
         const entry = countMap.get(key)!;
         entry.count++;
-        if (entry.locations.length < 5) { // limit location list
+        if (entry.locations.length < 5) {
             entry.locations.push(seg.location);
         }
     }
@@ -100,23 +109,176 @@ export function scanDuplicateTexts(buffer: ArrayBuffer): ScanResult[] {
     for (const [text, info] of countMap) {
         if (info.count < 2) continue;
         if (text.length < 3) continue;
-        if (/^\d+[.,]?\d*$/.test(text)) continue; // pure numbers
+        if (/^\d+[.,]?\d*$/.test(text)) continue;
         if (STOP_WORDS.has(text)) continue;
         if (STOP_WORDS.has(text.toLowerCase())) continue;
+
+        const score = computeDataScore(text);
+        const category = score >= 50 ? 'data' as const : 'boilerplate' as const;
+        const ctxLabel = contextLabels.get(text);
 
         results.push({
             text,
             count: info.count,
             locations: info.locations,
             suggestedTag: textToTag(text),
-            suggestedLabel: text.length > 30 ? text.slice(0, 30) + '...' : text,
-            selected: info.count >= 2 && text.length >= 4,
+            suggestedLabel: ctxLabel || (text.length > 30 ? text.slice(0, 30) + '...' : text),
+            selected: category === 'data' && text.length >= 4,
+            category,
+            dataScore: score,
+            contextLabel: ctxLabel,
         });
     }
 
-    // Sort by count descending, then by text length descending
-    results.sort((a, b) => b.count - a.count || b.text.length - a.text.length);
+    // Sort: data first (by score desc), then boilerplate (by score desc)
+    results.sort((a, b) => {
+        if (a.category !== b.category) return a.category === 'data' ? -1 : 1;
+        return b.dataScore - a.dataScore || b.count - a.count;
+    });
     return results;
+}
+
+/**
+ * Score 0-100 how likely a text value is real project data vs boilerplate.
+ * High score = names, phone numbers, addresses, amounts
+ * Low score = article titles, legal headings, long standard clauses
+ */
+function computeDataScore(text: string): number {
+    let score = 50; // neutral start
+
+    // ── BONUSES (likely project data) ──
+
+    // Vietnamese name pattern (2-4 capitalized words with diacritics)
+    if (/^[A-ZÀ-Ỹ][a-zà-ỹ]+(\s+[A-ZÀ-Ỹ][a-zà-ỹ]+){1,4}$/.test(text)) score += 40;
+
+    // Phone number
+    if (/^0\d{2,3}[\s.-]?\d{3,4}[\s.-]?\d{3,4}$/.test(text)) score += 45;
+
+    // Tax ID / long number (10-14 digits)
+    if (/^\d{10,14}$/.test(text)) score += 35;
+
+    // Bank account pattern
+    if (/^\d{4}[.\s]?\d{4}[.\s]?\d{4,}/.test(text)) score += 35;
+
+    // Contains year pattern (2024, 2025, 2026)
+    if (/20\d{2}/.test(text) && text.length < 30) score += 10;
+
+    // Short values (likely specific data, not boilerplate)
+    if (text.length <= 25) score += 15;
+    if (text.length <= 15) score += 10;
+
+    // Contains "tỉnh", "huyện", "xã", "phường" (address)
+    if (/tỉnh|huyện|xã|phường|thành phố|quận|thị trấn/i.test(text) && text.length < 60) score += 20;
+
+    // Company name pattern
+    if (/Công ty|TNHH|CP|cổ phần|DNTN/i.test(text) && text.length < 80) score += 25;
+
+    // ── PENALTIES (likely boilerplate) ──
+
+    // Starts with "Điều" + number (article title)
+    if (/^Điều\s+\d+/i.test(text)) score -= 50;
+
+    // Starts with numbered section (1., 2., I., II., a), b))
+    if (/^(\d+\.|[IVX]+\.|[a-z]\))\s/i.test(text)) score -= 20;
+
+    // Very long text (>60 chars = likely paragraph/clause)
+    if (text.length > 60) score -= 25;
+    if (text.length > 100) score -= 20;
+    if (text.length > 200) score -= 15;
+
+    // Contains legal/standard phrases
+    const legalPhrases = [
+        'quy định', 'theo quy định', 'căn cứ', 'phù hợp với',
+        'tuân thủ', 'chịu trách nhiệm', 'có trách nhiệm', 'cam kết',
+        'điều khoản', 'thỏa thuận', 'hợp đồng này', 'hai bên',
+        'bên A', 'bên B', 'nghiệm thu', 'bàn giao', 'thanh toán',
+        'chất lượng', 'tiến độ', 'bảo hành', 'bảo hiểm',
+        'hiệu lực', 'tranh chấp', 'vi phạm', 'phạt vi phạm',
+        'luật áp dụng', 'hồ sơ hợp đồng', 'điều kiện',
+    ];
+    const lower = text.toLowerCase();
+    for (const phrase of legalPhrases) {
+        if (lower.includes(phrase)) { score -= 10; break; }
+    }
+
+    // ALL CAPS text (likely heading)
+    if (text === text.toUpperCase() && text.length > 5) score -= 20;
+
+    return Math.max(0, Math.min(100, score));
+}
+
+/**
+ * Extract meaningful sub-segments from a paragraph text.
+ * Also collects context labels (text before ':' becomes the label for text after ':').
+ */
+function extractSubSegments(
+    text: string, location: string,
+    out: { text: string; location: string }[],
+    contextLabels: Map<string, string>, // text → label mapping
+) {
+    // Split by colon to get "label: value" pairs
+    const colonParts = text.split(/[:：]/);
+    for (let i = 1; i < colonParts.length; i++) {
+        // Extract the label (text before the colon)
+        const rawLabel = colonParts[i - 1].trim();
+        // Clean up label: take last meaningful phrase
+        const labelWords = rawLabel.split(/[,;.\t]/).pop()?.trim() || rawLabel;
+        const cleanLabel = labelWords.replace(/^\d+\.\s*/, '').trim(); // remove numbered prefix
+
+        const val = colonParts[i].trim();
+        const subParts = val.split(/[,;\t]/).map(s => s.trim()).filter(s => s.length >= 3);
+        for (const sp of subParts) {
+            if (sp.length >= 3 && !STOP_WORDS.has(sp) && !STOP_WORDS.has(sp.toLowerCase())) {
+                if (!/^\d{1,2}$/.test(sp)) {
+                    out.push({ text: sp, location });
+                    // Store context label for this value
+                    if (cleanLabel.length >= 2 && cleanLabel.length <= 30) {
+                        contextLabels.set(sp, cleanLabel);
+                    }
+                }
+            }
+        }
+        // Full value after colon
+        const fullVal = val.split(/\s{3,}|\t/)[0].trim();
+        if (fullVal.length >= 3 && fullVal !== val && !STOP_WORDS.has(fullVal)) {
+            out.push({ text: fullVal, location });
+            if (cleanLabel.length >= 2 && cleanLabel.length <= 30) {
+                contextLabels.set(fullVal, cleanLabel);
+            }
+        }
+    }
+
+    // Extract specific patterns via regex
+    const patterns: { re: RegExp; label?: string }[] = [
+        { re: /(?:Ông|Bà|ông|bà)\s*:?\s*([A-ZÀ-Ỹ][a-zà-ỹ]+(?:\s+[A-ZÀ-Ỹ][a-zà-ỹ]+){1,4})/g, label: 'Đại diện' },
+        { re: /^([A-ZÀ-Ỹ][a-zà-ỹ]+(?:\s+[A-ZÀ-Ỹ][a-zà-ỹ]+){1,4})$/gm },
+        { re: /(0\d{2,3}[\s.-]?\d{3,4}[\s.-]?\d{3,4})/g, label: 'Điện thoại' },
+        { re: /(\d{10,13})/g, label: 'Mã số' },
+        { re: /(\d{4}[.\s]?\d{4}[.\s]?\d{4,})/g, label: 'Số tài khoản' },
+    ];
+
+    for (const { re, label } of patterns) {
+        let m;
+        while ((m = re.exec(text)) !== null) {
+            const val = (m[1] || m[0]).trim();
+            if (val.length >= 3 && !STOP_WORDS.has(val) && !STOP_WORDS.has(val.toLowerCase())) {
+                out.push({ text: val, location });
+                if (label && !contextLabels.has(val)) {
+                    contextLabels.set(val, label);
+                }
+            }
+        }
+    }
+
+    // Split by tab
+    if (text.includes('\t')) {
+        const tabParts = text.split('\t').map(s => s.trim()).filter(s => s.length >= 3);
+        for (const tp of tabParts) {
+            if (!STOP_WORDS.has(tp) && !STOP_WORDS.has(tp.toLowerCase())) {
+                out.push({ text: tp, location });
+            }
+        }
+    }
 }
 
 /** Extract text from a <w:p> element */

@@ -10,6 +10,12 @@ import InvoiceForm from './pages/InvoiceForm';
 import About from './pages/About';
 import SearchPage from './pages/SearchPage';
 import MilitaryDocForm from './pages/MilitaryDocForm';
+import BundleForm from './pages/BundleForm';
+import ProjectList from './pages/ProjectList';
+import ProjectDetail from './pages/ProjectDetail';
+import ContractorDirectory from './pages/ContractorDirectory';
+import ProjectSearchAll from './pages/ProjectSearchAll';
+import ProjectCompare from './pages/ProjectCompare';
 import NotFoundPage from './pages/NotFoundPage';
 import TemporaryResidence from './pages/guides/TemporaryResidence';
 import PermanentResidence from './pages/guides/PermanentResidence';
@@ -36,6 +42,12 @@ export default function App() {
           <Route path="/huong-dan/sang-ten-so-hong" element={<LandTitle />} />
           <Route path="/hoa-don-ban-hang" element={<InvoiceForm />} />
           <Route path="/ho-so-sua-chua" element={<MilitaryDocForm />} />
+          <Route path="/goi-mau" element={<BundleForm />} />
+          <Route path="/quan-ly-du-an" element={<ProjectList />} />
+          <Route path="/du-an/:id" element={<ProjectDetail />} />
+          <Route path="/danh-ba-nha-thau" element={<ContractorDirectory />} />
+          <Route path="/tra-cuu-du-an" element={<ProjectSearchAll />} />
+          <Route path="/so-sanh-du-an" element={<ProjectCompare />} />
           <Route path="/tim-kiem" element={<SearchPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>

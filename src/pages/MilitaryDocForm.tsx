@@ -1,6 +1,8 @@
 import { useState, useCallback, useEffect, useRef, ChangeEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FormInput } from '../components/FormField';
 import ScanReviewModal from '../components/ScanReviewModal';
+import FieldSelectorModal from '../components/FieldSelectorModal';
 import {
     generateMilitaryDoc,
     renderDocxPreview,
@@ -29,6 +31,7 @@ import {
     contractorToFormData, formDataToContractor,
     type Contractor,
 } from '../utils/contractorStorage';
+import { saveProject, createProjectFromFormData } from '../utils/projectStorage';
 import { scanWordTables, fillWordTable, calculateTableData, type TableInfo, type TableConfig, type TableColumn } from '../utils/wordTableUtils';
 import TableSetupModal from '../components/TableSetupModal';
 import TableEditor from '../components/TableEditor';
@@ -311,6 +314,7 @@ const TAG_GROUPS = [
 type FormChangeEvent = ChangeEvent<HTMLInputElement | HTMLTextAreaElement>;
 
 export default function MilitaryDocForm() {
+    const navigate = useNavigate();
     const [data, setData] = useState<Record<string, string>>({ NĂM: '2026' });
     const [loading, setLoading] = useState(false);
     const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -783,6 +787,31 @@ export default function MilitaryDocForm() {
             alert('❌ Lỗi xuất PDF: ' + (err as Error).message);
         }
         setLoading(false);
+    };
+
+    // Save to project
+    const [showFieldSelector, setShowFieldSelector] = useState(false);
+
+    const handleSaveToProject = () => {
+        setShowFieldSelector(true);
+    };
+
+    const handleFieldSelectConfirm = async (selectedKeys: string[], projectName: string) => {
+        setShowFieldSelector(false);
+        try {
+            const labels: Record<string, string> = {};
+            for (const key of Object.keys(data)) {
+                labels[key] = TAG_LABELS[key] || customLabels[key] || key.replace(/_/g, ' ');
+            }
+            const projectData = createProjectFromFormData(data, currentSessionId ?? undefined, labels);
+            projectData.name = projectName;
+            projectData.selectedFields = selectedKeys;
+            const projectId = await saveProject(projectData);
+            alert('✅ Đã lưu vào dự án!');
+            navigate(`/du-an/${projectId}`);
+        } catch (err) {
+            alert('❌ Lỗi: ' + (err as Error).message);
+        }
     };
 
     // Template library
@@ -1393,6 +1422,10 @@ export default function MilitaryDocForm() {
                                         style={{ fontSize: '0.85rem' }}>
                                         📄 Xuất PDF
                                     </button>
+                                    <button className="btn btn-secondary" onClick={handleSaveToProject}
+                                        style={{ fontSize: '0.85rem', background: '#eff6ff', borderColor: '#93c5fd', color: '#2563eb' }}>
+                                        📊 Lưu vào dự án
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -1462,6 +1495,20 @@ export default function MilitaryDocForm() {
                     templateBuffer={templateBuffer}
                     templateTags={templateTags}
                     onClose={() => setShowBatchExport(false)}
+                />
+            )}
+
+            {/* FIELD SELECTOR MODAL */}
+            {showFieldSelector && (
+                <FieldSelectorModal
+                    fields={Object.keys(data).filter(k => data[k]?.trim()).map(k => ({
+                        key: k,
+                        label: TAG_LABELS[k] || customLabels[k] || k.replace(/_/g, ' '),
+                        value: data[k] || '',
+                    }))}
+                    defaultName={data['TÊN_CT'] || data['CÔNG_TRÌNH'] || data['TÊN_CÔNG_TRÌNH'] || ''}
+                    onConfirm={handleFieldSelectConfirm}
+                    onCancel={() => setShowFieldSelector(false)}
                 />
             )}
         </>

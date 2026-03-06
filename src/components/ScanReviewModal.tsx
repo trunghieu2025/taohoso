@@ -7,10 +7,72 @@ interface Props {
     onCancel: () => void;
 }
 
+/** Group locations by file and format compactly:
+ *  "[fileA.docx] Dòng 1", "[fileA.docx] Dòng 5" → "fileA.docx: Dòng 1, 5"
+ */
+function formatLocations(locations: string[]): string {
+    const groups = new Map<string, string[]>();
+    for (const loc of locations) {
+        const match = loc.match(/^\[(.+?)\]\s*(.+)$/);
+        if (match) {
+            const file = match[1].length > 20 ? match[1].slice(0, 18) + '..' : match[1];
+            if (!groups.has(file)) groups.set(file, []);
+            // Extract just the number from "Dòng 51"
+            const numMatch = match[2].match(/\d+/);
+            const short = numMatch ? `Dòng ${numMatch[0]}` : match[2];
+            if (!groups.get(file)!.includes(short)) groups.get(file)!.push(short);
+        } else {
+            // No file prefix (single file mode)
+            const key = '📄';
+            if (!groups.has(key)) groups.set(key, []);
+            groups.get(key)!.push(loc);
+        }
+    }
+    return [...groups.entries()]
+        .map(([file, locs]) => file === '📄' ? locs.join(', ') : `${file}: ${locs.join(', ')}`)
+        .join(' | ');
+}
+
+/* ── Field History (localStorage) ── */
+const HISTORY_KEY = 'taohoso_field_history';
+
+interface FieldHistoryEntry { text: string; tag: string; label: string; }
+
+function loadFieldHistory(): FieldHistoryEntry[] {
+    try {
+        return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+    } catch { return []; }
+}
+
+function saveFieldHistory(entries: FieldHistoryEntry[]) {
+    try {
+        // Merge with existing, keep unique by text, limit to 200
+        const existing = loadFieldHistory();
+        const map = new Map<string, FieldHistoryEntry>();
+        for (const e of existing) map.set(e.text, e);
+        for (const e of entries) map.set(e.text, e);
+        const merged = [...map.values()].slice(-200);
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(merged));
+    } catch { /* ignore */ }
+}
 export default function ScanReviewModal({ results, onConfirm, onCancel }: Props) {
-    const [items, setItems] = useState<ScanResult[]>(() =>
-        results.map((r) => ({ ...r }))
-    );
+    const [items, setItems] = useState<ScanResult[]>(() => {
+        // Load history and auto-select items that match previously used tags
+        const history = loadFieldHistory();
+        return results.map((r) => {
+            const wasUsed = history.some(h => h.text === r.text || h.tag === r.suggestedTag);
+            return { ...r, selected: wasUsed || r.selected };
+        });
+    });
+    const [filter, setFilter] = useState<'all' | 'data' | 'boilerplate'>('all');
+    const [crossFileOnly, setCrossFileOnly] = useState(false);
+    const [groupByRole, setGroupByRole] = useState(false);
+
+    const filteredItems = items.filter(i => {
+        if (filter !== 'all' && i.category !== filter) return false;
+        if (crossFileOnly && (i.crossFileCount || 0) < 2) return false;
+        return true;
+    });
 
     const toggleItem = (idx: number) => {
         setItems((prev) =>
@@ -43,10 +105,105 @@ export default function ScanReviewModal({ results, onConfirm, onCancel }: Props)
                 tag: item.suggestedTag.trim(),
                 label: item.suggestedLabel || item.text,
             }));
+        // Save to history for next scan
+        saveFieldHistory(selected);
         onConfirm(selected);
     };
 
+    // Role grouping
+    const getRole = (item: ScanResult): string => {
+        const label = (item.contextLabel || item.suggestedLabel || '').toLowerCase();
+        const text = item.text.toLowerCase();
+        const combined = label + ' ' + text;
+        if (/chủ đầu tư|bên a|chủ đầu|đại diện chủ/.test(combined)) return '🏛️ Chủ đầu tư';
+        if (/nhà thầu|bên b|đại diện nhà|công ty/.test(combined)) return '🏗️ Nhà thầu';
+        if (/tư vấn|giám sát|tvgs|tư vấn giám/.test(combined)) return '👁️ Tư vấn GS';
+        if (/địa chỉ|địa điểm|xã|huyện|tỉnh/.test(combined)) return '📍 Địa chỉ';
+        if (/điện thoại|số điện|sdt|phone/.test(combined)) return '📞 Liên hệ';
+        if (/tài khoản|mã số|mst|ngân hàng/.test(combined)) return '🏦 Tài chính';
+        if (/công trình|dự án|hạng mục/.test(combined)) return '📋 Dự án';
+        return '📝 Khác';
+    };
+
+    const groupedItems = groupByRole ? (() => {
+        const groups = new Map<string, { items: ScanResult[]; indices: number[] }>();
+        for (const item of filteredItems) {
+            const role = getRole(item);
+            if (!groups.has(role)) groups.set(role, { items: [], indices: [] });
+            groups.get(role)!.items.push(item);
+            groups.get(role)!.indices.push(items.indexOf(item));
+        }
+        return groups;
+    })() : null;
+
+    const toggleGroup = (role: string, select: boolean) => {
+        if (!groupedItems) return;
+        const indices = new Set(groupedItems.get(role)?.indices || []);
+        setItems(prev => prev.map((item, i) => indices.has(i) ? { ...item, selected: select } : item));
+    };
+
     const selectedCount = items.filter((i) => i.selected).length;
+
+    const renderRow = (item: ScanResult, realIdx: number) => (
+        <tr
+            key={realIdx}
+            style={{
+                background: item.selected ? '#f0fdf4' : item.category === 'boilerplate' ? '#fffbeb' : '#fafafa',
+                opacity: item.selected ? 1 : 0.6,
+            }}
+        >
+            <td style={{ ...tdStyle, textAlign: 'center' }}>
+                <input
+                    type="checkbox"
+                    checked={item.selected}
+                    onChange={() => toggleItem(realIdx)}
+                    style={{ width: 16, height: 16, cursor: 'pointer' }}
+                />
+            </td>
+            <td style={{ ...tdStyle, fontWeight: 500, maxWidth: 200 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                    <span style={{
+                        display: 'inline-block', padding: '0 4px', borderRadius: 4,
+                        fontSize: '0.65rem', fontWeight: 600,
+                        background: item.category === 'data' ? '#d1fae5' : '#fef3c7',
+                        color: item.category === 'data' ? '#059669' : '#b45309',
+                    }}>{item.category === 'data' ? '📋' : '📄'}</span>
+                    <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {item.text}
+                    </div>
+                </div>
+            </td>
+            <td style={{ ...tdStyle, textAlign: 'center', fontWeight: 600, color: '#dc2626' }}>
+                {item.count}
+            </td>
+            <td style={{ ...tdStyle }}>
+                <input
+                    type="text"
+                    value={item.suggestedTag}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => updateTag(realIdx, e.target.value)}
+                    disabled={!item.selected}
+                    style={inputStyle}
+                    placeholder="TEN_TRUONG"
+                />
+            </td>
+            <td style={tdStyle}>
+                <input
+                    type="text"
+                    value={item.suggestedLabel}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => updateLabel(realIdx, e.target.value)}
+                    disabled={!item.selected}
+                    style={inputStyle}
+                    placeholder="Nhãn hiển thị"
+                />
+            </td>
+            <td style={{ ...tdStyle, fontSize: '0.7rem', color: '#94a3b8', maxWidth: 180 }}>
+                <div style={{ lineHeight: 1.4 }}>
+                    {formatLocations(item.locations)}
+                    {item.count > item.locations.length && <span style={{ color: '#cbd5e1' }}> +{item.count - item.locations.length}</span>}
+                </div>
+            </td>
+        </tr>
+    );
 
     return (
         <div style={overlayStyle}>
@@ -68,6 +225,26 @@ export default function ScanReviewModal({ results, onConfirm, onCancel }: Props)
                 <div style={toolbarStyle}>
                     <button className="btn btn-sm" onClick={selectAll}>☑ Chọn tất cả</button>
                     <button className="btn btn-sm" onClick={deselectAll}>☐ Bỏ tất cả</button>
+                    <div style={{ display: 'flex', gap: '0.25rem', marginLeft: '0.5rem' }}>
+                        <button className="btn btn-sm" onClick={() => setFilter('all')}
+                            style={{ background: filter === 'all' ? '#dbeafe' : undefined, fontSize: '0.75rem' }}>Tất cả ({items.length})</button>
+                        <button className="btn btn-sm" onClick={() => setFilter('data')}
+                            style={{ background: filter === 'data' ? '#d1fae5' : undefined, fontSize: '0.75rem' }}>📋 Dữ liệu ({items.filter(i => i.category === 'data').length})</button>
+                        <button className="btn btn-sm" onClick={() => setFilter('boilerplate')}
+                            style={{ background: filter === 'boilerplate' ? '#fef3c7' : undefined, fontSize: '0.75rem' }}>📄 VB cố định ({items.filter(i => i.category === 'boilerplate').length})</button>
+                    </div>
+                    {/* Cross-file toggle */}
+                    {items.some(i => (i.crossFileCount || 0) > 1) && (
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginLeft: '0.5rem', fontSize: '0.75rem', cursor: 'pointer', color: '#6d28d9', fontWeight: 600 }}>
+                            <input type="checkbox" checked={crossFileOnly} onChange={e => setCrossFileOnly(e.target.checked)} />
+                            🔗 Chỉ xuyên file ({items.filter(i => (i.crossFileCount || 0) > 1).length})
+                        </label>
+                    )}
+                    {/* Group by role toggle */}
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginLeft: '0.5rem', fontSize: '0.75rem', cursor: 'pointer', color: '#0369a1', fontWeight: 600 }}>
+                        <input type="checkbox" checked={groupByRole} onChange={e => setGroupByRole(e.target.checked)} />
+                        👥 Nhóm theo vai trò
+                    </label>
                     <span style={{ marginLeft: 'auto', fontSize: '0.85rem', color: '#64748b' }}>
                         Đã chọn: <strong>{selectedCount}</strong> / {items.length}
                     </span>
@@ -87,56 +264,40 @@ export default function ScanReviewModal({ results, onConfirm, onCancel }: Props)
                             </tr>
                         </thead>
                         <tbody>
-                            {items.map((item, idx) => (
-                                <tr
-                                    key={idx}
-                                    style={{
-                                        background: item.selected ? '#f0fdf4' : '#fafafa',
-                                        opacity: item.selected ? 1 : 0.6,
-                                    }}
-                                >
-                                    <td style={{ ...tdStyle, textAlign: 'center' }}>
-                                        <input
-                                            type="checkbox"
-                                            checked={item.selected}
-                                            onChange={() => toggleItem(idx)}
-                                            style={{ width: 16, height: 16, cursor: 'pointer' }}
-                                        />
-                                    </td>
-                                    <td style={{ ...tdStyle, fontWeight: 500, maxWidth: 200 }}>
-                                        <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                            {item.text}
-                                        </div>
-                                    </td>
-                                    <td style={{ ...tdStyle, textAlign: 'center', fontWeight: 600, color: '#dc2626' }}>
-                                        {item.count}
-                                    </td>
-                                    <td style={tdStyle}>
-                                        <input
-                                            type="text"
-                                            value={item.suggestedTag}
-                                            onChange={(e: ChangeEvent<HTMLInputElement>) => updateTag(idx, e.target.value)}
-                                            disabled={!item.selected}
-                                            style={inputStyle}
-                                            placeholder="TEN_TRUONG"
-                                        />
-                                    </td>
-                                    <td style={tdStyle}>
-                                        <input
-                                            type="text"
-                                            value={item.suggestedLabel}
-                                            onChange={(e: ChangeEvent<HTMLInputElement>) => updateLabel(idx, e.target.value)}
-                                            disabled={!item.selected}
-                                            style={inputStyle}
-                                            placeholder="Nhãn hiển thị"
-                                        />
-                                    </td>
-                                    <td style={{ ...tdStyle, fontSize: '0.75rem', color: '#94a3b8' }}>
-                                        {item.locations.join(', ')}
-                                        {item.count > item.locations.length && ` +${item.count - item.locations.length}`}
-                                    </td>
-                                </tr>
-                            ))}
+                            {groupByRole && groupedItems ? (
+                                // Grouped view
+                                [...groupedItems.entries()].map(([role, group]) => (
+                                    <>
+                                        <tr key={`group-${role}`}>
+                                            <td colSpan={6} style={{
+                                                padding: '0.5rem 0.75rem', background: '#f0f9ff',
+                                                fontWeight: 700, fontSize: '0.85rem', color: '#1e40af',
+                                                borderBottom: '2px solid #bfdbfe',
+                                            }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                    <span>{role} ({group.items.length})</span>
+                                                    <div style={{ display: 'flex', gap: '0.3rem' }}>
+                                                        <button className="btn btn-sm" onClick={() => toggleGroup(role, true)}
+                                                            style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem' }}>☑ Chọn</button>
+                                                        <button className="btn btn-sm" onClick={() => toggleGroup(role, false)}
+                                                            style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem' }}>☐ Bỏ</button>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {group.items.map((item) => {
+                                            const realIdx = items.indexOf(item);
+                                            return renderRow(item, realIdx);
+                                        })}
+                                    </>
+                                ))
+                            ) : (
+                                // Flat view
+                                filteredItems.map((item) => {
+                                    const realIdx = items.indexOf(item);
+                                    return renderRow(item, realIdx);
+                                })
+                            )}
                         </tbody>
                     </table>
                 </div>

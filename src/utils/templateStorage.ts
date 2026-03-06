@@ -4,7 +4,7 @@
  */
 
 const DB_NAME = 'TaoHoSoDB';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const STORE_NAME = 'sessions';
 
 export interface SavedSession {
@@ -30,6 +30,9 @@ function openDB(): Promise<IDBDatabase> {
             }
             if (!db.objectStoreNames.contains('contractors')) {
                 db.createObjectStore('contractors', { keyPath: 'id', autoIncrement: true });
+            }
+            if (!db.objectStoreNames.contains('projects')) {
+                db.createObjectStore('projects', { keyPath: 'id', autoIncrement: true });
             }
         };
         req.onsuccess = () => resolve(req.result);

@@ -4,19 +4,19 @@
  */
 
 const DB_NAME = 'TaoHoSoDB';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const STORE_SESSIONS = 'sessions';
 const STORE_CONTRACTORS = 'contractors';
 
 export interface Contractor {
     id?: number;
-    name: string;          // TÊN_NHÀ_THẦU
-    representative: string; // ĐẠI_DIỆN_NHÀ_THẦU
-    position: string;      // CHỨC_VỤ_NHÀ_THẦU
-    phone: string;         // SĐT_NHÀ_THẦU
-    taxCode: string;       // MÃ_SỐ_THUẾ
-    bankAccount: string;   // STK_NHÀ_THẦU
-    bank: string;          // NGÂN_HÀNG
+    name: string;
+    representative: string;
+    position: string;
+    phone: string;
+    taxCode: string;
+    bankAccount: string;
+    bank: string;
     createdAt: string;
 }
 
@@ -30,6 +30,9 @@ function openDB(): Promise<IDBDatabase> {
             }
             if (!db.objectStoreNames.contains(STORE_CONTRACTORS)) {
                 db.createObjectStore(STORE_CONTRACTORS, { keyPath: 'id', autoIncrement: true });
+            }
+            if (!db.objectStoreNames.contains('projects')) {
+                db.createObjectStore('projects', { keyPath: 'id', autoIncrement: true });
             }
         };
         req.onsuccess = () => resolve(req.result);
