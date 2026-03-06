@@ -246,23 +246,37 @@ export function createProjectFromFormData(
     labels?: Record<string, string>,
 ): Omit<Project, 'id' | 'createdAt' | 'updatedAt'> {
     // Helper: find first non-empty value matching any of the key patterns
+    // Searches BOTH tag names AND label text for matches
     const find = (patterns: RegExp[]): string => {
+        // 1) Try matching tag names
         for (const p of patterns) {
             const key = Object.keys(data).find(k => p.test(k) && data[k]?.trim());
+            if (key) return data[key].trim();
+        }
+        // 2) Try matching label text (labels contain original Vietnamese text)
+        if (labels) {
+            for (const p of patterns) {
+                const tag = Object.keys(labels).find(k => p.test(labels[k]) && data[k]?.trim());
+                if (tag) return data[tag].trim();
+            }
+        }
+        // 3) Try matching data values directly (for short recognizable values)
+        for (const p of patterns) {
+            const key = Object.keys(data).find(k => p.test(data[k]) && data[k]?.trim());
             if (key) return data[key].trim();
         }
         return '';
     };
 
     return {
-        name: find([/TÊN_CT/i, /TÊN_CÔNG_TRÌNH/i, /CÔNG_TRÌNH/i, /cải_tạo/i, /sửa_chữa/i]) || 'Dự án mới',
-        year: find([/^NĂM$/i]) || new Date().getFullYear().toString(),
-        location: find([/ĐỊA_CHỈ/i, /ĐỊA_ĐIỂM/i, /xã/i, /huyện/i, /tỉnh/i, /PHƯỜNG/i]),
+        name: find([/TÊN_CT/i, /TÊN_CÔNG_TRÌNH/i, /CÔNG_TRÌNH/i, /cải_tạo/i, /sửa_chữa/i, /tên công trình/i, /tên dự án/i, /công trình/i]) || 'Dự án mới',
+        year: find([/^NĂM$/i, /^năm$/i]) || new Date().getFullYear().toString(),
+        location: find([/ĐỊA_CHỈ/i, /ĐỊA_ĐIỂM/i, /xã/i, /huyện/i, /tỉnh/i, /PHƯỜNG/i, /địa chỉ/i, /địa điểm/i, /thôn/i, /quận/i]),
         status: 'new',
-        totalAmount: find([/SỐ_TIỀN/i, /GIÁ_TRỊ/i, /KINH_PHÍ/i, /10\.256/i, /đồng/i]),
-        amountInWords: find([/ST_BẰNG_CHỮ/i, /BẰNG_CHỮ/i]),
-        fundingSource: find([/NGUỒN_KP/i, /NGUỒN_KINH_PHÍ/i, /NGÂN_SÁCH/i]),
-        contractorName: find([/TÊN_NHÀ_THẦU/i, /NHÀ_THẦU/i, /ĐƠN_VỊ_THI_CÔNG/i, /tư_vấn/i, /ĐẠI_DIỆN/i]),
+        totalAmount: find([/SỐ_TIỀN/i, /GIÁ_TRỊ/i, /KINH_PHÍ/i, /giá trị/i, /kinh phí/i, /số tiền/i, /dự toán/i, /tổng giá/i]),
+        amountInWords: find([/ST_BẰNG_CHỮ/i, /BẰNG_CHỮ/i, /bằng chữ/i]),
+        fundingSource: find([/NGUỒN_KP/i, /NGUỒN_KINH_PHÍ/i, /NGÂN_SÁCH/i, /nguồn kinh phí/i, /nguồn vốn/i, /ngân sách/i]),
+        contractorName: find([/TÊN_NHÀ_THẦU/i, /NHÀ_THẦU/i, /ĐƠN_VỊ_THI_CÔNG/i, /tư_vấn/i, /ĐẠI_DIỆN/i, /nhà thầu/i, /đơn vị thi công/i, /tư vấn giám sát/i]),
         checklist: DEFAULT_CHECKLIST.map(c => ({ ...c })),
         milestones: DEFAULT_MILESTONES.map(m => ({ ...m })),
         customFields: [],
