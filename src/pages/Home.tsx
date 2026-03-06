@@ -96,6 +96,15 @@ export default function Home() {
               </p>
               <span className="card-link">Tạo ngay →</span>
             </Link>
+            <Link to="/goi-mau" className="tool-card">
+              <div className="card-icon">📦</div>
+              <h3>Gói mẫu nhiều file</h3>
+              <p>
+                Upload nhiều file Word → điền 1 lần → xuất tất cả. Hỗ trợ
+                so sánh phiên, nhóm trường tự động, gợi ý thông minh.
+              </p>
+              <span className="card-link">Bắt đầu →</span>
+            </Link>
           </div>
         </div>
       </section>
