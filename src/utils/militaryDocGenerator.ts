@@ -122,7 +122,7 @@ export function scanDuplicateTexts(buffer: ArrayBuffer): ScanResult[] {
             count: info.count,
             locations: info.locations,
             suggestedTag: textToTag(text),
-            suggestedLabel: ctxLabel || (text.length > 30 ? text.slice(0, 30) + '...' : text),
+            suggestedLabel: text.length > 30 ? text.slice(0, 30) + '...' : text,
             selected: category === 'data' && text.length >= 4,
             category,
             dataScore: score,
