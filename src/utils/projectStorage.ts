@@ -64,6 +64,12 @@ export interface Project {
     deadline?: string;      // ISO date string for submission deadline
     deadlineLabel?: string; // e.g. "Hạn nộp hồ sơ"
 
+    // Tags
+    tags?: string[];
+
+    // Edit history (snapshots)
+    history?: { date: string; changes: string }[];
+
     // Full form data (all fields from source form)
     formData?: Record<string, string>;
     formLabels?: Record<string, string>;
@@ -72,6 +78,15 @@ export interface Project {
     createdAt: string;
     updatedAt: string;
 }
+
+/* ── Predefined tags ── */
+export const PREDEFINED_TAGS = [
+    { name: 'Khẩn cấp', color: '#dc2626', bg: '#fef2f2' },
+    { name: 'VIP', color: '#7c3aed', bg: '#f5f3ff' },
+    { name: 'Chờ duyệt', color: '#d97706', bg: '#fffbeb' },
+    { name: 'Tạm dừng', color: '#64748b', bg: '#f1f5f9' },
+    { name: 'Hoàn tất', color: '#059669', bg: '#f0fdf4' },
+];
 
 /* ── Default checklist for new projects ── */
 
@@ -90,6 +105,39 @@ export const DEFAULT_MILESTONES: Milestone[] = [
     { id: 'inspect', label: 'Nghiệm thu', date: '', status: 'pending' },
     { id: 'payment', label: 'Thanh toán', date: '', status: 'pending' },
 ];
+
+/* ── Checklist templates by project type ── */
+export const CHECKLIST_TEMPLATES: Record<string, ChecklistItem[]> = {
+    'Sửa chữa nhỏ': [
+        { id: 'tt', label: 'Tờ trình đề nghị', done: false },
+        { id: 'dt', label: 'Dự toán chi tiết', done: false },
+        { id: 'hd', label: 'Hợp đồng', done: false },
+        { id: 'bbnt', label: 'Biên bản nghiệm thu', done: false },
+        { id: 'bkct', label: 'Bảng kê chứng từ', done: false },
+        { id: 'qt', label: 'Quyết toán', done: false },
+    ],
+    'Xây mới': [
+        { id: 'pa', label: 'Phương án xây dựng', done: false },
+        { id: 'tkkt', label: 'Thiết kế kỹ thuật', done: false },
+        { id: 'dt', label: 'Dự toán chi tiết', done: false },
+        { id: 'tdtk', label: 'Thẩm định thiết kế', done: false },
+        { id: 'qddt', label: 'Quyết định đầu tư', done: false },
+        { id: 'dthau', label: 'Đấu thầu / Chỉ định thầu', done: false },
+        { id: 'hd', label: 'Hợp đồng xây dựng', done: false },
+        { id: 'kc', label: 'Khởi công', done: false },
+        { id: 'gsct', label: 'Giám sát chất lượng', done: false },
+        { id: 'nt_gd', label: 'Nghiệm thu giai đoạn', done: false },
+        { id: 'nt_ht', label: 'Nghiệm thu hoàn thành', done: false },
+        { id: 'qt', label: 'Quyết toán công trình', done: false },
+    ],
+    'Bảo trì định kỳ': [
+        { id: 'kh', label: 'Kế hoạch bảo trì', done: false },
+        { id: 'dt', label: 'Dự toán bảo trì', done: false },
+        { id: 'hd', label: 'Hợp đồng bảo trì', done: false },
+        { id: 'tc', label: 'Thực hiện bảo trì', done: false },
+        { id: 'nt', label: 'Nghiệm thu', done: false },
+    ],
+};
 
 /* ── DB ── */
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { listProjects, deleteProject, cloneProject, type Project } from '../utils/projectStorage';
+import { listProjects, deleteProject, cloneProject, type Project, PREDEFINED_TAGS } from '../utils/projectStorage';
 
 const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }> = {
     new: { label: '⚪ Mới', color: '#64748b', bg: '#f1f5f9' },
@@ -22,6 +22,7 @@ export default function ProjectList() {
     const [search, setSearch] = useState('');
     const [filterStatus, setFilterStatus] = useState('all');
     const [filterYear, setFilterYear] = useState('all');
+    const [filterTag, setFilterTag] = useState('all');
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -45,6 +46,7 @@ export default function ProjectList() {
     const filtered = projects.filter(p => {
         if (filterStatus !== 'all' && p.status !== filterStatus) return false;
         if (filterYear !== 'all' && p.year !== filterYear) return false;
+        if (filterTag !== 'all' && !(p.tags || []).includes(filterTag)) return false;
         if (search) {
             const q = search.toLowerCase();
             return p.name.toLowerCase().includes(q)
@@ -125,6 +127,11 @@ export default function ProjectList() {
                         {years.map(y => <option key={y} value={y}>{y}</option>)}
                     </select>
                 )}
+                <select value={filterTag} onChange={e => setFilterTag(e.target.value)}
+                    style={{ padding: '0.5rem', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: '0.85rem' }}>
+                    <option value="all">Tất cả nhãn</option>
+                    {PREDEFINED_TAGS.map(t => <option key={t.name} value={t.name}>{t.name}</option>)}
+                </select>
             </div>
 
             {/* Project table */}
@@ -172,6 +179,14 @@ export default function ProjectList() {
                                         <td style={tdStyle}>
                                             <div style={{ fontWeight: 600 }}>{p.name}</div>
                                             <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{p.location}</div>
+                                            {(p.tags || []).length > 0 && (
+                                                <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', marginTop: 2 }}>
+                                                    {(p.tags || []).map(tag => {
+                                                        const t = PREDEFINED_TAGS.find(pt => pt.name === tag);
+                                                        return <span key={tag} style={{ fontSize: '0.6rem', padding: '0 0.3rem', borderRadius: 6, background: t?.bg || '#f1f5f9', color: t?.color || '#64748b', fontWeight: 600 }}>{tag}</span>;
+                                                    })}
+                                                </div>
+                                            )}
                                         </td>
                                         <td style={tdStyle}>{p.contractorName || '—'}</td>
                                         <td style={tdStyle}>{formatMoney(p.totalAmount)}</td>

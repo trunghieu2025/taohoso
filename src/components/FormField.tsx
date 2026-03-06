@@ -5,42 +5,44 @@
 import { ChangeEvent } from 'react';
 
 interface FormInputProps {
-  label: string;
-  name: string;
-  value: string;
-  onChange: (e: ChangeEvent<HTMLInputElement>) => void;
-  required?: boolean;
-  type?: string;
-  placeholder?: string;
-  hint?: string;
-  error?: string;
+    label: string;
+    name: string;
+    value: string;
+    onChange: (e: ChangeEvent<HTMLInputElement>) => void;
+    required?: boolean;
+    type?: string;
+    placeholder?: string;
+    hint?: string;
+    error?: string;
+    onFocus?: () => void;
+    onBlur?: () => void;
 }
 
 interface FormTextAreaProps {
-  label: string;
-  name: string;
-  value: string;
-  onChange: (e: ChangeEvent<HTMLTextAreaElement>) => void;
-  placeholder?: string;
-  hint?: string;
-  rows?: number;
+    label: string;
+    name: string;
+    value: string;
+    onChange: (e: ChangeEvent<HTMLTextAreaElement>) => void;
+    placeholder?: string;
+    hint?: string;
+    rows?: number;
 }
 
 interface SelectOption {
-  value: string;
-  label: string;
+    value: string;
+    label: string;
 }
 
 interface FormSelectProps {
-  label: string;
-  name: string;
-  value: string;
-  onChange: (e: ChangeEvent<HTMLSelectElement>) => void;
-  options: SelectOption[];
-  hint?: string;
+    label: string;
+    name: string;
+    value: string;
+    onChange: (e: ChangeEvent<HTMLSelectElement>) => void;
+    options: SelectOption[];
+    hint?: string;
 }
 
-export function FormInput({ label, name, value, onChange, required, type = 'text', placeholder, hint, error }: FormInputProps) {
+export function FormInput({ label, name, value, onChange, required, type = 'text', placeholder, hint, error, onFocus, onBlur }: FormInputProps) {
     return (
         <div className="form-group">
             <label className="form-label">
@@ -52,6 +54,8 @@ export function FormInput({ label, name, value, onChange, required, type = 'text
                 className={`form-input ${error ? 'error' : ''}`}
                 value={value}
                 onChange={onChange}
+                onFocus={onFocus}
+                onBlur={onBlur}
                 placeholder={placeholder}
             />
             {error && <div className="form-error">{error}</div>}

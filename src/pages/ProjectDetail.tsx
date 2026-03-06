@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
     loadProject, saveProject,
-    type Project, type ChecklistItem, type Milestone, type CustomField,
+    type Project, type Milestone, PREDEFINED_TAGS, CHECKLIST_TEMPLATES,
 } from '../utils/projectStorage';
 import ProjectSearch from '../components/ProjectSearch';
 
@@ -20,6 +20,7 @@ export default function ProjectDetail() {
     const [editing, setEditing] = useState(false);
     const [saving, setSaving] = useState(false);
     const [showFormData, setShowFormData] = useState(false);
+    const [showHistory, setShowHistory] = useState(false);
 
     useEffect(() => {
         if (id) loadProject(parseInt(id)).then(setProject);
@@ -28,8 +29,11 @@ export default function ProjectDetail() {
     const save = useCallback(async (updated: Project) => {
         setSaving(true);
         try {
-            await saveProject({ ...updated, id: updated.id });
-            setProject(updated);
+            // Auto-snapshot history (max 10)
+            const historyEntry = { date: new Date().toISOString(), changes: `Cập nhật: ${updated.name}` };
+            const history = [...(updated.history || []), historyEntry].slice(-10);
+            await saveProject({ ...updated, id: updated.id, history });
+            setProject({ ...updated, history });
         } catch { /* ignore */ }
         setSaving(false);
     }, []);
@@ -157,6 +161,8 @@ export default function ProjectDetail() {
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                     {saving && <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>💾 Đang lưu...</span>}
+                    <button className="btn btn-sm" onClick={() => setShowHistory(!showHistory)}
+                        style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem' }}>🕐 Lịch sử</button>
                     <button className="btn btn-sm" onClick={() => setEditing(!editing)}>
                         {editing ? '✅ Xong' : '🖊 Sửa'}
                     </button>
@@ -165,6 +171,38 @@ export default function ProjectDetail() {
 
             {/* Search */}
             <ProjectSearch project={project} />
+
+            {/* History panel */}
+            {showHistory && (project.history || []).length > 0 && (
+                <div style={{ ...sectionStyle, background: '#fefce8', borderColor: '#fde047', marginBottom: '1rem' }}>
+                    <div style={sectionTitle}>🕐 Lịch sử chỉnh sửa ({(project.history || []).length})</div>
+                    {(project.history || []).slice().reverse().map((h, i) => (
+                        <div key={i} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', padding: '0.25rem 0', borderBottom: '1px solid #fef9c3', fontSize: '0.8rem' }}>
+                            <span style={{ color: '#64748b', minWidth: 120 }}>{new Date(h.date).toLocaleString('vi-VN')}</span>
+                            <span style={{ flex: 1, color: '#1e293b' }}>{h.changes}</span>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* Tags */}
+            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '1rem', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.8rem', color: '#64748b' }}>🏷️</span>
+                {PREDEFINED_TAGS.map(t => {
+                    const active = (project.tags || []).includes(t.name);
+                    return (
+                        <button key={t.name} onClick={() => {
+                            const tags = active ? (project.tags || []).filter(x => x !== t.name) : [...(project.tags || []), t.name];
+                            updateField('tags', tags);
+                        }} style={{
+                            padding: '0.15rem 0.5rem', borderRadius: 12, fontSize: '0.75rem', cursor: 'pointer',
+                            background: active ? t.bg : '#f8fafc', color: active ? t.color : '#94a3b8',
+                            border: `1px solid ${active ? t.color : '#e2e8f0'}`, fontWeight: active ? 700 : 400,
+                            transition: 'all 0.15s',
+                        }}>{t.name}</button>
+                    );
+                })}
+            </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '1rem' }}>
                 {/* Left column */}
@@ -384,7 +422,21 @@ export default function ProjectDetail() {
                     <div style={{ ...sectionStyle, background: 'linear-gradient(135deg, #f0fdf4, #fff)' }}>
                         <div style={sectionTitle}>
                             <span>✅ Checklist hồ sơ ({checkDone}/{checkTotal})</span>
-                            <button className="btn btn-sm" onClick={addChecklistItem} style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem' }}>➕ Thêm</button>
+                            <div style={{ display: 'flex', gap: '0.3rem' }}>
+                                <select onChange={e => {
+                                    const tpl = CHECKLIST_TEMPLATES[e.target.value];
+                                    if (tpl && confirm(`Thay bằng mẫu "${e.target.value}" (${tpl.length} mục)?`)) {
+                                        const updated = { ...project, checklist: tpl.map(c => ({ ...c })) };
+                                        setProject(updated);
+                                        save(updated);
+                                    }
+                                    e.target.value = '';
+                                }} style={{ fontSize: '0.65rem', padding: '0.1rem 0.3rem', borderRadius: 4, border: '1px solid #e2e8f0', color: '#64748b' }}>
+                                    <option value="">📋 Mẫu...</option>
+                                    {Object.keys(CHECKLIST_TEMPLATES).map(k => <option key={k} value={k}>{k}</option>)}
+                                </select>
+                                <button className="btn btn-sm" onClick={addChecklistItem} style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem' }}>➕ Thêm</button>
+                            </div>
                         </div>
                         {/* Progress bar */}
                         <div style={{ background: '#e2e8f0', borderRadius: 6, height: 8, marginBottom: '0.75rem' }}>
@@ -423,6 +475,38 @@ export default function ProjectDetail() {
                             <span>📅 Timeline</span>
                             <button className="btn btn-sm" onClick={addMilestone} style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem' }}>➕ Thêm</button>
                         </div>
+                        {/* Gantt chart */}
+                        {(() => {
+                            const dated = project.milestones.filter(m => m.date);
+                            if (dated.length >= 2) {
+                                const dates = dated.map(m => new Date(m.date).getTime());
+                                const min = Math.min(...dates);
+                                const max = Math.max(...dates);
+                                const range = max - min || 1;
+                                return (
+                                    <div style={{ background: '#f8fafc', borderRadius: 8, padding: '0.5rem', marginBottom: '0.75rem' }}>
+                                        <div style={{ fontSize: '0.7rem', color: '#64748b', marginBottom: '0.3rem' }}>📊 Gantt</div>
+                                        {dated.map(m => {
+                                            const pos = ((new Date(m.date).getTime() - min) / range) * 100;
+                                            return (
+                                                <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginBottom: 3 }}>
+                                                    <span style={{ fontSize: '0.65rem', color: '#64748b', minWidth: 70, textAlign: 'right' }}>{m.label}</span>
+                                                    <div style={{ flex: 1, height: 14, background: '#e2e8f0', borderRadius: 4, position: 'relative' }}>
+                                                        <div style={{
+                                                            position: 'absolute', left: 0, top: 0, height: '100%',
+                                                            width: `${Math.max(pos, 5)}%`, borderRadius: 4,
+                                                            background: 'linear-gradient(90deg, #3b82f6, #059669)',
+                                                        }} />
+                                                    </div>
+                                                    <span style={{ fontSize: '0.6rem', color: '#94a3b8', minWidth: 55 }}>{new Date(m.date).toLocaleDateString('vi-VN')}</span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                );
+                            }
+                            return null;
+                        })()}
                         {project.milestones.map((ms, idx) => (
                             <div key={ms.id} style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.5rem' }}>
                                 {/* Timeline dot + line */}

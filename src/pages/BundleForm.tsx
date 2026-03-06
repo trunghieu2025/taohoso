@@ -8,6 +8,7 @@ import {
 } from '../utils/militaryDocGenerator';
 import type { ScanResult } from '../utils/militaryDocGenerator';
 import { FormInput } from '../components/FormField';
+import { FORM_TEMPLATES } from '../utils/formTemplates';
 import ScanReviewModal from '../components/ScanReviewModal';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
@@ -181,6 +182,10 @@ export default function BundleForm() {
     const [fieldSearch, setFieldSearch] = useState('');
     const [dragOver, setDragOver] = useState(false);
     const [presets, setPresets] = useState<FilePreset[]>([]);
+    const [diffSessions, setDiffSessions] = useState<[string, string]>(['', '']);
+    const [showDiff, setShowDiff] = useState(false);
+    const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+    const [focusedTag, setFocusedTag] = useState<string | null>(null);
 
     // Load sessions + presets on mount
     useEffect(() => { setSavedSessions(loadBundleSessions()); setPresets(loadPresets()); }, []);
@@ -817,6 +822,29 @@ export default function BundleForm() {
                                     ))}
                                 </div>
                             )}
+
+                            {/* Session diff */}
+                            {savedSessions.length >= 2 && (
+                                <div style={{ marginTop: '0.5rem', borderTop: '1px solid #bbf7d0', paddingTop: '0.5rem' }}>
+                                    <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center', flexWrap: 'wrap', fontSize: '0.8rem' }}>
+                                        <span style={{ fontWeight: 600 }}>🔍 So sánh:</span>
+                                        <select value={diffSessions[0]} onChange={e => setDiffSessions([e.target.value, diffSessions[1]])}
+                                            style={{ fontSize: '0.7rem', padding: '0.1rem', borderRadius: 4, border: '1px solid #e2e8f0' }}>
+                                            <option value="">Chọn phiên 1</option>
+                                            {savedSessions.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                        </select>
+                                        <span>vs</span>
+                                        <select value={diffSessions[1]} onChange={e => setDiffSessions([diffSessions[0], e.target.value])}
+                                            style={{ fontSize: '0.7rem', padding: '0.1rem', borderRadius: 4, border: '1px solid #e2e8f0' }}>
+                                            <option value="">Chọn phiên 2</option>
+                                            {savedSessions.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                        </select>
+                                        <button className="btn btn-sm" disabled={!diffSessions[0] || !diffSessions[1] || diffSessions[0] === diffSessions[1]}
+                                            onClick={() => setShowDiff(true)}
+                                            style={{ fontSize: '0.65rem', padding: '0.1rem 0.3rem' }}>So sánh</button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         {/* File list */}
@@ -875,39 +903,140 @@ export default function BundleForm() {
                                     <span style={{ fontSize: '0.95rem', fontWeight: 600, color: '#4f46e5' }}>
                                         📋 Trường dữ liệu ({allTags.length})
                                     </span>
-                                    {allTags.length > 5 && (
-                                        <input type="text" value={fieldSearch} onChange={e => setFieldSearch(e.target.value)}
-                                            onKeyDown={e => {
-                                                if (e.key === 'Enter' && fieldSearch) {
-                                                    const match = allTags.find(t => (labels[t] || t).toLowerCase().includes(fieldSearch.toLowerCase()));
-                                                    if (match) {
-                                                        const el = document.getElementById(`field-${match}`);
-                                                        if (el) {
-                                                            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                                            el.style.background = '#fef08a';
-                                                            setTimeout(() => { el.style.background = ''; }, 1500);
+                                    <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center' }}>
+                                        {/* Template selector */}
+                                        <select onChange={e => {
+                                            const tpl = FORM_TEMPLATES.find(t => t.id === e.target.value);
+                                            if (tpl) {
+                                                setAllTags(prev => [...new Set([...prev, ...tpl.tags])]);
+                                                setLabels(prev => ({ ...prev, ...tpl.labels }));
+                                            }
+                                            e.target.value = '';
+                                        }} style={{ fontSize: '0.7rem', padding: '0.15rem 0.3rem', border: '1px solid #c7d2fe', borderRadius: 4 }}>
+                                            <option value="">📋 Mẫu...</option>
+                                            {FORM_TEMPLATES.map(t => <option key={t.id} value={t.id}>{t.icon} {t.name}</option>)}
+                                        </select>
+                                        {allTags.length > 5 && (
+                                            <input type="text" value={fieldSearch} onChange={e => setFieldSearch(e.target.value)}
+                                                onKeyDown={e => {
+                                                    if (e.key === 'Enter' && fieldSearch) {
+                                                        const match = allTags.find(t => (labels[t] || t).toLowerCase().includes(fieldSearch.toLowerCase()));
+                                                        if (match) {
+                                                            const el = document.getElementById(`field-${match}`);
+                                                            if (el) {
+                                                                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                                                el.style.background = '#fef08a';
+                                                                setTimeout(() => { el.style.background = ''; }, 1500);
+                                                            }
                                                         }
                                                     }
-                                                }
-                                            }}
-                                            placeholder="🔍 Tìm trường... (Enter để cuộn)"
-                                            style={{ fontSize: '0.8rem', padding: '0.25rem 0.5rem', border: '1px solid #c7d2fe', borderRadius: 6, width: 180 }} />
-                                    )}
+                                                }}
+                                                placeholder="🔍 Tìm trường... (Enter để cuộn)"
+                                                style={{ fontSize: '0.8rem', padding: '0.25rem 0.5rem', border: '1px solid #c7d2fe', borderRadius: 6, width: 180 }} />
+                                        )}
+                                    </div>
                                 </div>
-                                {allTags
-                                    .filter(tag => !fieldSearch || (labels[tag] || tag).toLowerCase().includes(fieldSearch.toLowerCase()))
-                                    .map(tag => (
-                                        <div key={tag} id={`field-${tag}`} style={{ transition: 'background 0.3s' }}>
-                                            <FormInput label={labels[tag] || tag.replace(/_/g, ' ')} name={tag}
-                                                value={data[tag] || ''} onChange={handleChange}
-                                                placeholder={`Nhập ${(labels[tag] || tag).toLowerCase()}`} />
-                                            {isMoneyField(tag) && data[tag] && (
-                                                <div style={{ fontSize: '0.75rem', color: '#059669', marginTop: '-0.3rem', marginBottom: '0.4rem', paddingLeft: '0.5rem', fontStyle: 'italic' }}>
-                                                    💰 {numberToVietnamese(data[tag])}
+                                {/* Grouped fields */}
+                                {(() => {
+                                    const filtered = allTags.filter(tag => !fieldSearch || (labels[tag] || tag).toLowerCase().includes(fieldSearch.toLowerCase()));
+                                    // Group by pattern
+                                    const groups: Record<string, string[]> = {};
+                                    for (const tag of filtered) {
+                                        const t = (labels[tag] || tag).toLowerCase();
+                                        let group = '📝 Khác';
+                                        if (/tên|họ|đại diện|chức vụ|ông|bà/.test(t)) group = '👤 Nhân sự';
+                                        else if (/địa|xã|huyện|tỉnh|thành phố/.test(t)) group = '📍 Địa chỉ';
+                                        else if (/giá|tiền|kinh phí|dự toán|thanh toán|số tiền|giá trị/.test(t)) group = '💰 Tài chính';
+                                        else if (/ngày|thời gian|năm|tháng/.test(t)) group = '📅 Thời gian';
+                                        else if (/số hđ|hợp đồng|quyết định|số qđ/.test(t)) group = '📄 Hợp đồng';
+                                        if (!groups[group]) groups[group] = [];
+                                        groups[group].push(tag);
+                                    }
+                                    const groupOrder = ['👤 Nhân sự', '📍 Địa chỉ', '💰 Tài chính', '📅 Thời gian', '📄 Hợp đồng', '📝 Khác'];
+                                    const sortedGroups = groupOrder.filter(g => groups[g]);
+                                    // Only show groups if > 8 fields, otherwise flat list
+                                    if (filtered.length <= 8 || sortedGroups.length <= 1) {
+                                        return filtered.map(tag => (
+                                            <div key={tag} id={`field-${tag}`} style={{ transition: 'background 0.3s', position: 'relative' }}>
+                                                <FormInput label={labels[tag] || tag.replace(/_/g, ' ')} name={tag}
+                                                    value={data[tag] || ''} onChange={handleChange}
+                                                    onFocus={() => setFocusedTag(tag)} onBlur={() => setTimeout(() => setFocusedTag(null), 200)}
+                                                    placeholder={`Nhập ${(labels[tag] || tag).toLowerCase()}`} />
+                                                {isMoneyField(tag) && data[tag] && (
+                                                    <div style={{ fontSize: '0.75rem', color: '#059669', marginTop: '-0.3rem', marginBottom: '0.4rem', paddingLeft: '0.5rem', fontStyle: 'italic' }}>
+                                                        💰 {numberToVietnamese(data[tag])}
+                                                    </div>
+                                                )}
+                                                {/* Auto-suggest */}
+                                                {focusedTag === tag && !data[tag] && (() => {
+                                                    const suggestions = [...new Set(savedSessions.map(s => s.data[tag]).filter(Boolean))].slice(0, 5);
+                                                    if (suggestions.length === 0) return null;
+                                                    return (
+                                                        <div style={{ position: 'absolute', zIndex: 10, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 6, boxShadow: '0 2px 8px rgba(0,0,0,0.1)', maxWidth: 300, left: 0, right: 0 }}>
+                                                            {suggestions.map((s, i) => (
+                                                                <div key={i} onMouseDown={() => { setData(prev => ({ ...prev, [tag]: s })); setFocusedTag(null); }}
+                                                                    style={{ padding: '0.3rem 0.5rem', cursor: 'pointer', fontSize: '0.8rem', borderBottom: '1px solid #f1f5f9' }}
+                                                                    onMouseEnter={e => (e.currentTarget.style.background = '#f0f9ff')}
+                                                                    onMouseLeave={e => (e.currentTarget.style.background = '')}>
+                                                                    💡 {s.length > 40 ? s.slice(0, 38) + '…' : s}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    );
+                                                })()}
+                                            </div>
+                                        ));
+                                    }
+                                    return sortedGroups.map(group => {
+                                        const collapsed = collapsedGroups.has(group);
+                                        return (
+                                            <div key={group} style={{ marginBottom: '0.5rem' }}>
+                                                <div onClick={() => setCollapsedGroups(prev => {
+                                                    const next = new Set(prev);
+                                                    collapsed ? next.delete(group) : next.add(group);
+                                                    return next;
+                                                })} style={{
+                                                    padding: '0.3rem 0.5rem', background: '#f0f9ff', borderRadius: 6,
+                                                    cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, color: '#2563eb',
+                                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                                }}>
+                                                    <span>{group} ({groups[group].length})</span>
+                                                    <span>{collapsed ? '▶' : '▼'}</span>
                                                 </div>
-                                            )}
-                                        </div>
-                                    ))}
+                                                {!collapsed && groups[group].map(tag => (
+                                                    <div key={tag} id={`field-${tag}`} style={{ transition: 'background 0.3s', position: 'relative' }}>
+                                                        <FormInput label={labels[tag] || tag.replace(/_/g, ' ')} name={tag}
+                                                            value={data[tag] || ''} onChange={handleChange}
+                                                            onFocus={() => setFocusedTag(tag)} onBlur={() => setTimeout(() => setFocusedTag(null), 200)}
+                                                            placeholder={`Nhập ${(labels[tag] || tag).toLowerCase()}`} />
+                                                        {isMoneyField(tag) && data[tag] && (
+                                                            <div style={{ fontSize: '0.75rem', color: '#059669', marginTop: '-0.3rem', marginBottom: '0.4rem', paddingLeft: '0.5rem', fontStyle: 'italic' }}>
+                                                                💰 {numberToVietnamese(data[tag])}
+                                                            </div>
+                                                        )}
+                                                        {/* Auto-suggest */}
+                                                        {focusedTag === tag && !data[tag] && (() => {
+                                                            const suggestions = [...new Set(savedSessions.map(s => s.data[tag]).filter(Boolean))].slice(0, 5);
+                                                            if (suggestions.length === 0) return null;
+                                                            return (
+                                                                <div style={{ position: 'absolute', zIndex: 10, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 6, boxShadow: '0 2px 8px rgba(0,0,0,0.1)', maxWidth: 300, left: 0, right: 0 }}>
+                                                                    {suggestions.map((s, i) => (
+                                                                        <div key={i} onMouseDown={() => { setData(prev => ({ ...prev, [tag]: s })); setFocusedTag(null); }}
+                                                                            style={{ padding: '0.3rem 0.5rem', cursor: 'pointer', fontSize: '0.8rem', borderBottom: '1px solid #f1f5f9' }}
+                                                                            onMouseEnter={e => (e.currentTarget.style.background = '#f0f9ff')}
+                                                                            onMouseLeave={e => (e.currentTarget.style.background = '')}>
+                                                                            💡 {s.length > 40 ? s.slice(0, 38) + '…' : s}
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            );
+                                                        })()}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        );
+                                    });
+                                })()}
                             </div>
                         )}
 
@@ -924,7 +1053,7 @@ export default function BundleForm() {
                                 <div style={{ display: 'flex', gap: '0.2rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
                                     {Object.keys(fileTableInfos).map(fn => (
                                         <button key={fn}
-                                            className={`btn btn-sm ${activeTableFile === fn ? 'btn-primary' : ''}`}
+                                            className={`btn btn - sm ${activeTableFile === fn ? 'btn-primary' : ''} `}
                                             onClick={() => setActiveTableFile(fn)}
                                             style={{ fontSize: '0.7rem', padding: '0.15rem 0.4rem' }}>
                                             {fn.length > 20 ? fn.slice(0, 18) + '…' : fn}
@@ -973,7 +1102,7 @@ export default function BundleForm() {
                             {/* Tab selector */}
                             <div style={{ display: 'flex', gap: '0.2rem', marginBottom: '0.4rem', flexWrap: 'wrap', overflowX: 'auto' }}>
                                 {files.map((f, i) => (
-                                    <button key={i} className={`btn btn-sm ${activePreview === i ? 'btn-primary' : ''}`}
+                                    <button key={i} className={`btn btn - sm ${activePreview === i ? 'btn-primary' : ''} `}
                                         onClick={() => handlePreview(i)}
                                         style={{ fontSize: '0.65rem', padding: '0.15rem 0.4rem', opacity: f.selected ? 1 : 0.5, whiteSpace: 'nowrap' }}
                                         title={f.name}>
@@ -1044,6 +1173,49 @@ export default function BundleForm() {
                     onCancel={() => setShowFieldSelector(false)}
                 />
             )}
+
+            {/* Session diff modal */}
+            {showDiff && (() => {
+                const s1 = savedSessions.find(s => s.id === diffSessions[0]);
+                const s2 = savedSessions.find(s => s.id === diffSessions[1]);
+                if (!s1 || !s2) return null;
+                const allKeys = [...new Set([...Object.keys(s1.data), ...Object.keys(s2.data)])];
+                const changed = allKeys.filter(k => (s1.data[k] || '') !== (s2.data[k] || ''));
+                return (
+                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999 }}
+                        onClick={() => setShowDiff(false)}>
+                        <div style={{ background: '#fff', borderRadius: 12, padding: '1.5rem', maxWidth: 700, width: '92%', maxHeight: '85vh', overflow: 'auto' }}
+                            onClick={e => e.stopPropagation()}>
+                            <h3 style={{ margin: '0 0 1rem', fontSize: '1.1rem' }}>🔍 So sánh: "{s1.name}" vs "{s2.name}"</h3>
+                            {changed.length === 0 ? (
+                                <div style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8' }}>✅ Không có thay đổi</div>
+                            ) : (
+                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                                    <thead>
+                                        <tr style={{ background: '#f1f5f9' }}>
+                                            <th style={{ padding: '0.4rem', textAlign: 'left' }}>Trường</th>
+                                            <th style={{ padding: '0.4rem', textAlign: 'left', color: '#dc2626' }}>{s1.name}</th>
+                                            <th style={{ padding: '0.4rem', textAlign: 'left', color: '#059669' }}>{s2.name}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {changed.map(k => (
+                                            <tr key={k} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                                <td style={{ padding: '0.3rem', fontWeight: 500, color: '#64748b' }}>{labels[k] || k}</td>
+                                                <td style={{ padding: '0.3rem', background: '#fef2f2', color: '#dc2626' }}>{s1.data[k] || '—'}</td>
+                                                <td style={{ padding: '0.3rem', background: '#f0fdf4', color: '#059669' }}>{s2.data[k] || '—'}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
+                            <div style={{ textAlign: 'right', marginTop: '1rem' }}>
+                                <button className="btn btn-primary" onClick={() => setShowDiff(false)}>Đóng</button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
         </div>
     );
 }
