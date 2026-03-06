@@ -67,6 +67,8 @@ export function scanExcelDuplicates(buffer: ArrayBuffer): ScanResult[] {
             suggestedTag: textToTag(text),
             suggestedLabel: text.length > 30 ? text.slice(0, 30) + '...' : text,
             selected: info.count >= 2 && text.length >= 4,
+            category: 'data',
+            dataScore: 50,
         });
     }
 
