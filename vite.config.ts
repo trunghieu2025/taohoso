@@ -31,8 +31,13 @@ export default defineConfig({
         ],
       },
       workbox: {
+        // Cache busting: SW mới kích hoạt ngay, không chờ tab cũ đóng
+        skipWaiting: true,
+        clientsClaim: true,
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,docx,xlsx}'],
+        // Không cache .docx/.xlsx để template luôn tải bản mới nhất
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        navigateFallback: '/index.html',
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
