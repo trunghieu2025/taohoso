@@ -9,6 +9,9 @@ import {
     createTemplateWithTags,
     fillTemplate,
     renderDocxPreview,
+    contextLabelToTag,
+    groupSimilarValues,
+    isLikelyNoise,
 } from '../utils/militaryDocGenerator';
 import type { ScanResult } from '../utils/militaryDocGenerator';
 import { FormInput } from '../components/FormField';
@@ -323,7 +326,7 @@ export default function BundleForm() {
         }
 
         // Bước 3: Lọc — ≥2 lần tổng cộng (kể cả xuyên file)
-        const allScanResults = new Map<string, ScanResult>();
+        const rawResults = new Map<string, ScanResult>();
         for (const [text, info] of countMap) {
             if (info.count < 2) continue;
             if (text.length < 3) continue;
@@ -333,27 +336,75 @@ export default function BundleForm() {
 
             const fileCount = crossFileValues.get(text)?.size || 1;
             let score = computeDataScore(text);
-            // Boost score cho giá trị xuất hiện ở nhiều file
             if (fileCount > 1) score = Math.min(100, score + 20);
             const category = score >= 50 ? 'data' as const : 'boilerplate' as const;
             const ctxLabel = allContextLabels.get(text);
 
-            allScanResults.set(text, {
+            // Smart tag: dùng context label nếu có
+            let tag = textToTag(text);
+            if (ctxLabel) {
+                const smartTag = contextLabelToTag(ctxLabel);
+                if (smartTag) tag = smartTag;
+            }
+
+            // Noise classification: đẩy xuống + bỏ tích (KHÔNG xóa)
+            const noise = isLikelyNoise(text, score);
+
+            rawResults.set(text, {
                 text,
                 count: info.count,
                 locations: info.locations,
-                suggestedTag: textToTag(text),
+                suggestedTag: tag,
                 suggestedLabel: text.length > 30 ? text.slice(0, 30) + '...' : text,
-                selected: category === 'data' && text.length >= 4,
+                selected: !noise && category === 'data' && text.length >= 4,
                 category,
-                dataScore: score,
+                dataScore: noise ? Math.max(0, score - 30) : score,
                 crossFileCount: fileCount,
                 contextLabel: ctxLabel,
             });
         }
 
-        // Sort: cross-file data first, then single-file, by score
-        const sorted = [...allScanResults.values()].sort((a, b) => {
+        // Bước 4: Fuzzy grouping — gộp các giá trị tương tự
+        const allTexts = [...rawResults.keys()];
+        const groups = groupSimilarValues(allTexts);
+        const mergedResults: ScanResult[] = [];
+
+        for (const [rep, members] of groups) {
+            const repResult = rawResults.get(rep)!;
+            if (members.length > 1) {
+                // Merge counts and locations from all members
+                let totalCount = 0;
+                const allLocs: string[] = [];
+                let maxScore = 0;
+                let maxFileCount = 0;
+                for (const m of members) {
+                    const mr = rawResults.get(m);
+                    if (mr) {
+                        totalCount += mr.count;
+                        allLocs.push(...mr.locations);
+                        maxScore = Math.max(maxScore, mr.dataScore);
+                        maxFileCount = Math.max(maxFileCount, mr.crossFileCount || 1);
+                    }
+                }
+                mergedResults.push({
+                    ...repResult,
+                    count: totalCount,
+                    locations: allLocs.slice(0, 8),
+                    dataScore: maxScore,
+                    crossFileCount: maxFileCount,
+                    suggestedLabel: repResult.text.length > 30
+                        ? repResult.text.slice(0, 30) + ` (+${members.length - 1} biến thể)`
+                        : repResult.text + (members.length > 1 ? ` (+${members.length - 1})` : ''),
+                });
+            } else {
+                mergedResults.push(repResult);
+            }
+        }
+
+        // Bước 5: Sort — data trước, noise xuống dưới
+        const sorted = mergedResults.sort((a, b) => {
+            // Selected items first
+            if (a.selected !== b.selected) return a.selected ? -1 : 1;
             const aCross = (a.crossFileCount || 1) > 1 ? 1 : 0;
             const bCross = (b.crossFileCount || 1) > 1 ? 1 : 0;
             if (aCross !== bCross) return bCross - aCross;

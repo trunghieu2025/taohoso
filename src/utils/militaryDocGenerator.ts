@@ -151,6 +151,105 @@ export function scanDuplicateTexts(buffer: ArrayBuffer): ScanResult[] {
     return results;
 }
 
+// ── Context label → tag mapping (common Vietnamese form labels) ──
+export const CONTEXT_LABEL_TAG_MAP: Record<string, string> = {
+    'tên dự án': 'TEN_DU_AN', 'tên công trình': 'TEN_CONG_TRINH',
+    'chủ đầu tư': 'CHU_DAU_TU', 'nhà thầu': 'NHA_THAU',
+    'địa chỉ': 'DIA_CHI', 'địa điểm': 'DIA_DIEM',
+    'điện thoại': 'DIEN_THOAI', 'số điện thoại': 'SO_DIEN_THOAI',
+    'mã số thuế': 'MA_SO_THUE', 'mst': 'MA_SO_THUE',
+    'số tài khoản': 'SO_TAI_KHOAN', 'tài khoản': 'TAI_KHOAN',
+    'ngân hàng': 'NGAN_HANG', 'đại diện': 'DAI_DIEN',
+    'chức vụ': 'CHUC_VU', 'giám đốc': 'GIAM_DOC',
+    'tư vấn giám sát': 'TU_VAN_GIAM_SAT', 'tvgs': 'TU_VAN_GIAM_SAT',
+    'gói thầu': 'GOI_THAU', 'hạng mục': 'HANG_MUC',
+    'giá trị hợp đồng': 'GIA_TRI_HD', 'giá trị': 'GIA_TRI',
+    'số hợp đồng': 'SO_HOP_DONG', 'hợp đồng': 'HOP_DONG',
+    'quyết định': 'QUYET_DINH', 'số quyết định': 'SO_QUYET_DINH',
+    'ngày': 'NGAY', 'tháng': 'THANG', 'năm': 'NAM',
+    'người lập': 'NGUOI_LAP', 'người ký': 'NGUOI_KY',
+    'diện tích': 'DIEN_TICH', 'chiều dài': 'CHIEU_DAI',
+    'khối lượng': 'KHOI_LUONG', 'đơn giá': 'DON_GIA',
+    'thành tiền': 'THANH_TIEN', 'tổng cộng': 'TONG_CONG',
+    'xây lắp': 'XAY_LAP', 'thiết bị': 'THIET_BI',
+    'tên gói thầu': 'TEN_GOI_THAU',
+};
+
+/**
+ * Smart tag from context label: "Chủ đầu tư" → "CHU_DAU_TU"
+ */
+export function contextLabelToTag(label: string): string | null {
+    const lower = label.toLowerCase().trim();
+    return CONTEXT_LABEL_TAG_MAP[lower] || null;
+}
+
+/**
+ * Group similar values using normalized text comparison.
+ * Returns map: representative text → list of similar texts.
+ */
+export function groupSimilarValues(
+    texts: string[], threshold = 0.85
+): Map<string, string[]> {
+    const normalize = (s: string) =>
+        s.toLowerCase().replace(/\s+/g, ' ').replace(/[,;.:\-–—]/g, '').trim();
+
+    const groups = new Map<string, string[]>();
+    const assigned = new Set<number>();
+
+    for (let i = 0; i < texts.length; i++) {
+        if (assigned.has(i)) continue;
+        const norm_i = normalize(texts[i]);
+        const group = [texts[i]];
+        assigned.add(i);
+
+        for (let j = i + 1; j < texts.length; j++) {
+            if (assigned.has(j)) continue;
+            const norm_j = normalize(texts[j]);
+
+            // Check similarity: startsWith or length ratio
+            const shorter = norm_i.length <= norm_j.length ? norm_i : norm_j;
+            const longer = norm_i.length > norm_j.length ? norm_i : norm_j;
+
+            if (longer.startsWith(shorter) && shorter.length / longer.length >= threshold) {
+                group.push(texts[j]);
+                assigned.add(j);
+            } else if (shorter === longer) {
+                group.push(texts[j]);
+                assigned.add(j);
+            }
+        }
+        // Use the shortest text as representative
+        const rep = group.reduce((a, b) => a.length <= b.length ? a : b);
+        groups.set(rep, group);
+    }
+    return groups;
+}
+
+/**
+ * Classify if a value is likely noise (boilerplate) that should be unchecked.
+ * Returns true = push down & uncheck, false = keep checked.
+ */
+export function isLikelyNoise(text: string, score: number): boolean {
+    // Very short generic words
+    if (text.length < 5 && !/^\d/.test(text)) return true;
+    // All lowercase, no proper noun
+    if (text === text.toLowerCase() && text.length < 20) return true;
+    // Common boilerplate fragments
+    const noisePatterns = [
+        /^(xây dựng|sau thuế|trước thuế|hợp đồng|nghiệm thu|bàn giao)$/i,
+        /^(thi công|hoàn thành|kết quả|phê duyệt|chấp thuận)$/i,
+        /^(thanh toán|tạm ứng|quyết toán|giám sát|kiểm tra)$/i,
+        /^(báo cáo|biên bản|thông báo|văn bản|hồ sơ)$/i,
+        /^(đơn vị|tổ chức|cá nhân|cơ quan|ban quản lý)$/i,
+    ];
+    for (const p of noisePatterns) {
+        if (p.test(text)) return true;
+    }
+    // Low data score
+    if (score < 35) return true;
+    return false;
+}
+
 // Export helpers for cross-file scanning in BundleForm
 export { computeDataScore, textToTag, STOP_WORDS };
 

@@ -1,10 +1,11 @@
-import { useState, ChangeEvent } from 'react';
+import { useState, ChangeEvent, useCallback } from 'react';
 import type { ScanResult } from '../utils/militaryDocGenerator';
 
 interface Props {
     results: ScanResult[];
     onConfirm: (selected: { text: string; tag: string; label: string }[]) => void;
     onCancel: () => void;
+    fileBuffers?: ArrayBuffer[]; // For preview highlight
 }
 
 /** Group locations by file and format compactly:
@@ -55,9 +56,34 @@ function saveFieldHistory(entries: FieldHistoryEntry[]) {
         localStorage.setItem(HISTORY_KEY, JSON.stringify(merged));
     } catch { /* ignore */ }
 }
-export default function ScanReviewModal({ results, onConfirm, onCancel }: Props) {
+/* ── Scan Template (localStorage) ── */
+const TEMPLATE_KEY = 'taohoso_scan_templates';
+
+interface ScanTemplate {
+    name: string;
+    tags: { text: string; tag: string; label: string }[];
+    createdAt: number;
+}
+
+function loadScanTemplates(): ScanTemplate[] {
+    try { return JSON.parse(localStorage.getItem(TEMPLATE_KEY) || '[]'); }
+    catch { return []; }
+}
+
+function saveScanTemplate(template: ScanTemplate) {
+    const all = loadScanTemplates();
+    all.push(template);
+    // Keep last 20
+    localStorage.setItem(TEMPLATE_KEY, JSON.stringify(all.slice(-20)));
+}
+
+function deleteScanTemplate(name: string) {
+    const all = loadScanTemplates().filter(t => t.name !== name);
+    localStorage.setItem(TEMPLATE_KEY, JSON.stringify(all));
+}
+
+export default function ScanReviewModal({ results, onConfirm, onCancel, fileBuffers }: Props) {
     const [items, setItems] = useState<ScanResult[]>(() => {
-        // Load history and auto-select items that match previously used tags
         const history = loadFieldHistory();
         return results.map((r) => {
             const wasUsed = history.some(h => h.text === r.text || h.tag === r.suggestedTag);
@@ -67,6 +93,11 @@ export default function ScanReviewModal({ results, onConfirm, onCancel }: Props)
     const [filter, setFilter] = useState<'all' | 'data' | 'boilerplate'>('all');
     const [crossFileOnly, setCrossFileOnly] = useState(false);
     const [groupByRole, setGroupByRole] = useState(false);
+    const [previewText, setPreviewText] = useState<string | null>(null);
+    const [showSaveTemplate, setShowSaveTemplate] = useState(false);
+    const [templateName, setTemplateName] = useState('');
+    const [savedTemplates, setSavedTemplates] = useState<ScanTemplate[]>(loadScanTemplates);
+    const [showLoadTemplate, setShowLoadTemplate] = useState(false);
 
     const filteredItems = items.filter(i => {
         if (filter !== 'all' && i.category !== filter) return false;
@@ -97,6 +128,17 @@ export default function ScanReviewModal({ results, onConfirm, onCancel }: Props)
         );
     };
 
+    // Drag-and-drop: move item up/down
+    const moveItem = useCallback((idx: number, direction: 'up' | 'down') => {
+        setItems(prev => {
+            const newItems = [...prev];
+            const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
+            if (targetIdx < 0 || targetIdx >= newItems.length) return prev;
+            [newItems[idx], newItems[targetIdx]] = [newItems[targetIdx], newItems[idx]];
+            return newItems;
+        });
+    }, []);
+
     const handleConfirm = () => {
         const selected = items
             .filter((item) => item.selected && item.suggestedTag.trim())
@@ -105,9 +147,53 @@ export default function ScanReviewModal({ results, onConfirm, onCancel }: Props)
                 tag: item.suggestedTag.trim(),
                 label: item.suggestedLabel || item.text,
             }));
-        // Save to history for next scan
         saveFieldHistory(selected);
         onConfirm(selected);
+    };
+
+    // Export to Excel
+    const handleExportExcel = () => {
+        const rows = items.map(i => ({
+            'Giá trị': i.text,
+            'Tag': i.suggestedTag,
+            'Nhãn': i.suggestedLabel,
+            'Số lần': i.count,
+            'Phân loại': i.category === 'data' ? 'Dữ liệu' : 'Boilerplate',
+            'Đã chọn': i.selected ? 'Có' : 'Không',
+            'Vị trí': i.locations.join('; '),
+        }));
+        const header = Object.keys(rows[0] || {}).join('\t');
+        const body = rows.map(r => Object.values(r).join('\t')).join('\n');
+        const tsv = header + '\n' + body;
+        const blob = new Blob(['\uFEFF' + tsv], { type: 'text/tab-separated-values;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'scan_results.xls'; a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    // Save scan template
+    const handleSaveTemplate = () => {
+        if (!templateName.trim()) return;
+        const tags = items.filter(i => i.selected).map(i => ({
+            text: i.text, tag: i.suggestedTag, label: i.suggestedLabel,
+        }));
+        saveScanTemplate({ name: templateName, tags, createdAt: Date.now() });
+        setSavedTemplates(loadScanTemplates());
+        setShowSaveTemplate(false);
+        setTemplateName('');
+    };
+
+    // Load scan template
+    const handleLoadTemplate = (tpl: ScanTemplate) => {
+        setItems(prev => prev.map(item => {
+            const match = tpl.tags.find(t => t.text === item.text);
+            if (match) {
+                return { ...item, selected: true, suggestedTag: match.tag, suggestedLabel: match.label };
+            }
+            return { ...item, selected: false };
+        }));
+        setShowLoadTemplate(false);
     };
 
     // Role grouping
@@ -149,9 +235,24 @@ export default function ScanReviewModal({ results, onConfirm, onCancel }: Props)
             key={realIdx}
             style={{
                 background: item.selected ? '#f0fdf4' : item.category === 'boilerplate' ? '#fffbeb' : '#fafafa',
-                opacity: item.selected ? 1 : 0.6,
+                opacity: item.selected ? 1 : 0.5,
+                cursor: 'pointer',
+            }}
+            onClick={(e) => {
+                // Don't trigger preview when clicking inputs/checkboxes
+                if ((e.target as HTMLElement).tagName === 'INPUT') return;
+                setPreviewText(previewText === item.text ? null : item.text);
             }}
         >
+            <td style={{ ...tdStyle, textAlign: 'center', width: 30 }}>
+                {/* Move buttons */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'center' }}>
+                    <button onClick={(e) => { e.stopPropagation(); moveItem(realIdx, 'up'); }}
+                        style={moveBtnStyle} title="Di chuyển lên">▲</button>
+                    <button onClick={(e) => { e.stopPropagation(); moveItem(realIdx, 'down'); }}
+                        style={moveBtnStyle} title="Di chuyển xuống">▼</button>
+                </div>
+            </td>
             <td style={{ ...tdStyle, textAlign: 'center' }}>
                 <input
                     type="checkbox"
@@ -215,7 +316,7 @@ export default function ScanReviewModal({ results, onConfirm, onCancel }: Props)
                             🔍 Kết quả quét — {items.length} giá trị trùng lặp
                         </h2>
                         <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '0.85rem' }}>
-                            Chọn các giá trị cần chuyển thành trường nhập liệu. Bạn có thể sửa tên trường và nhãn.
+                            Chọn các giá trị cần chuyển thành trường nhập liệu. Click vào dòng để xem preview.
                         </p>
                     </div>
                     <button onClick={onCancel} style={closeBtnStyle}>✕</button>
@@ -233,14 +334,12 @@ export default function ScanReviewModal({ results, onConfirm, onCancel }: Props)
                         <button className="btn btn-sm" onClick={() => setFilter('boilerplate')}
                             style={{ background: filter === 'boilerplate' ? '#fef3c7' : undefined, fontSize: '0.75rem' }}>📄 VB cố định ({items.filter(i => i.category === 'boilerplate').length})</button>
                     </div>
-                    {/* Cross-file toggle */}
                     {items.some(i => (i.crossFileCount || 0) > 1) && (
                         <label style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginLeft: '0.5rem', fontSize: '0.75rem', cursor: 'pointer', color: '#6d28d9', fontWeight: 600 }}>
                             <input type="checkbox" checked={crossFileOnly} onChange={e => setCrossFileOnly(e.target.checked)} />
                             🔗 Chỉ xuyên file ({items.filter(i => (i.crossFileCount || 0) > 1).length})
                         </label>
                     )}
-                    {/* Group by role toggle */}
                     <label style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginLeft: '0.5rem', fontSize: '0.75rem', cursor: 'pointer', color: '#0369a1', fontWeight: 600 }}>
                         <input type="checkbox" checked={groupByRole} onChange={e => setGroupByRole(e.target.checked)} />
                         👥 Nhóm theo vai trò
@@ -250,11 +349,57 @@ export default function ScanReviewModal({ results, onConfirm, onCancel }: Props)
                     </span>
                 </div>
 
+                {/* Action bar: save template, load template, export */}
+                <div style={{ display: 'flex', gap: '0.5rem', padding: '0.4rem 1.5rem', borderBottom: '1px solid #f1f5f9', background: '#fefce8', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <button className="btn btn-sm" onClick={() => setShowSaveTemplate(!showSaveTemplate)}
+                        style={{ fontSize: '0.75rem', background: '#dbeafe' }}>💾 Lưu template</button>
+                    <button className="btn btn-sm" onClick={() => setShowLoadTemplate(!showLoadTemplate)}
+                        style={{ fontSize: '0.75rem', background: '#d1fae5' }}>📂 Tải template ({savedTemplates.length})</button>
+                    <button className="btn btn-sm" onClick={handleExportExcel}
+                        style={{ fontSize: '0.75rem', background: '#fde68a' }}>📊 Xuất Excel</button>
+
+                    {showSaveTemplate && (
+                        <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center' }}>
+                            <input type="text" value={templateName} onChange={e => setTemplateName(e.target.value)}
+                                placeholder="Tên template..." style={{ ...inputStyle, width: 150, fontSize: '0.75rem' }} />
+                            <button className="btn btn-sm" onClick={handleSaveTemplate}
+                                style={{ fontSize: '0.7rem', background: '#10b981', color: '#fff' }}>✓ Lưu</button>
+                        </div>
+                    )}
+
+                    {showLoadTemplate && savedTemplates.length > 0 && (
+                        <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                            {savedTemplates.map((t, i) => (
+                                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                    <button className="btn btn-sm" onClick={() => handleLoadTemplate(t)}
+                                        style={{ fontSize: '0.7rem' }}>{t.name} ({t.tags.length})</button>
+                                    <button onClick={() => { deleteScanTemplate(t.name); setSavedTemplates(loadScanTemplates()); }}
+                                        style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.7rem', padding: 0 }}>✕</button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {/* Preview panel */}
+                {previewText && (
+                    <div style={{ padding: '0.5rem 1.5rem', background: '#f0f9ff', borderBottom: '1px solid #bfdbfe', maxHeight: 120, overflow: 'auto' }}>
+                        <div style={{ fontSize: '0.75rem', color: '#0369a1', fontWeight: 600, marginBottom: 4 }}>👁️ Preview — Click dòng khác để đóng</div>
+                        {items.find(i => i.text === previewText)?.locations.map((loc, j) => (
+                            <div key={j} style={{ fontSize: '0.8rem', color: '#334155', lineHeight: 1.6 }}>
+                                <span style={{ color: '#64748b' }}>{loc.replace(/\[.*?\]\s*/, '')}: </span>
+                                <mark style={{ background: '#fef08a', padding: '0 2px', borderRadius: 2 }}>{previewText}</mark>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
                 {/* Table */}
                 <div style={tableContainerStyle}>
                     <table style={tableStyle}>
                         <thead>
                             <tr>
+                                <th style={{ ...thStyle, width: 30 }}>↕</th>
                                 <th style={{ ...thStyle, width: 40 }}>☑</th>
                                 <th style={thStyle}>Giá trị trong file</th>
                                 <th style={{ ...thStyle, width: 60, textAlign: 'center' }}>Lần</th>
@@ -265,11 +410,10 @@ export default function ScanReviewModal({ results, onConfirm, onCancel }: Props)
                         </thead>
                         <tbody>
                             {groupByRole && groupedItems ? (
-                                // Grouped view
                                 [...groupedItems.entries()].map(([role, group]) => (
                                     <>
                                         <tr key={`group-${role}`}>
-                                            <td colSpan={6} style={{
+                                            <td colSpan={7} style={{
                                                 padding: '0.5rem 0.75rem', background: '#f0f9ff',
                                                 fontWeight: 700, fontSize: '0.85rem', color: '#1e40af',
                                                 borderBottom: '2px solid #bfdbfe',
@@ -292,7 +436,6 @@ export default function ScanReviewModal({ results, onConfirm, onCancel }: Props)
                                     </>
                                 ))
                             ) : (
-                                // Flat view
                                 filteredItems.map((item) => {
                                     const realIdx = items.indexOf(item);
                                     return renderRow(item, realIdx);
@@ -407,6 +550,11 @@ const inputStyle: React.CSSProperties = {
     borderRadius: 4,
     fontSize: '0.82rem',
     fontFamily: 'monospace',
+};
+
+const moveBtnStyle: React.CSSProperties = {
+    background: 'none', border: 'none', cursor: 'pointer',
+    fontSize: '0.6rem', padding: '0 2px', color: '#94a3b8', lineHeight: 1,
 };
 
 const footerStyle: React.CSSProperties = {
