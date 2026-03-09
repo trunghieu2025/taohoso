@@ -69,6 +69,9 @@ export default function Header() {
               <Link to="/tra-cuu-du-an" onClick={() => setMobileOpen(false)}>
                 🔍 Tra cứu dự án
               </Link>
+              <Link to="/dashboard" onClick={() => setMobileOpen(false)}>
+                📊 Dashboard
+              </Link>
             </div>
           </div>
 

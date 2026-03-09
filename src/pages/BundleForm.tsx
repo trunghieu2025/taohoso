@@ -28,6 +28,7 @@ import TableEditor from '../components/TableEditor';
 import FieldSelectorModal from '../components/FieldSelectorModal';
 import { numberToVietnamese } from '../utils/numberToVietnamese';
 import { useNavigate } from 'react-router-dom';
+import { logHistory } from './Dashboard';
 import { saveProject, createProjectFromFormData } from '../utils/projectStorage';
 
 /* ── Types ── */
