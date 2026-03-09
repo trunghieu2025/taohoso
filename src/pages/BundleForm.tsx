@@ -65,8 +65,8 @@ Khi làm hồ sơ dự án, bạn có <b>nhiều file Word</b> (HĐ giám sát, 
 
 <h3 style="color:#1e293b;margin:0.75rem 0 0.4rem;font-size:1.05rem">📌 Bước 1: Upload file</h3>
 <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:0.5rem">
-<tr style="background:#e0f2fe"><td style="padding:6px;border:1px solid #bae6fd;width:40%"><b>📄 Thêm file lẻ</b></td><td style="padding:6px;border:1px solid #bae6fd">Chọn từng file .docx riêng lẻ</td></tr>
-<tr><td style="padding:6px;border:1px solid #bae6fd"><b>📁 Thêm thư mục</b></td><td style="padding:6px;border:1px solid #bae6fd">Chọn cả thư mục → tự lọc file .docx</td></tr>
+<tr style="background:#e0f2fe"><td style="padding:6px;border:1px solid #bae6fd;width:40%"><b>📄 Thêm file lẻ</b></td><td style="padding:6px;border:1px solid #bae6fd">Chọn file .docx, .xlsx, .xls</td></tr>
+<tr><td style="padding:6px;border:1px solid #bae6fd"><b>📁 Thêm thư mục</b></td><td style="padding:6px;border:1px solid #bae6fd">Chọn cả thư mục → tự lọc file .docx/.xlsx</td></tr>
 </table>
 <div style="background:#fef3c7;padding:0.5rem;border-radius:6px;font-size:13px;margin-bottom:0.5rem">
 <b>Ví dụ:</b> Bạn có 3 thư mục: <code>Giám Sát/</code>, <code>QLDA/</code>, <code>Xây Lắp/</code><br>
@@ -77,8 +77,10 @@ Khi làm hồ sơ dự án, bạn có <b>nhiều file Word</b> (HĐ giám sát, 
 <h3 style="color:#1e293b;margin:0.75rem 0 0.4rem;font-size:1.05rem">📌 Bước 2: Quét & tạo form</h3>
 <p style="font-size:13px;margin:0 0 0.3rem">Khi có ≥2 file → bấm <b style="color:#10b981">🔍 Quét & tạo form</b></p>
 <div style="background:#fef3c7;padding:0.5rem;border-radius:6px;font-size:13px;margin-bottom:0.5rem">
-<b>Ví dụ:</b> Hệ thống phát hiện <i>"Bộ Chỉ huy Công ty XY"</i> xuất hiện trong <b>cả 8 file</b><br>
-→ Tự động đề xuất tạo trường <b>TEN_CONG_TRINH</b><br>
+Hệ thống tự tìm <b>2 loại trường</b>:<br>
+• <b>Dữ liệu trùng lặp</b>: text xuất hiện ≥2 lần → tự tạo trường<br>
+• <b>📌 Trường [BRACKET]</b>: text trong dấu <code>[...]</code> → <b>luôn lấy</b> dù chỉ 1 lần<br>
+→ Giảm nhiễu thông minh + gộp giá trị tương tự<br>
 → Bạn chỉ cần tích ✅ các trường cần tự động hóa
 </div>
 
@@ -116,6 +118,8 @@ Khi làm hồ sơ dự án, bạn có <b>nhiều file Word</b> (HĐ giám sát, 
 <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:0.5rem">
 <tr style="background:#dcfce7"><td style="padding:5px 8px;border:1px solid #86efac;width:35%"><b>💾 Sao lưu</b></td><td style="padding:5px 8px;border:1px solid #86efac">Xuất dữ liệu → file JSON (backup)</td></tr>
 <tr><td style="padding:5px 8px;border:1px solid #86efac"><b>📂 Khôi phục</b></td><td style="padding:5px 8px;border:1px solid #86efac">Tải lại từ file JSON đã backup</td></tr>
+<tr style="background:#dcfce7"><td style="padding:5px 8px;border:1px solid #86efac"><b>📥 Nhập dữ liệu</b></td><td style="padding:5px 8px;border:1px solid #86efac">Import JSON → điền vào TẤT CẢ template</td></tr>
+<tr><td style="padding:5px 8px;border:1px solid #86efac"><b>📤 Xuất dữ liệu</b></td><td style="padding:5px 8px;border:1px solid #86efac">Export data → dùng cho bộ file mới</td></tr>
 <tr style="background:#dcfce7"><td style="padding:5px 8px;border:1px solid #86efac"><b>📊 Nhập từ Excel</b></td><td style="padding:5px 8px;border:1px solid #86efac">Map dữ liệu Excel vào form tự động</td></tr>
 <tr><td style="padding:5px 8px;border:1px solid #86efac"><b>💿 Lưu phiên</b></td><td style="padding:5px 8px;border:1px solid #86efac">Lưu session vào trình duyệt</td></tr>
 <tr style="background:#dcfce7"><td style="padding:5px 8px;border:1px solid #86efac"><b>📋 Nhân bản</b></td><td style="padding:5px 8px;border:1px solid #86efac">Copy session → session mới</td></tr>
@@ -124,11 +128,24 @@ Khi làm hồ sơ dự án, bạn có <b>nhiều file Word</b> (HĐ giám sát, 
 
 <div style="background:#fef2f2;border-radius:6px;padding:0.5rem;font-size:13px;border-left:4px solid #ef4444">
 <b style="color:#dc2626">⚠️ Lưu ý quan trọng:</b><br>
-• Chỉ hỗ trợ file <b>.docx</b> (Word 2007+) và <b>.xlsx/.xls</b> (Excel)<br>
+• Hỗ trợ file <b>.docx</b> (Word 2007+) và <b>.xlsx/.xls</b> (Excel)<br>
+• Trường trong dấu <b>[...]</b> được tự nhận dạng<br>
 • Dữ liệu xử lý <b>100% trên trình duyệt</b> — không upload lên server<br>
 • Nên <b>💾 Sao lưu</b> thường xuyên để không mất dữ liệu<br>
 • Dữ liệu <b>tự lưu mỗi 2 giây</b>, đóng trình duyệt mở lại vẫn còn
-</div>`;
+</div>
+
+<h3 style="color:#1e293b;margin:0.75rem 0 0.4rem;font-size:1.05rem">⌨️ Phím tắt</h3>
+<table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:0.5rem">
+<tr style="background:#e0f2fe"><td style="padding:5px 8px;border:1px solid #bae6fd;width:35%"><b>Ctrl + S</b></td><td style="padding:5px 8px;border:1px solid #bae6fd">Lưu nhanh phiên làm việc</td></tr>
+<tr><td style="padding:5px 8px;border:1px solid #bae6fd"><b>Ctrl + Enter</b></td><td style="padding:5px 8px;border:1px solid #bae6fd">Bắt đầu quét (ở bước Upload)</td></tr>
+</table>
+
+<h3 style="color:#1e293b;margin:0.75rem 0 0.4rem;font-size:1.05rem">🆕 Công cụ mới</h3>
+<table style="width:100%;border-collapse:collapse;font-size:13px">
+<tr style="background:#ede9fe"><td style="padding:5px 8px;border:1px solid #c4b5fd;width:35%"><b>📊 Dashboard</b></td><td style="padding:5px 8px;border:1px solid #c4b5fd">Thống kê, lịch sử, QR Code, đánh số VB</td></tr>
+<tr><td style="padding:5px 8px;border:1px solid #c4b5fd"><b>⚖️ So sánh file</b></td><td style="padding:5px 8px;border:1px solid #c4b5fd">Upload bản cũ & mới → highlight khác biệt</td></tr>
+</table>`;
 
 /* ── localStorage helpers ── */
 const STORAGE_KEY = 'bundle_sessions';
