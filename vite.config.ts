@@ -40,8 +40,7 @@ export default defineConfig({
         clientsClaim: true,
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB
         // Không cache .docx/.xlsx để template luôn tải bản mới nhất
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
-        navigateFallback: '/index.html',
+        globPatterns: ['**/*.{js,css,ico,png,svg}'],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,

@@ -17,6 +17,25 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Force clear old Service Workers — chạy TRƯỚC app
+      (function(){
+        var v = '20260309b';
+        var k = 'sw-nuke-v';
+        if (localStorage.getItem(k) !== v && 'serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(function(regs) {
+            regs.forEach(function(r) { r.unregister(); });
+          });
+          if (window.caches) {
+            caches.keys().then(function(ns) {
+              ns.forEach(function(n) { caches.delete(n); });
+            });
+          }
+          localStorage.setItem(k, v);
+          setTimeout(function() { location.reload(); }, 500);
+        }
+      })();
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
