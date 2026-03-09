@@ -72,6 +72,9 @@ export default function Header() {
               <Link to="/dashboard" onClick={() => setMobileOpen(false)}>
                 📊 Dashboard
               </Link>
+              <Link to="/so-sanh-file" onClick={() => setMobileOpen(false)}>
+                ⚖️ So sánh file
+              </Link>
             </div>
           </div>
 

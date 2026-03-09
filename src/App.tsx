@@ -17,6 +17,7 @@ import ContractorDirectory from './pages/ContractorDirectory';
 import ProjectSearchAll from './pages/ProjectSearchAll';
 import ProjectCompare from './pages/ProjectCompare';
 import Dashboard from './pages/Dashboard';
+import FileDiff from './pages/FileDiff';
 import NotFoundPage from './pages/NotFoundPage';
 import TemporaryResidence from './pages/guides/TemporaryResidence';
 import PermanentResidence from './pages/guides/PermanentResidence';
@@ -50,6 +51,7 @@ export default function App() {
           <Route path="/tra-cuu-du-an" element={<ProjectSearchAll />} />
           <Route path="/so-sanh-du-an" element={<ProjectCompare />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/so-sanh-file" element={<FileDiff />} />
           <Route path="/tim-kiem" element={<SearchPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>

@@ -579,6 +579,45 @@ export default function BundleForm() {
         setPresets(updated);
     };
 
+    /* ── B1: Reverse Fill — Export/Import data JSON ── */
+    const handleExportData = () => {
+        const exportObj = { data, labels, allTags, exportDate: new Date().toISOString() };
+        const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'bo-du-lieu-ho-so.json'; a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    const handleImportData = () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        input.onchange = async (e) => {
+            const file = (e.target as HTMLInputElement).files?.[0];
+            if (!file) return;
+            try {
+                const text = await file.text();
+                const imported = JSON.parse(text);
+                if (imported.data && typeof imported.data === 'object') {
+                    setData(prev => ({ ...prev, ...imported.data }));
+                    if (imported.labels) setLabels(prev => ({ ...prev, ...imported.labels }));
+                    if (imported.allTags) {
+                        setAllTags(prev => {
+                            const merged = new Set([...prev, ...imported.allTags]);
+                            return [...merged].sort();
+                        });
+                    }
+                    alert(`✅ Đã nhập ${Object.keys(imported.data).length} trường dữ liệu!`);
+                    logHistory('Nhập dữ liệu từ JSON', file.name, Object.keys(imported.data).length);
+                } else {
+                    alert('File JSON không hợp lệ. Cần có trường "data".');
+                }
+            } catch { alert('Lỗi đọc file JSON.'); }
+        };
+        input.click();
+    };
+
     /* ── Batch export from Excel ── */
     const handleBatchExport = async (e: ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -887,6 +926,19 @@ export default function BundleForm() {
                             <button className="btn btn-primary" onClick={handleStartScan} disabled={scanning}
                                 style={{ fontSize: '1rem', padding: '0.6rem 1.5rem', background: '#10b981' }}>
                                 {scanning ? '⏳ Đang quét...' : `🔍 Quét & tạo form (${stagedFiles.length} file)`}
+                            </button>
+                        )}
+                    </div>
+                    {/* B1: Import/Export Data */}
+                    <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+                        <button className="btn btn-sm" onClick={handleImportData}
+                            style={{ fontSize: '0.8rem', background: '#dbeafe', color: '#1d4ed8' }}>
+                            📥 Nhập dữ liệu (JSON)
+                        </button>
+                        {allTags.length > 0 && (
+                            <button className="btn btn-sm" onClick={handleExportData}
+                                style={{ fontSize: '0.8rem', background: '#d1fae5', color: '#059669' }}>
+                                📤 Xuất dữ liệu (JSON)
                             </button>
                         )}
                     </div>
