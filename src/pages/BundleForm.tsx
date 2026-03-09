@@ -15,6 +15,7 @@ import {
 } from '../utils/militaryDocGenerator';
 import type { ScanResult } from '../utils/militaryDocGenerator';
 import * as XLSX from 'xlsx';
+import PizZip from 'pizzip';
 import { FormInput } from '../components/FormField';
 import { FORM_TEMPLATES } from '../utils/formTemplates';
 import ScanReviewModal from '../components/ScanReviewModal';
@@ -385,39 +386,73 @@ export default function BundleForm() {
             }
         }
 
-        // Bước 3: Lọc — ≥2 lần tổng cộng (kể cả xuyên file)
+        // Bước 2.5: Tìm trường [BRACKET] — xuất hiện 1 lần vẫn lấy
+        const bracketFields = new Set<string>();
+        for (const f of stagedFiles) {
+            if (f.name.endsWith('.xlsx') || f.name.endsWith('.xls')) continue;
+            try {
+                const zip = new PizZip(f.buffer);
+                const xml = zip.file('word/document.xml')?.asText() || '';
+                // Find all [TEXT] patterns in raw XML (handles split tags)
+                const cleanXml = xml.replace(/<[^>]+>/g, '');
+                const bracketRegex = /\[([^\[\]]{2,80})\]/g;
+                let match;
+                while ((match = bracketRegex.exec(cleanXml)) !== null) {
+                    const inner = match[1].trim();
+                    if (inner.length >= 2 && !/^\d+$/.test(inner)) {
+                        bracketFields.add(inner);
+                        // Also add to countMap if not there
+                        const fullText = `[${inner}]`;
+                        if (!countMap.has(fullText)) {
+                            countMap.set(fullText, { count: 1, locations: [`[${f.name}] bracket field`] });
+                        }
+                    }
+                }
+            } catch { /* skip */ }
+        }
+
+        // Bước 3: Lọc — ≥2 lần tổng cộng HOẶC là bracket field
         const rawResults = new Map<string, ScanResult>();
         for (const [text, info] of countMap) {
-            if (info.count < 2) continue;
-            if (text.length < 3) continue;
+            const isBracket = text.startsWith('[') && text.endsWith(']') && bracketFields.has(text.slice(1, -1));
+            // Skip if count < 2 AND not a bracket field
+            if (info.count < 2 && !isBracket) continue;
+            if (text.length < 2) continue;
             if (/^\d+[.,]?\d*$/.test(text)) continue;
-            if (STOP_WORDS.has(text)) continue;
-            if (STOP_WORDS.has(text.toLowerCase())) continue;
+            if (!isBracket && STOP_WORDS.has(text)) continue;
+            if (!isBracket && STOP_WORDS.has(text.toLowerCase())) continue;
 
             const fileCount = crossFileValues.get(text)?.size || 1;
             let score = computeDataScore(text);
             if (fileCount > 1) score = Math.min(100, score + 20);
+            // Bracket fields get high score automatically
+            if (isBracket) score = Math.max(score, 85);
             const category = score >= 50 ? 'data' as const : 'boilerplate' as const;
             const ctxLabel = allContextLabels.get(text);
 
-            // Smart tag: dùng context label nếu có
+            // Smart tag: bracket field → use inner text as tag
             let tag = textToTag(text);
-            if (ctxLabel) {
+            if (isBracket) {
+                const inner = text.slice(1, -1).trim();
+                tag = textToTag(inner);
+            } else if (ctxLabel) {
                 const smartTag = contextLabelToTag(ctxLabel);
                 if (smartTag) tag = smartTag;
             }
 
-            // Noise classification: đẩy xuống + bỏ tích (KHÔNG xóa)
-            const noise = isLikelyNoise(text, score);
+            // Noise classification
+            const noise = !isBracket && isLikelyNoise(text, score);
 
             rawResults.set(text, {
                 text,
                 count: info.count,
                 locations: info.locations,
                 suggestedTag: tag,
-                suggestedLabel: text.length > 30 ? text.slice(0, 30) + '...' : text,
-                selected: !noise && category === 'data' && text.length >= 4,
-                category,
+                suggestedLabel: isBracket
+                    ? `📌 ${text}` // Mark bracket fields with pin
+                    : (text.length > 30 ? text.slice(0, 30) + '...' : text),
+                selected: isBracket || (!noise && category === 'data' && text.length >= 4),
+                category: isBracket ? 'data' : category,
                 dataScore: noise ? Math.max(0, score - 30) : score,
                 crossFileCount: fileCount,
                 contextLabel: ctxLabel,
