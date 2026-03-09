@@ -1,6 +1,10 @@
 import { useState, useRef, ChangeEvent, useCallback, useEffect } from 'react';
 import {
     scanDuplicateTexts,
+    extractTextSegments,
+    computeDataScore,
+    textToTag,
+    STOP_WORDS,
     extractTags,
     createTemplateWithTags,
     fillTemplate,
@@ -281,39 +285,73 @@ export default function BundleForm() {
 
     const removeStagedFile = (idx: number) => setStagedFiles(prev => prev.filter((_, i) => i !== idx));
 
-    /* ── Scan ── */
+    /* ── Scan (cross-file: gộp text từ TẤT CẢ file, rồi mới đếm trùng lặp) ── */
     const handleStartScan = () => {
         if (stagedFiles.length === 0) return;
         setScanning(true);
-        const allScanResults = new Map<string, ScanResult>();
+
+        // Bước 1: Gộp ALL text segments từ tất cả file vào 1 pool
+        const allSegments: { text: string; location: string }[] = [];
+        const allContextLabels = new Map<string, string>();
         const crossFileValues = new Map<string, Set<string>>();
+
         for (const f of stagedFiles) {
-            const results = scanDuplicateTexts(f.buffer);
-            for (const r of results) {
-                const existing = allScanResults.get(r.text);
-                if (existing) {
-                    existing.count += r.count;
-                    existing.locations.push(...r.locations.map(l => `[${f.name}] ${l}`));
-                } else {
-                    allScanResults.set(r.text, { ...r, locations: r.locations.map(l => `[${f.name}] ${l}`) });
-                }
-                if (!crossFileValues.has(r.text)) crossFileValues.set(r.text, new Set());
-                crossFileValues.get(r.text)!.add(f.name);
+            const { segments, contextLabels } = extractTextSegments(f.buffer);
+            for (const seg of segments) {
+                allSegments.push({ text: seg.text, location: `[${f.name}] ${seg.location}` });
+                // Track cross-file presence
+                if (!crossFileValues.has(seg.text)) crossFileValues.set(seg.text, new Set());
+                crossFileValues.get(seg.text)!.add(f.name);
+            }
+            // Merge context labels
+            for (const [k, v] of contextLabels) {
+                if (!allContextLabels.has(k)) allContextLabels.set(k, v);
             }
         }
-        // Set crossFileCount and boost score for cross-file values
-        for (const [text, fns] of crossFileValues) {
-            const entry = allScanResults.get(text);
-            if (entry) {
-                entry.crossFileCount = fns.size;
-                if (fns.size > 1) {
-                    // Cross-file values are much more likely to be real data
-                    entry.dataScore = Math.min(100, entry.dataScore + 20);
-                    entry.category = entry.dataScore >= 50 ? 'data' : 'boilerplate';
-                    entry.selected = entry.category === 'data';
-                }
+
+        // Bước 2: Đếm tổng số lần xuất hiện (xuyên file)
+        const countMap = new Map<string, { count: number; locations: string[] }>();
+        for (const seg of allSegments) {
+            if (!countMap.has(seg.text)) {
+                countMap.set(seg.text, { count: 0, locations: [] });
+            }
+            const entry = countMap.get(seg.text)!;
+            entry.count++;
+            if (entry.locations.length < 8) {
+                entry.locations.push(seg.location);
             }
         }
+
+        // Bước 3: Lọc — ≥2 lần tổng cộng (kể cả xuyên file)
+        const allScanResults = new Map<string, ScanResult>();
+        for (const [text, info] of countMap) {
+            if (info.count < 2) continue;
+            if (text.length < 3) continue;
+            if (/^\d+[.,]?\d*$/.test(text)) continue;
+            if (STOP_WORDS.has(text)) continue;
+            if (STOP_WORDS.has(text.toLowerCase())) continue;
+
+            const fileCount = crossFileValues.get(text)?.size || 1;
+            let score = computeDataScore(text);
+            // Boost score cho giá trị xuất hiện ở nhiều file
+            if (fileCount > 1) score = Math.min(100, score + 20);
+            const category = score >= 50 ? 'data' as const : 'boilerplate' as const;
+            const ctxLabel = allContextLabels.get(text);
+
+            allScanResults.set(text, {
+                text,
+                count: info.count,
+                locations: info.locations,
+                suggestedTag: textToTag(text),
+                suggestedLabel: text.length > 30 ? text.slice(0, 30) + '...' : text,
+                selected: category === 'data' && text.length >= 4,
+                category,
+                dataScore: score,
+                crossFileCount: fileCount,
+                contextLabel: ctxLabel,
+            });
+        }
+
         // Sort: cross-file data first, then single-file, by score
         const sorted = [...allScanResults.values()].sort((a, b) => {
             const aCross = (a.crossFileCount || 1) > 1 ? 1 : 0;

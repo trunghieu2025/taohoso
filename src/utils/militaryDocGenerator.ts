@@ -32,31 +32,29 @@ const STOP_WORDS = new Set([
 ]);
 
 /**
- * Scan a raw .docx for duplicate text segments.
- * Returns text values appearing ≥2 times, filtered and sorted by frequency.
- * 
- * Enhanced: Also extracts sub-paragraph segments (split by : ; , tab)
- * to detect values like names, phone numbers, addresses embedded in
- * longer paragraphs.
+ * Extract ALL text segments from a .docx without filtering.
+ * Returns raw segments for cross-file merging before duplicate detection.
+ * Used by BundleForm to merge segments from all files first, then filter.
  */
-export function scanDuplicateTexts(buffer: ArrayBuffer): ScanResult[] {
+export function extractTextSegments(buffer: ArrayBuffer): {
+    segments: { text: string; location: string }[];
+    contextLabels: Map<string, string>;
+} {
     const zip = new PizZip(buffer);
-    const textSegments: { text: string; location: string }[] = [];
-    const contextLabels = new Map<string, string>(); // text → label
+    const segments: { text: string; location: string }[] = [];
+    const contextLabels = new Map<string, string>();
 
-    // Parse document.xml
     const docXml = zip.file('word/document.xml')?.asText();
-    if (!docXml) return [];
+    if (!docXml) return { segments, contextLabels };
 
     const parser = new DOMParser();
     const doc = parser.parseFromString(docXml, 'application/xml');
     const ns = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
 
-    // Extract text from paragraphs
     let paraIdx = 0;
     let tableIdx = 0;
     const body = doc.getElementsByTagNameNS(ns, 'body')[0];
-    if (!body) return [];
+    if (!body) return { segments, contextLabels };
 
     for (let i = 0; i < body.childNodes.length; i++) {
         const node = body.childNodes[i] as Element;
@@ -67,8 +65,8 @@ export function scanDuplicateTexts(buffer: ArrayBuffer): ScanResult[] {
             const text = getTextFromParagraph(node, ns);
             if (text.trim()) {
                 const loc = `Dòng ${paraIdx}`;
-                textSegments.push({ text: text.trim(), location: loc });
-                extractSubSegments(text.trim(), loc, textSegments, contextLabels);
+                segments.push({ text: text.trim(), location: loc });
+                extractSubSegments(text.trim(), loc, segments, contextLabels);
             }
         } else if (node.tagName === 'w:tbl' || node.localName === 'tbl') {
             tableIdx++;
@@ -81,14 +79,29 @@ export function scanDuplicateTexts(buffer: ArrayBuffer): ScanResult[] {
                         const text = getTextFromParagraph(paras[p], ns);
                         if (text.trim()) {
                             const loc = `Bảng ${tableIdx}, dòng ${r + 1}, cột ${c + 1}`;
-                            textSegments.push({ text: text.trim(), location: loc });
-                            extractSubSegments(text.trim(), loc, textSegments, contextLabels);
+                            segments.push({ text: text.trim(), location: loc });
+                            extractSubSegments(text.trim(), loc, segments, contextLabels);
                         }
                     }
                 }
             }
         }
     }
+
+    return { segments, contextLabels };
+}
+
+/**
+ * Scan a raw .docx for duplicate text segments.
+ * Returns text values appearing ≥2 times, filtered and sorted by frequency.
+ * 
+ * Enhanced: Also extracts sub-paragraph segments (split by : ; , tab)
+ * to detect values like names, phone numbers, addresses embedded in
+ * longer paragraphs.
+ */
+export function scanDuplicateTexts(buffer: ArrayBuffer): ScanResult[] {
+    const { segments: textSegments, contextLabels } = extractTextSegments(buffer);
+    if (textSegments.length === 0) return [];
 
     // Count occurrences
     const countMap = new Map<string, { count: number; locations: string[] }>();
@@ -137,6 +150,9 @@ export function scanDuplicateTexts(buffer: ArrayBuffer): ScanResult[] {
     });
     return results;
 }
+
+// Export helpers for cross-file scanning in BundleForm
+export { computeDataScore, textToTag, STOP_WORDS };
 
 /**
  * Score 0-100 how likely a text value is real project data vs boilerplate.
