@@ -4,14 +4,38 @@ import './index.css'
 import App from './App.tsx'
 
 // ============================================================
-// CACHE BUSTING MẠNH: đảm bảo người dùng LUÔN thấy bản mới nhất
+// CACHE BUSTING V2: XÓA TOÀN BỘ SW + CACHE CŨ ngay lập tức
 // ============================================================
 
-// Phiên bản app - thay đổi mỗi lần build nhờ Vite inject timestamp
-const APP_VERSION = import.meta.env.VITE_APP_VERSION || Date.now().toString()
+// Build-time version hash (thay đổi mỗi lần Vite build)
+const APP_VERSION = '__BUILD_' + (import.meta.env.VITE_APP_VERSION || '0') + '__'
+const STORED_VERSION = localStorage.getItem('app-version')
 
 if ('serviceWorker' in navigator) {
-  // 1. Tự động reload khi SW mới kích hoạt
+  // Nếu version thay đổi (hoặc chưa lưu) → xóa hết SW + cache
+  if (STORED_VERSION !== APP_VERSION) {
+    // Unregister tất cả Service Workers cũ
+    navigator.serviceWorker.getRegistrations().then((registrations) => {
+      for (const reg of registrations) {
+        reg.unregister()
+      }
+    })
+    // Xóa tất cả caches
+    if ('caches' in window) {
+      caches.keys().then((names) => {
+        for (const name of names) {
+          caches.delete(name)
+        }
+      })
+    }
+    localStorage.setItem('app-version', APP_VERSION)
+    // Reload 1 lần để đảm bảo load code mới
+    if (STORED_VERSION) {
+      window.location.reload()
+    }
+  }
+
+  // Tự động reload khi SW mới kích hoạt
   let isReloading = false
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (!isReloading) {
@@ -20,32 +44,13 @@ if ('serviceWorker' in navigator) {
     }
   })
 
-  // 2. Chủ động check update SW mỗi 60 giây
+  // Check update SW mỗi 60 giây
   navigator.serviceWorker.ready.then((registration) => {
-    // Check ngay lập tức
     registration.update().catch(() => { })
-
-    // Check định kỳ mỗi 60 giây
     setInterval(() => {
       registration.update().catch(() => { })
     }, 60 * 1000)
   })
-
-  // 3. Xóa toàn bộ cache cũ của SW (trừ font cache)
-  if ('caches' in window) {
-    caches.keys().then((cacheNames) => {
-      cacheNames.forEach((cacheName) => {
-        // Giữ lại font cache, xóa hết cache khác nếu version khác
-        if (!cacheName.includes('fonts')) {
-          const savedVersion = localStorage.getItem('app-version')
-          if (savedVersion && savedVersion !== APP_VERSION) {
-            caches.delete(cacheName)
-          }
-        }
-      })
-      localStorage.setItem('app-version', APP_VERSION)
-    })
-  }
 }
 
 createRoot(document.getElementById('root')!).render(
