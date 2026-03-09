@@ -14,6 +14,7 @@ import {
     isLikelyNoise,
 } from '../utils/militaryDocGenerator';
 import type { ScanResult } from '../utils/militaryDocGenerator';
+import * as XLSX from 'xlsx';
 import { FormInput } from '../components/FormField';
 import { FORM_TEMPLATES } from '../utils/formTemplates';
 import ScanReviewModal from '../components/ScanReviewModal';
@@ -121,7 +122,7 @@ Khi làm hồ sơ dự án, bạn có <b>nhiều file Word</b> (HĐ giám sát, 
 
 <div style="background:#fef2f2;border-radius:6px;padding:0.5rem;font-size:13px;border-left:4px solid #ef4444">
 <b style="color:#dc2626">⚠️ Lưu ý quan trọng:</b><br>
-• Chỉ hỗ trợ file <b>.docx</b> (Word 2007+), không hỗ trợ .doc cũ<br>
+• Chỉ hỗ trợ file <b>.docx</b> (Word 2007+) và <b>.xlsx/.xls</b> (Excel)<br>
 • Dữ liệu xử lý <b>100% trên trình duyệt</b> — không upload lên server<br>
 • Nên <b>💾 Sao lưu</b> thường xuyên để không mất dữ liệu<br>
 • Dữ liệu <b>tự lưu mỗi 2 giây</b>, đóng trình duyệt mở lại vẫn còn
@@ -213,6 +214,35 @@ export default function BundleForm() {
         return () => clearTimeout(timer);
     }, [data, step, allTags, labels, files]);
 
+    // Keyboard shortcuts: Ctrl+S save, Ctrl+Enter scan/submit
+    useEffect(() => {
+        const handler = (e: KeyboardEvent) => {
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                // Force auto-save
+                if (step === 'form' && allTags.length > 0) {
+                    const session: BundleSession = {
+                        id: '__autosave__', name: 'Tự động lưu (Ctrl+S)',
+                        date: new Date().toISOString(), data, labels, allTags,
+                        fileNames: files.map(f => f.name),
+                    };
+                    localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(session));
+                    // Flash save indicator
+                    document.title = '✅ Đã lưu!';
+                    setTimeout(() => { document.title = 'Tạo Hồ Sơ - Gói mẫu nhiều file'; }, 1500);
+                }
+            }
+            if (e.ctrlKey && e.key === 'Enter') {
+                e.preventDefault();
+                if (step === 'upload' && stagedFiles.length > 0) {
+                    handleStartScan();
+                }
+            }
+        };
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+    });
+
     /* ── Upload (accumulative) ── */
     const handleUpload = async (e: ChangeEvent<HTMLInputElement>) => {
         const fileList = e.target.files;
@@ -220,13 +250,15 @@ export default function BundleForm() {
         const newFiles: { name: string; folder: string; buffer: ArrayBuffer }[] = [];
         for (let i = 0; i < fileList.length; i++) {
             const f = fileList[i];
-            if (!f.name.endsWith('.docx') || f.name.startsWith('~')) continue;
+            const isDocx = f.name.endsWith('.docx');
+            const isXlsx = f.name.endsWith('.xlsx') || f.name.endsWith('.xls');
+            if ((!isDocx && !isXlsx) || f.name.startsWith('~')) continue;
             const buf = await f.arrayBuffer();
             const relPath = (f as any).webkitRelativePath || '';
             const folder = relPath ? relPath.split('/').slice(0, -1).join('/') : '';
             newFiles.push({ name: f.name, folder, buffer: buf });
         }
-        if (newFiles.length === 0) { alert('Không tìm thấy file .docx nào.'); return; }
+        if (newFiles.length === 0) { alert('Không tìm thấy file .docx/.xlsx nào.'); return; }
         setStagedFiles(prev => {
             const existing = new Set(prev.map(f => f.name));
             const unique = newFiles.filter(f => !existing.has(f.name));
@@ -250,12 +282,12 @@ export default function BundleForm() {
                 newFiles.push(...files);
             } else {
                 const f = items[i].getAsFile();
-                if (f && f.name.endsWith('.docx') && !f.name.startsWith('~')) {
+                if (f && (f.name.endsWith('.docx') || f.name.endsWith('.xlsx') || f.name.endsWith('.xls')) && !f.name.startsWith('~')) {
                     newFiles.push({ name: f.name, folder: '', buffer: await f.arrayBuffer() });
                 }
             }
         }
-        if (newFiles.length === 0) { alert('Không tìm thấy file .docx nào.'); return; }
+        if (newFiles.length === 0) { alert('Không tìm thấy file .docx/.xlsx nào.'); return; }
         setStagedFiles(prev => {
             const existing = new Set(prev.map(f => f.name));
             const unique = newFiles.filter(f => !existing.has(f.name));
@@ -268,7 +300,7 @@ export default function BundleForm() {
         if (entry.isFile) {
             return new Promise(resolve => {
                 entry.file(async (f: File) => {
-                    if (f.name.endsWith('.docx') && !f.name.startsWith('~')) {
+                    if ((f.name.endsWith('.docx') || f.name.endsWith('.xlsx') || f.name.endsWith('.xls')) && !f.name.startsWith('~')) {
                         resolve([{ name: f.name, folder: entry.fullPath.replace('/' + f.name, '').replace(/^\//, ''), buffer: await f.arrayBuffer() }]);
                     } else resolve([]);
                 });
@@ -299,16 +331,43 @@ export default function BundleForm() {
         const crossFileValues = new Map<string, Set<string>>();
 
         for (const f of stagedFiles) {
-            const { segments, contextLabels } = extractTextSegments(f.buffer);
-            for (const seg of segments) {
-                allSegments.push({ text: seg.text, location: `[${f.name}] ${seg.location}` });
-                // Track cross-file presence
-                if (!crossFileValues.has(seg.text)) crossFileValues.set(seg.text, new Set());
-                crossFileValues.get(seg.text)!.add(f.name);
-            }
-            // Merge context labels
-            for (const [k, v] of contextLabels) {
-                if (!allContextLabels.has(k)) allContextLabels.set(k, v);
+            const isXlsx = f.name.endsWith('.xlsx') || f.name.endsWith('.xls');
+
+            if (isXlsx) {
+                // Extract text from Excel cells
+                try {
+                    const wb = XLSX.read(f.buffer, { type: 'array' });
+                    for (const sheetName of wb.SheetNames) {
+                        const sheet = wb.Sheets[sheetName];
+                        const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1');
+                        for (let r = range.s.r; r <= range.e.r; r++) {
+                            for (let c = range.s.c; c <= range.e.c; c++) {
+                                const addr = XLSX.utils.encode_cell({ r, c });
+                                const cell = sheet[addr];
+                                if (cell && cell.v != null) {
+                                    const text = String(cell.v).trim();
+                                    if (text.length >= 3 && !/^\d{1,2}$/.test(text)) {
+                                        const loc = `[${f.name}] ${sheetName}!${addr}`;
+                                        allSegments.push({ text, location: loc });
+                                        if (!crossFileValues.has(text)) crossFileValues.set(text, new Set());
+                                        crossFileValues.get(text)!.add(f.name);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (e) { console.warn('Excel parse error:', f.name, e); }
+            } else {
+                // Extract text from docx
+                const { segments, contextLabels } = extractTextSegments(f.buffer);
+                for (const seg of segments) {
+                    allSegments.push({ text: seg.text, location: `[${f.name}] ${seg.location}` });
+                    if (!crossFileValues.has(seg.text)) crossFileValues.set(seg.text, new Set());
+                    crossFileValues.get(seg.text)!.add(f.name);
+                }
+                for (const [k, v] of contextLabels) {
+                    if (!allContextLabels.has(k)) allContextLabels.set(k, v);
+                }
             }
         }
 
@@ -766,7 +825,7 @@ export default function BundleForm() {
                 <div>
                     <h1 style={{ fontSize: '1.3rem', fontWeight: 700, margin: 0, color: '#1e293b' }}>📦 Gói mẫu nhiều file</h1>
                     <p style={{ color: '#64748b', fontSize: '0.8rem', margin: 0 }}>
-                        Upload nhiều file Word → điền 1 lần → xuất tất cả
+                        Upload nhiều file Word/Excel → điền 1 lần → xuất tất cả
                     </p>
                 </div>
                 <button className="btn btn-sm" onClick={() => setShowGuide(true)} style={{ ...btnSm, background: '#dbeafe', color: '#1d4ed8' }}>
@@ -808,15 +867,15 @@ export default function BundleForm() {
                 >
                     <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>{dragOver ? '📥' : '📁'}</div>
                     <h2 style={{ fontSize: '1.2rem', marginBottom: '0.5rem', color: '#0369a1' }}>
-                        {dragOver ? 'Thả file vào đây!' : 'Chọn file .docx'}
+                        {dragOver ? 'Thả file vào đây!' : 'Chọn file .docx / .xlsx'}
                     </h2>
                     <p style={{ color: '#64748b', marginBottom: '1rem', fontSize: '0.85rem' }}>
                         Kéo thả file/thư mục vào đây, hoặc bấm nút bên dưới.
                     </p>
 
-                    <input ref={fileInputRef} type="file" accept=".docx" multiple style={{ display: 'none' }} onChange={handleUpload} />
-                    {/* @ts-ignore */}
-                    <input ref={folderInputRef} type="file" accept=".docx" webkitdirectory="" multiple style={{ display: 'none' }} onChange={handleUpload} />
+                    <input ref={fileInputRef} type="file" accept=".docx,.xlsx,.xls" multiple style={{ display: 'none' }} onChange={handleUpload} />
+                    {/* Folder picker */}
+                    <input ref={folderInputRef} type="file" accept=".docx,.xlsx,.xls" webkitdirectory="" multiple style={{ display: 'none' }} onChange={handleUpload} />
 
                     <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
                         <button className="btn btn-primary" onClick={() => fileInputRef.current?.click()} disabled={scanning}

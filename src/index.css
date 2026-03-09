@@ -1559,3 +1559,34 @@ textarea {
     gap: 0.3rem !important;
   }
 }
+
+/* ============================================
+   SCAN MODAL MOBILE RESPONSIVE
+   ============================================ */
+@media (max-width: 640px) {
+
+  /* Scan modal stretches full width on mobile */
+  div[style*="maxWidth: 900px"] {
+    max-width: 100% !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    max-height: 100vh !important;
+  }
+
+  /* Toolbar wraps on mobile */
+  div[style*="gap: '0.5rem'"][style*="padding: '0.75rem"] {
+    flex-wrap: wrap !important;
+  }
+
+  /* Table cells smaller on mobile */
+  table td,
+  table th {
+    padding: 0.35rem 0.4rem !important;
+    font-size: 0.75rem !important;
+  }
+
+  table input[type="text"] {
+    font-size: 0.72rem !important;
+    padding: 0.2rem 0.3rem !important;
+  }
+}
