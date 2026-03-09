@@ -270,7 +270,15 @@ function extractSubSegments(
         { re: /^([A-ZÀ-Ỹ][a-zà-ỹ]+(?:\s+[A-ZÀ-Ỹ][a-zà-ỹ]+){1,4})$/gm },
         { re: /(0\d{2,3}[\s.-]?\d{3,4}[\s.-]?\d{3,4})/g, label: 'Điện thoại' },
         { re: /(\d{10,13})/g, label: 'Mã số' },
-        { re: /(\d{4}[.\s]?\d{4}[.\s]?\d{4,})/g, label: 'Số tài khoản' },
+        { re: /(\d{4}[\s.]?\d{4}[\s.]?\d{4,})/g, label: 'Số tài khoản' },
+        // Project/construction name patterns (tên dự án, công trình)
+        { re: /(?:dự án|công trình|gói thầu)\s+([A-ZĐa-zà-ỹÀ-Ỹ][^\n,;.]{5,80}?)(?:\s*[,;.]|\s+với\s|\s+theo\s|\s+không\s|\s+để\s|\s+tại\s|\s+đã\s|$)/gi, label: 'Tên công trình' },
+        // "Đầu tư xây dựng..." pattern (common project name prefix)
+        { re: /(Đầu tư xây dựng[^\n,;.]{5,80}?)(?:\s*[,;.]|\s+với\s|\s+theo\s|\s+không\s|\s+để\s|$)/g, label: 'Tên dự án' },
+        // Address pattern: "số XX đường/phố Name"
+        { re: /(?:số\s+)?(\d+[A-Za-z]?\s+(?:đường|phố|tổ|khu|ấp)?\s*[A-ZÀ-Ỹ][a-zà-ỹ]+(?:\s+[A-ZÀ-Ỹ][a-zà-ỹ]+){0,4})/g, label: 'Địa chỉ' },
+        // Quyết định / Số hiệu văn bản
+        { re: /(?:số\s+)(\d+\/[A-Za-zĐđ-]+(?:-[A-Za-zĐđ]+)*)/g, label: 'Số văn bản' },
     ];
 
     for (const { re, label } of patterns) {
