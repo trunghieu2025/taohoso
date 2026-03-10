@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { listProjects, deleteProject, cloneProject, type Project, PREDEFINED_TAGS } from '../utils/projectStorage';
+import { checkDeadlines, requestNotificationPermission, saveDeadlineReminder } from '../utils/deadlineNotifications';
 
 const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }> = {
     new: { label: '⚪ Mới', color: '#64748b', bg: '#f1f5f9' },
@@ -23,10 +24,26 @@ export default function ProjectList() {
     const [filterStatus, setFilterStatus] = useState('all');
     const [filterYear, setFilterYear] = useState('all');
     const [filterTag, setFilterTag] = useState('all');
+    const [urgentCount, setUrgentCount] = useState(0);
     const navigate = useNavigate();
 
     useEffect(() => {
-        listProjects().then(setProjects).catch(() => { });
+        listProjects().then(all => {
+            setProjects(all);
+            // Auto-register deadlines and check
+            for (const p of all) {
+                if (p.deadline && p.id) {
+                    saveDeadlineReminder({
+                        projectId: String(p.id),
+                        projectName: p.name,
+                        deadline: p.deadline,
+                        enabled: true,
+                    });
+                }
+            }
+            const urgent = checkDeadlines(3);
+            setUrgentCount(urgent.length);
+        }).catch(() => { });
     }, []);
 
     const reload = async () => setProjects(await listProjects());
@@ -81,6 +98,17 @@ export default function ProjectList() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                 <h1 style={{ fontSize: '1.5rem', margin: 0 }}>📊 Quản lý Dự án</h1>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    {urgentCount > 0 && (
+                        <span style={{ background: '#fef2f2', color: '#dc2626', padding: '0.3rem 0.6rem', borderRadius: 12, fontSize: '0.75rem', fontWeight: 700 }}>
+                            🔔 {urgentCount} dự án sắp hết hạn
+                        </span>
+                    )}
+                    <button className="btn btn-sm" onClick={async () => {
+                        const ok = await requestNotificationPermission();
+                        alert(ok ? '✅ Đã bật nhắc nhở! Bạn sẽ nhận thông báo khi dự án sắp hết hạn.' : '❌ Trình duyệt không cho phép thông báo.');
+                    }} style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem', background: '#dbeafe', color: '#1d4ed8' }}>
+                        🔔 Bật nhắc nhở
+                    </button>
                     <Link to="/danh-ba-nha-thau" className="btn btn-sm btn-secondary">📋 Nhà thầu</Link>
                     <Link to="/ho-so-sua-chua" className="btn btn-sm btn-primary">➕ Tạo hồ sơ mới</Link>
                 </div>

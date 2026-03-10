@@ -12,15 +12,8 @@ const APP_VERSION = '__BUILD_' + (import.meta.env.VITE_APP_VERSION || '0') + '__
 const STORED_VERSION = localStorage.getItem('app-version')
 
 if ('serviceWorker' in navigator) {
-  // Nếu version thay đổi (hoặc chưa lưu) → xóa hết SW + cache
+  // Version check — if version changed, clear old caches first
   if (STORED_VERSION !== APP_VERSION) {
-    // Unregister tất cả Service Workers cũ
-    navigator.serviceWorker.getRegistrations().then((registrations) => {
-      for (const reg of registrations) {
-        reg.unregister()
-      }
-    })
-    // Xóa tất cả caches
     if ('caches' in window) {
       caches.keys().then((names) => {
         for (const name of names) {
@@ -29,27 +22,23 @@ if ('serviceWorker' in navigator) {
       })
     }
     localStorage.setItem('app-version', APP_VERSION)
-    // Reload 1 lần để đảm bảo load code mới
     if (STORED_VERSION) {
       window.location.reload()
     }
   }
 
-  // Tự động reload khi SW mới kích hoạt
+  // Register Service Worker for PWA
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => { })
+  })
+
+  // Auto-reload when SW updates
   let isReloading = false
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (!isReloading) {
       isReloading = true
       window.location.reload()
     }
-  })
-
-  // Check update SW mỗi 60 giây
-  navigator.serviceWorker.ready.then((registration) => {
-    registration.update().catch(() => { })
-    setInterval(() => {
-      registration.update().catch(() => { })
-    }, 60 * 1000)
   })
 }
 

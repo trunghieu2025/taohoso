@@ -1,41 +1,49 @@
 <!doctype html>
 <html lang="vi">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tạo Hồ Sơ - Hướng dẫn tạo hồ sơ & Điền form CT01 miễn phí</title>
-    <meta name="description" content="Công cụ điền form CT01 đăng ký tạm trú, thường trú online miễn phí. Hướng dẫn xin CT07, sang tên sổ hồng 2026. Bảo mật, xử lý trên trình duyệt." />
-    <meta name="keywords" content="thủ tục hành chính, điền form CT01, đăng ký tạm trú, đăng ký thường trú, sang tên sổ hồng, CT07, tạo hồ sơ miễn phí, hợp đồng thuê nhà" />
-    <meta name="author" content="Tạo Hồ Sơ" />
-    <meta name="robots" content="index, follow" />
-    <meta name="theme-color" content="#10b981" />
-    <meta property="og:type" content="website" />
-    <meta property="og:title" content="Tạo Hồ Sơ - Hướng dẫn tạo hồ sơ & Điền form CT01 miễn phí" />
-    <meta property="og:description" content="Công cụ điền form CT01 đăng ký tạm trú, thường trú online miễn phí. Hướng dẫn xin CT07, sang tên sổ hồng 2026." />
-    <meta property="og:locale" content="vi_VN" />
-  </head>
-  <body>
-    <div id="root"></div>
-    <script>
-      // Force clear old Service Workers — chạy TRƯỚC app
-      (function(){
-        var v = '20260309b';
-        var k = 'sw-nuke-v';
-        if (localStorage.getItem(k) !== v && 'serviceWorker' in navigator) {
-          navigator.serviceWorker.getRegistrations().then(function(regs) {
-            regs.forEach(function(r) { r.unregister(); });
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tạo Hồ Sơ - Hướng dẫn tạo hồ sơ & Điền form CT01 miễn phí</title>
+  <meta name="description"
+    content="Công cụ điền form CT01 đăng ký tạm trú, thường trú online miễn phí. Hướng dẫn xin CT07, sang tên sổ hồng 2026. Bảo mật, xử lý trên trình duyệt." />
+  <meta name="keywords"
+    content="thủ tục hành chính, điền form CT01, đăng ký tạm trú, đăng ký thường trú, sang tên sổ hồng, CT07, tạo hồ sơ miễn phí, hợp đồng thuê nhà" />
+  <meta name="author" content="Tạo Hồ Sơ" />
+  <meta name="robots" content="index, follow" />
+  <meta name="theme-color" content="#0ea5e9" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="apple-touch-icon" href="/icon-192.png" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Tạo Hồ Sơ - Hướng dẫn tạo hồ sơ & Điền form CT01 miễn phí" />
+  <meta property="og:description"
+    content="Công cụ điền form CT01 đăng ký tạm trú, thường trú online miễn phí. Hướng dẫn xin CT07, sang tên sổ hồng 2026." />
+  <meta property="og:locale" content="vi_VN" />
+</head>
+
+<body>
+  <div id="root"></div>
+  <script>
+    // Force clear old Service Workers — chạy TRƯỚC app
+    (function () {
+      var v = '20260309b';
+      var k = 'sw-nuke-v';
+      if (localStorage.getItem(k) !== v && 'serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function (regs) {
+          regs.forEach(function (r) { r.unregister(); });
+        });
+        if (window.caches) {
+          caches.keys().then(function (ns) {
+            ns.forEach(function (n) { caches.delete(n); });
           });
-          if (window.caches) {
-            caches.keys().then(function(ns) {
-              ns.forEach(function(n) { caches.delete(n); });
-            });
-          }
-          localStorage.setItem(k, v);
-          setTimeout(function() { location.reload(); }, 500);
         }
-      })();
-    </script>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+        localStorage.setItem(k, v);
+        setTimeout(function () { location.reload(); }, 500);
+      }
+    })();
+  </script>
+  <script type="module" src="/src/main.jsx"></script>
+</body>
+
 </html>

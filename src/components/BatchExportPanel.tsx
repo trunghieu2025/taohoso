@@ -18,6 +18,7 @@ export default function BatchExportPanel({ templateBuffer, templateTags, onClose
     const [processing, setProcessing] = useState(false);
     const [progress, setProgress] = useState(0);
     const fileRef = useRef<HTMLInputElement>(null);
+    const jsonRef = useRef<HTMLInputElement>(null);
 
     const handleUploadExcel = async (e: ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -34,6 +35,30 @@ export default function BatchExportPanel({ templateBuffer, templateTags, onClose
             alert('❌ Lỗi đọc file: ' + (err as Error).message);
         }
         if (fileRef.current) fileRef.current.value = '';
+    };
+
+    const handleUploadJson = async (e: ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        try {
+            const text = await file.text();
+            const data = JSON.parse(text);
+            const arr = Array.isArray(data) ? data : [data];
+            if (arr.length === 0) {
+                alert('Không tìm thấy dữ liệu trong file JSON.');
+                return;
+            }
+            setRows(arr.map((obj: Record<string, unknown>) => {
+                const row: Record<string, string> = {};
+                for (const [k, v] of Object.entries(obj)) {
+                    row[k] = String(v ?? '');
+                }
+                return row;
+            }));
+        } catch (err) {
+            alert('❌ Lỗi đọc JSON: ' + (err as Error).message);
+        }
+        if (jsonRef.current) jsonRef.current.value = '';
     };
 
     const handleExportAll = async () => {
@@ -79,14 +104,18 @@ export default function BatchExportPanel({ templateBuffer, templateTags, onClose
             }}>
                 <h3 style={{ margin: '0 0 0.5rem', fontSize: '1.1rem' }}>📦 Tạo hồ sơ hàng loạt</h3>
                 <p style={{ color: '#64748b', fontSize: '0.85rem', margin: '0 0 1rem' }}>
-                    Upload file Excel với mỗi dòng là 1 công trình → xuất tất cả thành 1 file ZIP.
+                    Upload file Excel hoặc JSON với mỗi dòng/object là 1 công trình → xuất tất cả thành 1 file ZIP.
                 </p>
 
                 {/* Upload */}
-                <div style={{ marginBottom: '1rem' }}>
+                <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                     <input ref={fileRef} type="file" accept=".xlsx,.xls" style={{ display: 'none' }} onChange={handleUploadExcel} />
+                    <input ref={jsonRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleUploadJson} />
                     <button className="btn btn-sm btn-secondary" onClick={() => fileRef.current?.click()}>
                         📊 Chọn file Excel
+                    </button>
+                    <button className="btn btn-sm btn-secondary" onClick={() => jsonRef.current?.click()}>
+                        📋 Chọn file JSON
                     </button>
                 </div>
 

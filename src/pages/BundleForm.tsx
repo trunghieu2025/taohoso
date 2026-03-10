@@ -21,6 +21,8 @@ import PizZip from 'pizzip';
 import { FormInput } from '../components/FormField';
 import { FORM_TEMPLATES } from '../utils/formTemplates';
 import ScanReviewModal from '../components/ScanReviewModal';
+import OnboardingTour from '../components/OnboardingTour';
+import { evaluateFormula, isValidFormula } from '../utils/formulaEvaluator';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import html2pdf from 'html2pdf.js';
@@ -215,6 +217,9 @@ export default function BundleForm() {
     const [showDiff, setShowDiff] = useState(false);
     const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
     const [focusedTag, setFocusedTag] = useState<string | null>(null);
+    const [showTour, setShowTour] = useState(false);
+    const [formulas, setFormulas] = useState<Record<string, string>>({});
+    const [activeFormulaTag, setActiveFormulaTag] = useState<string | null>(null);
 
     // Load sessions + presets on mount + check for active template
     useEffect(() => {
@@ -954,7 +959,7 @@ export default function BundleForm() {
                         Upload nhiều file Word/Excel → điền 1 lần → xuất tất cả
                     </p>
                 </div>
-                <button className="btn btn-sm" onClick={() => setShowGuide(true)} style={{ ...btnSm, background: '#dbeafe', color: '#1d4ed8' }}>
+                <button className="btn btn-sm" onClick={() => setShowTour(true)} style={{ ...btnSm, background: '#dbeafe', color: '#1d4ed8' }}>
                     ❓ Hướng dẫn
                 </button>
             </div>
@@ -976,6 +981,7 @@ export default function BundleForm() {
             {/* ═══════ UPLOAD STEP ═══════ */}
             {step === 'upload' && (
                 <div
+                    id="upload-area"
                     style={{
                         ...S,
                         background: dragOver
@@ -1243,36 +1249,87 @@ export default function BundleForm() {
                                     const sortedGroups = groupOrder.filter(g => groups[g]);
                                     // Only show groups if > 8 fields, otherwise flat list
                                     if (filtered.length <= 8 || sortedGroups.length <= 1) {
-                                        return filtered.map(tag => (
-                                            <div key={tag} id={`field-${tag}`} style={{ transition: 'background 0.3s', position: 'relative' }}>
-                                                <FormInput label={labels[tag] || tag.replace(/_/g, ' ')} name={tag}
-                                                    value={data[tag] || ''} onChange={handleChange}
-                                                    onFocus={() => setFocusedTag(tag)} onBlur={() => setTimeout(() => setFocusedTag(null), 200)}
-                                                    placeholder={`Nhập ${(labels[tag] || tag).toLowerCase()}`} />
-                                                {isMoneyField(tag) && data[tag] && (
-                                                    <div style={{ fontSize: '0.75rem', color: '#059669', marginTop: '-0.3rem', marginBottom: '0.4rem', paddingLeft: '0.5rem', fontStyle: 'italic' }}>
-                                                        💰 {numberToVietnamese(data[tag])}
-                                                    </div>
-                                                )}
-                                                {/* Auto-suggest */}
-                                                {focusedTag === tag && !data[tag] && (() => {
-                                                    const suggestions = [...new Set(savedSessions.map(s => s.data[tag]).filter(Boolean))].slice(0, 5);
-                                                    if (suggestions.length === 0) return null;
-                                                    return (
-                                                        <div style={{ position: 'absolute', zIndex: 10, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 6, boxShadow: '0 2px 8px rgba(0,0,0,0.1)', maxWidth: 300, left: 0, right: 0 }}>
-                                                            {suggestions.map((s, i) => (
-                                                                <div key={i} onMouseDown={() => { setData(prev => ({ ...prev, [tag]: s })); setFocusedTag(null); }}
-                                                                    style={{ padding: '0.3rem 0.5rem', cursor: 'pointer', fontSize: '0.8rem', borderBottom: '1px solid #f1f5f9' }}
-                                                                    onMouseEnter={e => (e.currentTarget.style.background = '#f0f9ff')}
-                                                                    onMouseLeave={e => (e.currentTarget.style.background = '')}>
-                                                                    💡 {s.length > 40 ? s.slice(0, 38) + '…' : s}
-                                                                </div>
-                                                            ))}
+                                        return filtered.map(tag => {
+                                            const hasFormula = formulas[tag] && isValidFormula(formulas[tag]);
+                                            // Auto-compute formula value
+                                            if (hasFormula) {
+                                                const computed = evaluateFormula(formulas[tag], data);
+                                                if (computed !== data[tag] && !computed.startsWith('⚠️')) {
+                                                    // Update data with computed value (deferred)
+                                                    setTimeout(() => setData(prev => ({ ...prev, [tag]: computed })), 0);
+                                                }
+                                            }
+                                            return (
+                                                <div key={tag} id={`field-${tag}`} style={{ transition: 'background 0.3s', position: 'relative' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                                        <div style={{ flex: 1 }}>
+                                                            <FormInput label={labels[tag] || tag.replace(/_/g, ' ')} name={tag}
+                                                                value={data[tag] || ''} onChange={handleChange}
+                                                                onFocus={() => setFocusedTag(tag)} onBlur={() => setTimeout(() => setFocusedTag(null), 200)}
+                                                                placeholder={`Nhập ${(labels[tag] || tag).toLowerCase()}`} />
                                                         </div>
-                                                    );
-                                                })()}
-                                            </div>
-                                        ));
+                                                        <button
+                                                            onClick={() => setActiveFormulaTag(activeFormulaTag === tag ? null : tag)}
+                                                            title="Công thức tính"
+                                                            style={{
+                                                                background: hasFormula ? '#ede9fe' : 'none',
+                                                                border: hasFormula ? '1px solid #a78bfa' : '1px solid #e2e8f0',
+                                                                borderRadius: 4, cursor: 'pointer', fontSize: '0.75rem',
+                                                                padding: '0.15rem 0.3rem', color: hasFormula ? '#7c3aed' : '#94a3b8',
+                                                                marginTop: '0.4rem',
+                                                            }}
+                                                        >🧮</button>
+                                                    </div>
+                                                    {activeFormulaTag === tag && (
+                                                        <div style={{
+                                                            padding: '0.4rem 0.5rem', background: '#faf5ff', border: '1px solid #c4b5fd',
+                                                            borderRadius: 6, marginTop: '0.2rem', marginBottom: '0.4rem', fontSize: '0.78rem',
+                                                        }}>
+                                                            <div style={{ fontWeight: 600, color: '#6d28d9', marginBottom: '0.2rem' }}>🧮 Công thức</div>
+                                                            <input
+                                                                type="text"
+                                                                value={formulas[tag] || ''}
+                                                                onChange={e => setFormulas(prev => ({ ...prev, [tag]: e.target.value }))}
+                                                                placeholder="VD: {GIA_TRI_HD} * {THUE_VAT} / 100"
+                                                                style={{
+                                                                    width: '100%', padding: '0.3rem 0.5rem', borderRadius: 4,
+                                                                    border: '1px solid #c4b5fd', fontSize: '0.78rem', fontFamily: 'monospace',
+                                                                }}
+                                                            />
+                                                            {formulas[tag] && (
+                                                                <div style={{ marginTop: '0.2rem', color: isValidFormula(formulas[tag]) ? '#059669' : '#dc2626' }}>
+                                                                    {isValidFormula(formulas[tag])
+                                                                        ? `= ${evaluateFormula(formulas[tag], data)}`
+                                                                        : '⚠️ Cần ít nhất 1 {TAG} và 1 phép tính (+, -, *, /)'}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                    {isMoneyField(tag) && data[tag] && (
+                                                        <div style={{ fontSize: '0.75rem', color: '#059669', marginTop: '-0.3rem', marginBottom: '0.4rem', paddingLeft: '0.5rem', fontStyle: 'italic' }}>
+                                                            💰 {numberToVietnamese(data[tag])}
+                                                        </div>
+                                                    )}
+                                                    {/* Auto-suggest */}
+                                                    {focusedTag === tag && !data[tag] && (() => {
+                                                        const suggestions = [...new Set(savedSessions.map(s => s.data[tag]).filter(Boolean))].slice(0, 5);
+                                                        if (suggestions.length === 0) return null;
+                                                        return (
+                                                            <div style={{ position: 'absolute', zIndex: 10, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 6, boxShadow: '0 2px 8px rgba(0,0,0,0.1)', maxWidth: 300, left: 0, right: 0 }}>
+                                                                {suggestions.map((s, i) => (
+                                                                    <div key={i} onMouseDown={() => { setData(prev => ({ ...prev, [tag]: s })); setFocusedTag(null); }}
+                                                                        style={{ padding: '0.3rem 0.5rem', cursor: 'pointer', fontSize: '0.8rem', borderBottom: '1px solid #f1f5f9' }}
+                                                                        onMouseEnter={e => (e.currentTarget.style.background = '#f0f9ff')}
+                                                                        onMouseLeave={e => (e.currentTarget.style.background = '')}>
+                                                                        💡 {s.length > 40 ? s.slice(0, 38) + '…' : s}
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        );
+                                                    })()}
+                                                </div>
+                                            );
+                                        });
                                     }
                                     return sortedGroups.map(group => {
                                         const collapsed = collapsedGroups.has(group);
@@ -1503,6 +1560,8 @@ export default function BundleForm() {
                     </div>
                 );
             })()}
+            {/* Onboarding Tour */}
+            <OnboardingTour page="bundle" forceShow={showTour} onClose={() => setShowTour(false)} />
         </div>
     );
 }
