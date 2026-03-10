@@ -195,6 +195,49 @@ export default function Home() {
         </div>
       </section>
 
+      {/* NEW FEATURES v2.7 */}
+      <section className="section">
+        <div className="container">
+          <h2 className="section-title">🆕 Tính năng mới v2.7</h2>
+          <p className="section-subtitle">
+            8 tính năng mạnh mẽ vừa được cập nhật
+          </p>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+            gap: '1rem', marginTop: '1.5rem',
+          }}>
+            {[
+              { icon: '📱', title: 'PWA Offline', desc: 'Cài app trên điện thoại, dùng offline không cần mạng', color: '#0ea5e9', bg: '#f0f9ff' },
+              { icon: '🧮', title: 'Công thức tính', desc: 'Tự tạo công thức: {GIÁ_TRỊ} * {THUẾ} / 100', color: '#7c3aed', bg: '#faf5ff' },
+              { icon: '👁️', title: 'Xem trước Word', desc: 'Preview file Word đã điền ngay trên trình duyệt', color: '#059669', bg: '#f0fdf4' },
+              { icon: '☁️', title: 'Google Drive', desc: 'Upload file Word trực tiếp lên Google Drive', color: '#d97706', bg: '#fffbeb' },
+              { icon: '📊', title: 'Google Sheets', desc: 'Xuất dữ liệu form sang CSV cho Google Sheets', color: '#16a34a', bg: '#f0fdf4' },
+              { icon: '🔔', title: 'Nhắc deadline', desc: 'Thông báo trình duyệt khi dự án sắp hết hạn', color: '#dc2626', bg: '#fef2f2' },
+              { icon: '🎯', title: 'Hướng dẫn tương tác', desc: 'Tour hướng dẫn 4 bước cho người mới sử dụng', color: '#2563eb', bg: '#eff6ff' },
+              { icon: '📦', title: 'Xuất hàng loạt', desc: 'Upload JSON/Excel → xuất nhiều file ZIP cùng lúc', color: '#0891b2', bg: '#ecfeff' },
+            ].map(f => (
+              <div key={f.title} style={{
+                background: f.bg, borderRadius: 12, padding: '1.2rem',
+                border: `1px solid ${f.color}22`, transition: 'transform 0.2s',
+              }}>
+                <div style={{ fontSize: '1.8rem', marginBottom: '0.5rem' }}>{f.icon}</div>
+                <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: f.color, marginBottom: '0.3rem' }}>{f.title}</h3>
+                <p style={{ fontSize: '0.82rem', color: '#64748b', lineHeight: 1.5, margin: 0 }}>{f.desc}</p>
+              </div>
+            ))}
+          </div>
+          <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+            <Link to="/cai-dat" className="btn btn-outline" style={{ marginRight: '0.5rem' }}>
+              ⚙️ Cài đặt Google API
+            </Link>
+            <Link to="/goi-mau" className="btn btn-primary">
+              📦 Thử ngay
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* CTA */}
       <section className="cta-section">
         <div className="container">
