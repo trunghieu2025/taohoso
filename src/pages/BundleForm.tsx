@@ -12,6 +12,8 @@ import {
     contextLabelToTag,
     groupSimilarValues,
     isLikelyNoise,
+    classifyFieldType,
+    FIELD_CATEGORY_INFO,
 } from '../utils/militaryDocGenerator';
 import type { ScanResult } from '../utils/militaryDocGenerator';
 import * as XLSX from 'xlsx';
@@ -214,8 +216,31 @@ export default function BundleForm() {
     const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
     const [focusedTag, setFocusedTag] = useState<string | null>(null);
 
-    // Load sessions + presets on mount
-    useEffect(() => { setSavedSessions(loadBundleSessions()); setPresets(loadPresets()); }, []);
+    // Load sessions + presets on mount + check for active template
+    useEffect(() => {
+        setSavedSessions(loadBundleSessions());
+        setPresets(loadPresets());
+
+        // Check if user came from Template Marketplace
+        try {
+            const templateJson = localStorage.getItem('taohoso_active_template');
+            if (templateJson) {
+                localStorage.removeItem('taohoso_active_template');
+                const template = JSON.parse(templateJson);
+                if (template?.fields?.length > 0) {
+                    const tags = template.fields.map((f: { tag: string }) => f.tag);
+                    const newLabels: Record<string, string> = {};
+                    for (const f of template.fields) {
+                        newLabels[f.tag] = f.label || f.tag;
+                    }
+                    setAllTags(tags);
+                    setLabels(newLabels);
+                    setStep('form');
+                    alert(`✅ Đã tải bộ mẫu "${template.name}" với ${tags.length} trường.\n\n📁 Upload file Word rồi điền dữ liệu nhé!`);
+                }
+            }
+        } catch { /* ignore */ }
+    }, []);
 
     // Auto-save
     useEffect(() => {
@@ -513,15 +538,24 @@ export default function BundleForm() {
             }
         }
 
-        // Bước 5: Sort — data trước, noise xuống dưới
+        // Bước 5: Phân loại trường + Sort thông minh
+        for (const r of mergedResults) {
+            const isBrk = r.text.startsWith('[') && r.text.endsWith(']') && bracketFields.has(r.text.slice(1, -1));
+            r.fieldType = classifyFieldType(r.text, r.suggestedTag, isBrk);
+        }
+
         const sorted = mergedResults.sort((a, b) => {
-            // Selected items first
+            // Sort by category order first
+            const orderA = FIELD_CATEGORY_INFO[a.fieldType || 'other'].order;
+            const orderB = FIELD_CATEGORY_INFO[b.fieldType || 'other'].order;
+            if (orderA !== orderB) return orderA - orderB;
+            // Within same category: selected first
             if (a.selected !== b.selected) return a.selected ? -1 : 1;
-            const aCross = (a.crossFileCount || 1) > 1 ? 1 : 0;
-            const bCross = (b.crossFileCount || 1) > 1 ? 1 : 0;
-            if (aCross !== bCross) return bCross - aCross;
-            if (a.category !== b.category) return a.category === 'data' ? -1 : 1;
-            return b.dataScore - a.dataScore || b.count - a.count;
+            // Then by cross-file count
+            if ((b.crossFileCount || 0) !== (a.crossFileCount || 0))
+                return (b.crossFileCount || 0) - (a.crossFileCount || 0);
+            // Then by score
+            return b.dataScore - a.dataScore;
         });
         setScanResults(sorted);
         setShowScanModal(true);

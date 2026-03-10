@@ -1,5 +1,7 @@
 import { useState, ChangeEvent, useCallback } from 'react';
 import type { ScanResult } from '../utils/militaryDocGenerator';
+import { FIELD_CATEGORY_INFO } from '../utils/militaryDocGenerator';
+import type { FieldCategory } from '../utils/militaryDocGenerator';
 
 interface Props {
     results: ScanResult[];
@@ -266,9 +268,19 @@ export default function ScanReviewModal({ results, onConfirm, onCancel, fileBuff
                     <span style={{
                         display: 'inline-block', padding: '0 4px', borderRadius: 4,
                         fontSize: '0.65rem', fontWeight: 600,
-                        background: item.category === 'data' ? '#d1fae5' : '#fef3c7',
-                        color: item.category === 'data' ? '#059669' : '#b45309',
-                    }}>{item.category === 'data' ? '📋' : '📄'}</span>
+                        background: item.fieldType === 'bracket' ? '#ede9fe'
+                            : item.fieldType === 'project' ? '#dbeafe'
+                                : item.fieldType === 'party' ? '#fce7f3'
+                                    : item.fieldType === 'finance' ? '#d1fae5'
+                                        : item.fieldType === 'date' ? '#fef3c7'
+                                            : '#f1f5f9',
+                        color: item.fieldType === 'bracket' ? '#7c3aed'
+                            : item.fieldType === 'project' ? '#1d4ed8'
+                                : item.fieldType === 'party' ? '#be185d'
+                                    : item.fieldType === 'finance' ? '#059669'
+                                        : item.fieldType === 'date' ? '#b45309'
+                                            : '#475569',
+                    }}>{FIELD_CATEGORY_INFO[item.fieldType || 'other'].icon}</span>
                     <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {item.text}
                     </div>
@@ -436,10 +448,29 @@ export default function ScanReviewModal({ results, onConfirm, onCancel, fileBuff
                                     </>
                                 ))
                             ) : (
-                                filteredItems.map((item) => {
-                                    const realIdx = items.indexOf(item);
-                                    return renderRow(item, realIdx);
-                                })
+                                (() => {
+                                    const rows: React.ReactNode[] = [];
+                                    let lastType: FieldCategory | undefined;
+                                    for (const item of filteredItems) {
+                                        const ft = item.fieldType || 'other';
+                                        if (ft !== lastType) {
+                                            const info = FIELD_CATEGORY_INFO[ft];
+                                            rows.push(
+                                                <tr key={`cat-${ft}`} style={{ background: '#f8fafc' }}>
+                                                    <td colSpan={7} style={{
+                                                        padding: '0.4rem 0.75rem', fontWeight: 700,
+                                                        fontSize: '0.85rem', color: '#334155',
+                                                        borderBottom: '2px solid #e2e8f0',
+                                                    }}>{info.icon} {info.label}</td>
+                                                </tr>
+                                            );
+                                            lastType = ft;
+                                        }
+                                        const realIdx = items.indexOf(item);
+                                        rows.push(renderRow(item, realIdx));
+                                    }
+                                    return rows;
+                                })()
                             )}
                         </tbody>
                     </table>

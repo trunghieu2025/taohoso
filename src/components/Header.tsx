@@ -59,6 +59,9 @@ export default function Header() {
               <Link to="/goi-mau" onClick={() => setMobileOpen(false)}>
                 📦 Gói mẫu nhiều file
               </Link>
+              <Link to="/thu-vien-mau" onClick={() => setMobileOpen(false)}>
+                📚 Thư viện mẫu
+              </Link>
               <div style={{ borderTop: '1px solid #e2e8f0', margin: '0.25rem 0' }} />
               <Link to="/quan-ly-du-an" onClick={() => setMobileOpen(false)}>
                 📊 Quản lý dự án

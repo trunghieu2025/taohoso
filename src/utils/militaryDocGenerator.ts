@@ -17,7 +17,19 @@ export interface ScanResult {
     dataScore: number;   // 0-100 likelihood of being real project data
     crossFileCount?: number; // How many different files contain this value
     contextLabel?: string; // Label extracted from surrounding context (e.g. "Đại diện")
+    fieldType?: FieldCategory;  // Auto-classified field type
 }
+
+export type FieldCategory = 'project' | 'party' | 'finance' | 'date' | 'bracket' | 'other';
+
+export const FIELD_CATEGORY_INFO: Record<FieldCategory, { icon: string; label: string; order: number }> = {
+    bracket:  { icon: '📌', label: 'Trường mã hóa [...]',    order: 0 },
+    project:  { icon: '🏗️', label: 'Thông tin dự án',        order: 1 },
+    party:    { icon: '👤', label: 'Chủ đầu tư / Nhà thầu',  order: 2 },
+    finance:  { icon: '💰', label: 'Tài chính',               order: 3 },
+    date:     { icon: '📅', label: 'Thời gian',               order: 4 },
+    other:    { icon: '📋', label: 'Khác',                    order: 5 },
+};
 
 /* ── Common Vietnamese stop words to ignore ── */
 const STOP_WORDS = new Set([
@@ -288,6 +300,22 @@ function computeDataScore(text: string): number {
     // Company name pattern
     if (/Công ty|TNHH|CP|cổ phần|DNTN/i.test(text) && text.length < 80) score += 25;
 
+    // Số tiền VND (dấu chấm ngăn nghìn)
+    if (/^\d{1,3}(\.\d{3}){1,4}(đ|\s*đồng)?$/i.test(text)) score += 35;
+
+    // Ngày tháng Việt Nam
+    if (/ngày\s+\d{1,2}\s+tháng\s+\d{1,2}\s+năm\s+\d{4}/i.test(text)) score += 30;
+    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(text)) score += 30;
+
+    // Địa chỉ đầy đủ (có số nhà + đường)
+    if (/số\s+\d|đường\s+/i.test(text) && text.length < 80) score += 20;
+
+    // Mã hợp đồng / số văn bản (VD: 01/2026/HĐ-XD)
+    if (/^\d{1,4}\s*\/\s*\d{4}\s*\//.test(text)) score += 35;
+
+    // Chức danh
+    if (/giám đốc|phó gđ|trưởng phòng|kế toán trưởng|thủ quỹ/i.test(text) && text.length < 40) score += 15;
+
     // ── PENALTIES (likely boilerplate) ──
 
     // Starts with "Điều" + number (article title)
@@ -320,6 +348,58 @@ function computeDataScore(text: string): number {
     if (text === text.toUpperCase() && text.length > 5) score -= 20;
 
     return Math.max(0, Math.min(100, score));
+}
+
+/**
+ * Classify a field into a category based on text content and tag name.
+ */
+export function classifyFieldType(text: string, tag: string, isBracket: boolean): FieldCategory {
+    if (isBracket) return 'bracket';
+    const t = text.toLowerCase();
+    const tg = tag.toLowerCase();
+
+    // 🏗️ Dự án
+    if (/công trình|dự án|hạng mục|địa điểm|địa chỉ xd|gói thầu|tên gói/i.test(t)) return 'project';
+    if (/ten_cong_trinh|dia_diem|hang_muc|goi_thau|du_an|ten_goi/i.test(tg)) return 'project';
+
+    // 👤 Chủ thể
+    if (/công ty|tnhh|cổ phần|nhà thầu|chủ đầu tư|đại diện|chức vụ|mst|mã số thuế|giám đốc/i.test(t)) return 'party';
+    if (/chu_dau_tu|nha_thau|dai_dien|cong_ty|chuc_vu|mst|giam_doc/i.test(tg)) return 'party';
+
+    // 💰 Tài chính
+    if (/giá trị|tạm ứng|thanh toán|thuế|vat|đồng|triệu|tỷ|quyết toán/i.test(t)) return 'finance';
+    if (/^\d{1,3}(\.\d{3}){1,4}/.test(t)) return 'finance';
+    if (/gia_tri|tam_ung|thanh_toan|thue|tien|quyet_toan/i.test(tg)) return 'finance';
+
+    // 📅 Thời gian
+    if (/ngày.*tháng.*năm|thời hạn|thời gian|từ ngày|đến ngày/i.test(t)) return 'date';
+    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(t)) return 'date';
+    if (/ngay|thang|nam|thoi_han|ngay_ky/i.test(tg)) return 'date';
+
+    return 'other';
+}
+
+/**
+ * Get a placeholder hint for a field based on its type.
+ */
+export function getFieldPlaceholder(fieldType: FieldCategory, tag: string): string {
+    switch (fieldType) {
+        case 'project': {
+            if (/dia_diem|dia_chi/i.test(tag)) return 'VD: Hà Nội';
+            return 'VD: Sửa chữa nhà kho K59';
+        }
+        case 'party': {
+            if (/mst|ma_so/i.test(tag)) return 'VD: 0123456789';
+            if (/dai_dien/i.test(tag)) return 'VD: Nguyễn Văn A';
+            if (/chuc_vu|giam_doc/i.test(tag)) return 'VD: Giám đốc';
+            if (/dia_chi/i.test(tag)) return 'VD: 123 Đường ABC, Quận 1';
+            return 'VD: Công ty TNHH ABC';
+        }
+        case 'finance': return 'VD: 1.500.000.000';
+        case 'date': return 'VD: 15/03/2026';
+        case 'bracket': return 'Nhập giá trị thay thế';
+        default: return '';
+    }
 }
 
 /**
