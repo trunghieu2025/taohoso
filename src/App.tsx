@@ -19,6 +19,7 @@ import ProjectCompare from './pages/ProjectCompare';
 import Dashboard from './pages/Dashboard';
 import FileDiff from './pages/FileDiff';
 import TemplateMarketplace from './pages/TemplateMarketplace';
+import SettingsPage from './pages/SettingsPage';
 import NotFoundPage from './pages/NotFoundPage';
 import TemporaryResidence from './pages/guides/TemporaryResidence';
 import PermanentResidence from './pages/guides/PermanentResidence';
@@ -54,6 +55,7 @@ export default function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/so-sanh-file" element={<FileDiff />} />
           <Route path="/thu-vien-mau" element={<TemplateMarketplace />} />
+          <Route path="/cai-dat" element={<SettingsPage />} />
           <Route path="/tim-kiem" element={<SearchPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>

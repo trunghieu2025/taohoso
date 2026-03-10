@@ -78,6 +78,10 @@ export default function Header() {
               <Link to="/so-sanh-file" onClick={() => setMobileOpen(false)}>
                 ⚖️ So sánh file
               </Link>
+              <div style={{ borderTop: '1px solid #e2e8f0', margin: '0.25rem 0' }} />
+              <Link to="/cai-dat" onClick={() => setMobileOpen(false)}>
+                ⚙️ Cài đặt
+              </Link>
             </div>
           </div>
 

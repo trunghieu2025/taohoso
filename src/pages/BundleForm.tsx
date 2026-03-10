@@ -22,12 +22,14 @@ import { FormInput } from '../components/FormField';
 import { FORM_TEMPLATES } from '../utils/formTemplates';
 import ScanReviewModal from '../components/ScanReviewModal';
 import OnboardingTour from '../components/OnboardingTour';
+import DocxPreview from '../components/DocxPreview';
 import { evaluateFormula, isValidFormula } from '../utils/formulaEvaluator';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import html2pdf from 'html2pdf.js';
 import { scanWordTables, fillWordTable, calculateTableData } from '../utils/wordTableUtils';
 import type { TableInfo, TableConfig, TableColumn } from '../utils/wordTableUtils';
+import { hasGoogleApiKey, uploadToDrive, exportToCSV, openSheetsWithData } from '../utils/googleApi';
 import TableSetupModal from '../components/TableSetupModal';
 import TableEditor from '../components/TableEditor';
 import FieldSelectorModal from '../components/FieldSelectorModal';
@@ -220,6 +222,8 @@ export default function BundleForm() {
     const [showTour, setShowTour] = useState(false);
     const [formulas, setFormulas] = useState<Record<string, string>>({});
     const [activeFormulaTag, setActiveFormulaTag] = useState<string | null>(null);
+    const [previewBuffer, setPreviewBuffer] = useState<ArrayBuffer | null>(null);
+    const [previewName, setPreviewName] = useState('');
 
     // Load sessions + presets on mount + check for active template
     useEffect(() => {
@@ -1177,12 +1181,48 @@ export default function BundleForm() {
                             </label>
                             <button className="btn btn-secondary" onClick={handleExportPDF} disabled={exporting}
                                 style={{ fontSize: '0.85rem', padding: '0.5rem 1rem' }}>📄 Xuất PDF</button>
+                            <button className="btn btn-secondary" onClick={() => {
+                                const first = files.find(f => f.selected);
+                                if (!first) { alert('Chọn ít nhất 1 file!'); return; }
+                                const filled = fillTemplate(first.buffer, data);
+                                setPreviewBuffer(filled);
+                                setPreviewName(first.name);
+                            }} style={{ fontSize: '0.85rem', padding: '0.5rem 1rem', background: '#f0fdf4', borderColor: '#86efac', color: '#166534' }}>
+                                👁️ Xem trước Word
+                            </button>
                             <button className="btn btn-secondary" onClick={handleSaveToProject}
                                 style={{ fontSize: '0.85rem', padding: '0.5rem 1rem', background: '#eff6ff', borderColor: '#93c5fd', color: '#2563eb' }}>
                                 📊 Lưu vào dự án
                             </button>
                             <button className="btn btn-secondary" onClick={() => { setStep('upload'); setFiles([]); setStagedFiles([]); }}
                                 style={{ fontSize: '0.85rem' }}>↩️ Upload lại</button>
+                            {hasGoogleApiKey() && (
+                                <>
+                                    <button className="btn btn-secondary" onClick={async () => {
+                                        const first = files.find(f => f.selected);
+                                        if (!first) { alert('Chọn ít nhất 1 file!'); return; }
+                                        try {
+                                            const filled = fillTemplate(first.buffer, data);
+                                            const result = await uploadToDrive(first.name, filled);
+                                            alert(`✅ Đã upload lên Google Drive!\nFile ID: ${result.id}`);
+                                            if (result.webViewLink) window.open(result.webViewLink, '_blank');
+                                        } catch (err) {
+                                            alert('❌ ' + (err as Error).message);
+                                        }
+                                    }} style={{ fontSize: '0.85rem', padding: '0.5rem 1rem', background: '#fef3c7', borderColor: '#fbbf24', color: '#92400e' }}>
+                                        ☁️ Lưu Drive
+                                    </button>
+                                    <button className="btn btn-secondary" onClick={() => openSheetsWithData(data)}
+                                        style={{ fontSize: '0.85rem', padding: '0.5rem 1rem', background: '#dcfce7', borderColor: '#86efac', color: '#166534' }}>
+                                        📊 Xuất Sheets
+                                    </button>
+                                </>
+                            )}
+                            {!hasGoogleApiKey() && (
+                                <a href="/cai-dat" className="btn btn-sm" style={{ fontSize: '0.75rem', color: '#64748b', textDecoration: 'none' }}>
+                                    ☁️ Kết nối Google
+                                </a>
+                            )}
                             {isMobile && (
                                 <button className="btn btn-sm" onClick={() => setShowMobilePreview(!showMobilePreview)}
                                     style={{ ...btnSm, background: '#dbeafe' }}>{showMobilePreview ? '📋 Form' : '👁️ Preview'}</button>
@@ -1560,6 +1600,14 @@ export default function BundleForm() {
                     </div>
                 );
             })()}
+            {/* Docx Preview */}
+            {previewBuffer && (
+                <DocxPreview
+                    fileBuffer={previewBuffer}
+                    fileName={previewName}
+                    onClose={() => { setPreviewBuffer(null); setPreviewName(''); }}
+                />
+            )}
             {/* Onboarding Tour */}
             <OnboardingTour page="bundle" forceShow={showTour} onClose={() => setShowTour(false)} />
         </div>
