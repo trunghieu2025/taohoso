@@ -9,7 +9,18 @@ import {
     extractTags,
     scanDuplicateTexts,
     createTemplateWithTags,
+    fillTemplate,
+    isLikelyNoise,
+    groupSimilarValues,
+    classifyFieldType,
+    contextLabelToTag,
+    computeDataScore,
+    FIELD_CATEGORY_INFO,
 } from '../utils/militaryDocGenerator';
+import DocxPreview from '../components/DocxPreview';
+import OnboardingTour from '../components/OnboardingTour';
+import { evaluateFormula, isValidFormula } from '../utils/formulaEvaluator';
+import { hasGoogleApiKey, uploadToDrive, openSheetsWithData } from '../utils/googleApi';
 import {
     scanExcelDuplicates,
     extractExcelTags,
@@ -358,6 +369,14 @@ export default function MilitaryDocForm() {
     const [exportHistory, setExportHistory] = useState<{ date: string; type: string }[]>([]);
     const [showBatchExport, setShowBatchExport] = useState(false);
     const [sessionSearch, setSessionSearch] = useState('');
+
+    // New features
+    const [previewBuffer, setPreviewBuffer] = useState<ArrayBuffer | null>(null);
+    const [previewDocName, setPreviewDocName] = useState('');
+    const [showTour, setShowTour] = useState(false);
+    const [formulas, setFormulas] = useState<Record<string, string>>({});
+    const [activeFormulaTag, setActiveFormulaTag] = useState<string | null>(null);
+    const [fieldSearch, setFieldSearch] = useState('');
 
     // Validation
     const REQUIRED_TAGS = ['CÔNG_TRÌNH', 'SỐ_TIỀN', 'NĂM'];
@@ -965,16 +984,52 @@ export default function MilitaryDocForm() {
             // Custom template: auto-generate simple list of fields
             return (
                 <div style={sectionStyle}>
-                    <div style={sectionTitleStyle}>📋 Trường dữ liệu ({templateTags.length})</div>
-                    {templateTags.map((tag) => (
-                        <FormInput
-                            key={tag}
-                            label={customLabels[tag] || TAG_LABELS[tag] || tag.replace(/_/g, ' ')}
-                            name={tag}
-                            value={data[tag] || ''}
-                            onChange={handleChange}
-                            placeholder={TAG_PLACEHOLDERS[tag] || `Nhập ${(customLabels[tag] || tag).replace(/_/g, ' ').toLowerCase()}`}
-                        />
+                    <div style={{ ...sectionTitleStyle, justifyContent: 'space-between' }}>
+                        <span>📋 Trường dữ liệu ({templateTags.length})</span>
+                        <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center' }}>
+                            {templateTags.length > 5 && (
+                                <input type="text" value={fieldSearch} onChange={e => setFieldSearch(e.target.value)}
+                                    onKeyDown={e => {
+                                        if (e.key === 'Enter' && fieldSearch) {
+                                            const labels = { ...TAG_LABELS, ...customLabels };
+                                            const match = templateTags.find(t => (labels[t] || t).toLowerCase().includes(fieldSearch.toLowerCase()));
+                                            if (match) {
+                                                const el = document.getElementById(`field-${match}`);
+                                                if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.style.background = '#fef08a'; setTimeout(() => { el.style.background = ''; }, 1500); }
+                                            }
+                                        }
+                                    }}
+                                    placeholder="🔍 Tìm trường... (Enter)"
+                                    style={{ fontSize: '0.75rem', padding: '0.2rem 0.4rem', border: '1px solid #c7d2fe', borderRadius: 4, width: 140, fontWeight: 400 }} />
+                            )}
+                        </div>
+                    </div>
+                    {/* Data score */}
+                    {(() => {
+                        const score = computeDataScore(data, templateTags);
+                        return (
+                            <div style={{ marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <div style={{ flex: 1, height: 6, background: '#e2e8f0', borderRadius: 3 }}>
+                                    <div style={{ height: '100%', borderRadius: 3, width: `${score}%`, background: score === 100 ? '#10b981' : '#3b82f6', transition: 'width 0.3s' }} />
+                                </div>
+                                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: score === 100 ? '#059669' : '#3b82f6' }}>{score}%</span>
+                            </div>
+                        );
+                    })()}
+                    {templateTags.filter(tag => {
+                        if (!fieldSearch) return true;
+                        const label = customLabels[tag] || TAG_LABELS[tag] || tag;
+                        return label.toLowerCase().includes(fieldSearch.toLowerCase()) || tag.toLowerCase().includes(fieldSearch.toLowerCase());
+                    }).map((tag) => (
+                        <div key={tag} id={`field-${tag}`}>
+                            <FormInput
+                                label={customLabels[tag] || TAG_LABELS[tag] || tag.replace(/_/g, ' ')}
+                                name={tag}
+                                value={data[tag] || ''}
+                                onChange={handleChange}
+                                placeholder={TAG_PLACEHOLDERS[tag] || `Nhập ${(customLabels[tag] || tag).replace(/_/g, ' ').toLowerCase()}`}
+                            />
+                        </div>
                     ))}
                 </div>
             );
@@ -1422,10 +1477,42 @@ export default function MilitaryDocForm() {
                                         style={{ fontSize: '0.85rem' }}>
                                         📄 Xuất PDF
                                     </button>
+                                    {fileType === 'word' && templateBuffer && (
+                                        <button className="btn btn-secondary" onClick={() => {
+                                            const filled = fillTemplate(templateBuffer, data);
+                                            setPreviewBuffer(filled);
+                                            setPreviewDocName(templateName);
+                                        }} style={{ fontSize: '0.85rem', background: '#f0fdf4', borderColor: '#86efac', color: '#166534' }}>
+                                            👁️ Xem trước Word
+                                        </button>
+                                    )}
                                     <button className="btn btn-secondary" onClick={handleSaveToProject}
                                         style={{ fontSize: '0.85rem', background: '#eff6ff', borderColor: '#93c5fd', color: '#2563eb' }}>
                                         📊 Lưu vào dự án
                                     </button>
+                                    {hasGoogleApiKey() && fileType === 'word' && templateBuffer && (
+                                        <>
+                                            <button className="btn btn-secondary" onClick={async () => {
+                                                try {
+                                                    const filled = fillTemplate(templateBuffer, data);
+                                                    const result = await uploadToDrive(templateName, filled);
+                                                    alert(`✅ Đã upload lên Google Drive!\nFile ID: ${result.id}`);
+                                                    if (result.webViewLink) window.open(result.webViewLink, '_blank');
+                                                } catch (err) { alert('❌ ' + (err as Error).message); }
+                                            }} style={{ fontSize: '0.85rem', background: '#fef3c7', borderColor: '#fbbf24', color: '#92400e' }}>
+                                                ☁️ Lưu Drive
+                                            </button>
+                                            <button className="btn btn-secondary" onClick={() => openSheetsWithData(data)}
+                                                style={{ fontSize: '0.85rem', background: '#dcfce7', borderColor: '#86efac', color: '#166534' }}>
+                                                📊 Xuất Sheets
+                                            </button>
+                                        </>
+                                    )}
+                                    {!hasGoogleApiKey() && (
+                                        <a href="/cai-dat" className="btn btn-sm" style={{ fontSize: '0.75rem', color: '#64748b', textDecoration: 'none' }}>
+                                            ☁️ Kết nối Google
+                                        </a>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -1511,6 +1598,18 @@ export default function MilitaryDocForm() {
                     onCancel={() => setShowFieldSelector(false)}
                 />
             )}
+
+            {/* DOCX PREVIEW MODAL */}
+            {previewBuffer && (
+                <DocxPreview
+                    fileBuffer={previewBuffer}
+                    fileName={previewDocName}
+                    onClose={() => { setPreviewBuffer(null); setPreviewDocName(''); }}
+                />
+            )}
+
+            {/* ONBOARDING TOUR */}
+            <OnboardingTour page="military" forceShow={showTour} onClose={() => setShowTour(false)} />
         </>
     );
 }
