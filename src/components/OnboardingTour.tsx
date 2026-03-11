@@ -14,10 +14,17 @@ const BUNDLE_STEPS: Step[] = [
     { target: '#export-area', title: '📦 Bước 4: Xuất file', content: 'Xuất ZIP tất cả file, hoặc xuất từng file riêng lẻ. Hỗ trợ Word và PDF.', position: 'top' },
 ];
 
+const MILITARY_STEPS: Step[] = [
+    { target: '.contract-form', title: '📄 Bước 1: Chọn mẫu', content: 'Upload file Word/Excel của bạn hoặc dùng mẫu mặc định. Hệ thống quét {TAG} và [text] tự động.', position: 'bottom' },
+    { target: '.contract-form', title: '📝 Bước 2: Điền form', content: 'Điền dữ liệu vào các trường. Số tiền tự chuyển sang chữ. Tìm trường bằng ô tìm kiếm.', position: 'top' },
+    { target: '.contract-preview', title: '👁️ Bước 3: Xem trước', content: 'Preview trực tiếp ngay trên trang. Phóng to/thu nhỏ bằng nút +/−.', position: 'left' },
+    { target: '.contract-form', title: '📥 Bước 4: Xuất file', content: 'Xuất Word, PDF, hoặc upload Google Drive. Bấm "👁️ Xem trước Word" để preview trước.', position: 'top' },
+];
+
 const STORAGE_KEY = 'taohoso_onboarding_done';
 
 interface Props {
-    page: 'bundle';
+    page: 'bundle' | 'military';
     forceShow?: boolean;
     onClose?: () => void;
 }
@@ -27,7 +34,7 @@ export default function OnboardingTour({ page, forceShow, onClose }: Props) {
     const [visible, setVisible] = useState(false);
     const [tooltipPos, setTooltipPos] = useState({ top: 0, left: 0 });
 
-    const steps = page === 'bundle' ? BUNDLE_STEPS : [];
+    const steps = page === 'bundle' ? BUNDLE_STEPS : page === 'military' ? MILITARY_STEPS : [];
 
     useEffect(() => {
         if (forceShow) {
