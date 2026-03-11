@@ -1,5 +1,5 @@
 // TaoHoSo Service Worker — PWA Offline
-const CACHE_NAME = 'taohoso-v1';
+const CACHE_NAME = 'taohoso-v2';
 const STATIC_ASSETS = [
     '/',
     '/index.html',
