@@ -14,7 +14,7 @@ import {
     groupSimilarValues,
     classifyFieldType,
     contextLabelToTag,
-    computeDataScore,
+
     FIELD_CATEGORY_INFO,
 } from '../utils/militaryDocGenerator';
 import DocxPreview from '../components/DocxPreview';
@@ -1006,7 +1006,8 @@ export default function MilitaryDocForm() {
                     </div>
                     {/* Data score */}
                     {(() => {
-                        const score = computeDataScore(data, templateTags);
+                        const filled = templateTags.filter(t => data[t]?.trim()).length;
+                        const score = templateTags.length > 0 ? Math.round((filled / templateTags.length) * 100) : 0;
                         return (
                             <div style={{ marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                 <div style={{ flex: 1, height: 6, background: '#e2e8f0', borderRadius: 3 }}>
