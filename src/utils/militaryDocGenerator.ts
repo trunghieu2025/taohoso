@@ -630,8 +630,8 @@ export function extractTags(templateBuffer: ArrayBuffer): string[] {
     const bracketMatches = fullText.match(/\[([^\]]{2,})\]/g) || [];
     for (const m of bracketMatches) {
         const text = m.slice(1, -1).trim();
-        // Skip if looks like a number, checkbox, or formatting marker
-        if (/^\d+$/.test(text) || text.length > 50) continue;
+        // Skip if purely numeric or extremely long
+        if (/^\d+$/.test(text) || text.length > 200) continue;
         const tag = textToTag(text);
         if (tag && tag.length >= 2) tags.push(tag);
     }
@@ -653,22 +653,80 @@ export function fillTemplate(templateBuffer: ArrayBuffer, data: Record<string, s
     doc.render(data);
 
     // Also replace [text] bracket fields in XML content
+    // Handle case where bracket text is split across XML runs
     const filledZip = doc.getZip();
-    const xmlFile = filledZip.file('word/document.xml');
-    if (xmlFile) {
+    const xmlFiles = ['word/document.xml', 'word/header1.xml', 'word/header2.xml', 'word/footer1.xml', 'word/footer2.xml'];
+    for (const fname of xmlFiles) {
+        const xmlFile = filledZip.file(fname);
+        if (!xmlFile) continue;
         let xml = xmlFile.asText();
-        // Build reverse map: tag → original bracket text
+
+        // Extract plain text from XML, find brackets, then replace in XML
+        // Strategy: find bracket text in plain text, then search & replace in XML
+        // (handles text split across <w:t> tags)
+        const plainText = xml.replace(/<[^>]+>/g, '');
         const bracketRe = /\[([^\]]{2,})\]/g;
         let m;
-        while ((m = bracketRe.exec(xml)) !== null) {
+        const replacements: { original: string; replacement: string }[] = [];
+        while ((m = bracketRe.exec(plainText)) !== null) {
             const bracketText = m[1].trim();
-            if (/^\d+$/.test(bracketText) || bracketText.length > 50) continue;
+            if (/^\d+$/.test(bracketText) || bracketText.length > 200) continue;
             const tag = textToTag(bracketText);
             if (tag && data[tag]) {
-                xml = xml.replace(m[0], data[tag]);
+                replacements.push({ original: m[0], replacement: data[tag] });
             }
         }
-        filledZip.file('word/document.xml', xml);
+
+        // Apply replacements - try direct XML replacement first
+        for (const { original, replacement } of replacements) {
+            if (xml.includes(original)) {
+                xml = xml.split(original).join(replacement);
+            } else {
+                // Text is split across XML runs - replace character by character
+                // Remove brackets and content between them in the XML stream
+                const chars = [...original];
+                let pos = 0;
+                let xmlPos = 0;
+                let startXmlPos = -1;
+                let endXmlPos = -1;
+
+                while (pos < chars.length && xmlPos < xml.length) {
+                    // Skip XML tags
+                    if (xml[xmlPos] === '<') {
+                        while (xmlPos < xml.length && xml[xmlPos] !== '>') xmlPos++;
+                        xmlPos++; // skip '>'
+                        continue;
+                    }
+                    if (xml[xmlPos] === chars[pos]) {
+                        if (pos === 0) startXmlPos = xmlPos;
+                        pos++;
+                        if (pos === chars.length) endXmlPos = xmlPos + 1;
+                    } else {
+                        pos = 0;
+                        startXmlPos = -1;
+                    }
+                    xmlPos++;
+                }
+
+                if (startXmlPos >= 0 && endXmlPos > startXmlPos) {
+                    // Replace the matched range, preserving XML tags within
+                    const before = xml.slice(0, startXmlPos);
+                    const middle = xml.slice(startXmlPos, endXmlPos);
+                    const after = xml.slice(endXmlPos);
+                    // Keep XML tags, replace text content
+                    const cleaned = middle.replace(/[^<>]+(?=<|$)/g, '');
+                    // Insert replacement text in the first text position
+                    const firstTagEnd = cleaned.indexOf('>');
+                    if (firstTagEnd >= 0) {
+                        xml = before + replacement + cleaned + after;
+                    } else {
+                        xml = before + replacement + after;
+                    }
+                }
+            }
+        }
+
+        filledZip.file(fname, xml);
     }
 
     return filledZip.generate({ type: 'arraybuffer' });
