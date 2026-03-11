@@ -1018,7 +1018,7 @@ export default function BundleForm() {
                             style={{ fontSize: '1rem', padding: '0.6rem 1.5rem' }}>📄 Thêm file lẻ</button>
                         <button className="btn btn-primary" onClick={() => folderInputRef.current?.click()} disabled={scanning}
                             style={{ fontSize: '1rem', padding: '0.6rem 1.5rem', background: '#7c3aed' }}>📁 Thêm thư mục</button>
-                        {stagedFiles.length >= 2 && (
+                        {stagedFiles.length >= 1 && (
                             <button className="btn btn-primary" onClick={handleStartScan} disabled={scanning}
                                 style={{ fontSize: '1rem', padding: '0.6rem 1.5rem', background: '#10b981' }}>
                                 {scanning ? '⏳ Đang quét...' : `🔍 Quét & tạo form (${stagedFiles.length} file)`}
@@ -1051,7 +1051,7 @@ export default function BundleForm() {
                             ))}
                         </div>
                     )}
-                    {stagedFiles.length >= 2 && (
+                    {stagedFiles.length >= 1 && (
                         <div style={{ marginTop: '0.5rem' }}>
                             <button className="btn btn-sm" onClick={handleSavePreset}
                                 style={{ fontSize: '0.8rem', padding: '0.25rem 0.75rem', background: '#fef3c7', color: '#92400e' }}>
