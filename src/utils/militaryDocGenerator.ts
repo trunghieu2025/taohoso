@@ -23,12 +23,12 @@ export interface ScanResult {
 export type FieldCategory = 'project' | 'party' | 'finance' | 'date' | 'bracket' | 'other';
 
 export const FIELD_CATEGORY_INFO: Record<FieldCategory, { icon: string; label: string; order: number }> = {
-    bracket:  { icon: '📌', label: 'Trường mã hóa [...]',    order: 0 },
-    project:  { icon: '🏗️', label: 'Thông tin dự án',        order: 1 },
-    party:    { icon: '👤', label: 'Chủ đầu tư / Nhà thầu',  order: 2 },
-    finance:  { icon: '💰', label: 'Tài chính',               order: 3 },
-    date:     { icon: '📅', label: 'Thời gian',               order: 4 },
-    other:    { icon: '📋', label: 'Khác',                    order: 5 },
+    bracket: { icon: '📌', label: 'Trường mã hóa [...]', order: 0 },
+    project: { icon: '🏗️', label: 'Thông tin dự án', order: 1 },
+    party: { icon: '👤', label: 'Chủ đầu tư / Nhà thầu', order: 2 },
+    finance: { icon: '💰', label: 'Tài chính', order: 3 },
+    date: { icon: '📅', label: 'Thời gian', order: 4 },
+    other: { icon: '📋', label: 'Khác', order: 5 },
 };
 
 /* ── Common Vietnamese stop words to ignore ── */
@@ -622,8 +622,20 @@ export function extractTags(templateBuffer: ArrayBuffer): string[] {
         linebreaks: true,
     });
     const fullText = doc.getFullText();
-    const matches = fullText.match(/\{([^}]+)\}/g) || [];
-    const tags = matches.map((m: string) => m.slice(1, -1));
+    // Extract {TAG} patterns (MERGEFIELDs / docxtemplater tags)
+    const curlyMatches = fullText.match(/\{([^}]+)\}/g) || [];
+    const tags = curlyMatches.map((m: string) => m.slice(1, -1));
+
+    // Also extract [text] bracket patterns as fields
+    const bracketMatches = fullText.match(/\[([^\]]{2,})\]/g) || [];
+    for (const m of bracketMatches) {
+        const text = m.slice(1, -1).trim();
+        // Skip if looks like a number, checkbox, or formatting marker
+        if (/^\d+$/.test(text) || text.length > 50) continue;
+        const tag = textToTag(text);
+        if (tag && tag.length >= 2) tags.push(tag);
+    }
+
     return [...new Set(tags)].sort();
 }
 
@@ -639,7 +651,27 @@ export function fillTemplate(templateBuffer: ArrayBuffer, data: Record<string, s
         linebreaks: true,
     });
     doc.render(data);
-    return doc.getZip().generate({ type: 'arraybuffer' });
+
+    // Also replace [text] bracket fields in XML content
+    const filledZip = doc.getZip();
+    const xmlFile = filledZip.file('word/document.xml');
+    if (xmlFile) {
+        let xml = xmlFile.asText();
+        // Build reverse map: tag → original bracket text
+        const bracketRe = /\[([^\]]{2,})\]/g;
+        let m;
+        while ((m = bracketRe.exec(xml)) !== null) {
+            const bracketText = m[1].trim();
+            if (/^\d+$/.test(bracketText) || bracketText.length > 50) continue;
+            const tag = textToTag(bracketText);
+            if (tag && data[tag]) {
+                xml = xml.replace(m[0], data[tag]);
+            }
+        }
+        filledZip.file('word/document.xml', xml);
+    }
+
+    return filledZip.generate({ type: 'arraybuffer' });
 }
 
 /**
