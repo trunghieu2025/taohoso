@@ -1,56 +1,105 @@
 /**
- * Google API Integration Utilities
- * Uses user-provided API key stored in localStorage.
- * Supports: Google Drive (upload/download) and Google Sheets (export)
+ * Google API Integration — OAuth 2.0
+ * Uses Google Identity Services (GIS) for proper authentication.
+ * Customer provides their own OAuth Client ID in Settings.
  */
 
-const STORAGE_KEY = 'taohoso_google_api_key';
+const CLIENT_ID_KEY = 'taohoso_google_client_id';
+let cachedAccessToken: string | null = null;
 
-export function getGoogleApiKey(): string {
-    return localStorage.getItem(STORAGE_KEY) || '';
+/* ─── Client ID management ─── */
+
+export function getGoogleClientId(): string {
+    return localStorage.getItem(CLIENT_ID_KEY) || '';
 }
 
-export function setGoogleApiKey(key: string): void {
-    localStorage.setItem(STORAGE_KEY, key.trim());
+export function setGoogleClientId(id: string): void {
+    localStorage.setItem(CLIENT_ID_KEY, id.trim());
+    cachedAccessToken = null; // Reset token when client ID changes
 }
 
 export function hasGoogleApiKey(): boolean {
-    return !!getGoogleApiKey();
+    return !!getGoogleClientId();
+}
+
+// Legacy aliases
+export function getGoogleApiKey(): string { return getGoogleClientId(); }
+export function setGoogleApiKey(key: string): void { setGoogleClientId(key); }
+
+/* ─── Load Google Identity Services ─── */
+
+let gisLoaded = false;
+
+function loadGIS(): Promise<void> {
+    if (gisLoaded) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+        if (document.querySelector('script[src*="accounts.google.com/gsi/client"]')) {
+            gisLoaded = true;
+            resolve();
+            return;
+        }
+        const script = document.createElement('script');
+        script.src = 'https://accounts.google.com/gsi/client';
+        script.onload = () => { gisLoaded = true; resolve(); };
+        script.onerror = () => reject(new Error('Không tải được Google Identity Services'));
+        document.head.appendChild(script);
+    });
+}
+
+/* ─── OAuth Token ─── */
+
+async function getAccessToken(): Promise<string> {
+    if (cachedAccessToken) return cachedAccessToken;
+
+    const clientId = getGoogleClientId();
+    if (!clientId) throw new Error('Chưa có Client ID. Vào Cài đặt để nhập.');
+
+    await loadGIS();
+
+    return new Promise((resolve, reject) => {
+        const tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
+            client_id: clientId,
+            scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets',
+            callback: (response: any) => {
+                if (response.error) {
+                    reject(new Error(response.error_description || response.error));
+                    return;
+                }
+                cachedAccessToken = response.access_token;
+                // Token expires, clear after 50 minutes
+                setTimeout(() => { cachedAccessToken = null; }, 50 * 60 * 1000);
+                resolve(response.access_token);
+            },
+            error_callback: (err: any) => {
+                reject(new Error(err?.message || 'Đăng nhập Google thất bại'));
+            },
+        });
+        tokenClient.requestAccessToken();
+    });
 }
 
 /* ─── Google Drive ─── */
 
-/**
- * Upload a file (ArrayBuffer) to Google Drive.
- * Returns the file ID on success.
- */
 export async function uploadToDrive(
     fileName: string,
     fileBuffer: ArrayBuffer,
     mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     folderId?: string,
 ): Promise<{ id: string; webViewLink: string }> {
-    const apiKey = getGoogleApiKey();
-    if (!apiKey) throw new Error('Chưa có API key. Vào Cài đặt để nhập.');
+    const token = await getAccessToken();
 
-    // Create metadata
-    const metadata: Record<string, unknown> = {
-        name: fileName,
-        mimeType,
-    };
-    if (folderId) {
-        metadata.parents = [folderId];
-    }
+    const metadata: Record<string, unknown> = { name: fileName, mimeType };
+    if (folderId) metadata.parents = [folderId];
 
-    // Multipart upload
     const boundary = '---taohoso_upload_' + Date.now();
     const body = createMultipartBody(boundary, metadata, fileBuffer, mimeType);
 
     const res = await fetch(
-        `https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&key=${apiKey}&fields=id,webViewLink`,
+        'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink',
         {
             method: 'POST',
             headers: {
+                'Authorization': `Bearer ${token}`,
                 'Content-Type': `multipart/related; boundary=${boundary}`,
             },
             body,
@@ -58,6 +107,7 @@ export async function uploadToDrive(
     );
 
     if (!res.ok) {
+        if (res.status === 401) { cachedAccessToken = null; }
         const err = await res.json().catch(() => ({}));
         throw new Error(err?.error?.message || `Upload lỗi (${res.status})`);
     }
@@ -76,7 +126,6 @@ function createMultipartBody(
         `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${metaStr}\r\n`,
         `--${boundary}\r\nContent-Type: ${contentType}\r\nContent-Transfer-Encoding: base64\r\n\r\n`,
     ];
-    // Encode ArrayBuffer to base64
     const bytes = new Uint8Array(content);
     let binary = '';
     for (let i = 0; i < bytes.length; i++) {
@@ -86,19 +135,16 @@ function createMultipartBody(
     return new Blob([parts[0], parts[1], b64, `\r\n--${boundary}--`]);
 }
 
-/**
- * List files from Google Drive root.
- */
 export async function listDriveFiles(
     query = '',
     pageSize = 20,
 ): Promise<{ id: string; name: string; mimeType: string; modifiedTime: string }[]> {
-    const apiKey = getGoogleApiKey();
-    if (!apiKey) throw new Error('Chưa có API key.');
+    const token = await getAccessToken();
 
     const q = query || "mimeType='application/vnd.openxmlformats-officedocument.wordprocessingml.document'";
     const res = await fetch(
-        `https://www.googleapis.com/drive/v3/files?key=${apiKey}&q=${encodeURIComponent(q)}&pageSize=${pageSize}&fields=files(id,name,mimeType,modifiedTime)&orderBy=modifiedTime desc`,
+        `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&pageSize=${pageSize}&fields=files(id,name,mimeType,modifiedTime)&orderBy=modifiedTime desc`,
+        { headers: { 'Authorization': `Bearer ${token}` } },
     );
 
     if (!res.ok) {
@@ -110,31 +156,20 @@ export async function listDriveFiles(
     return data.files || [];
 }
 
-/**
- * Download a file from Google Drive.
- */
 export async function downloadFromDrive(fileId: string): Promise<ArrayBuffer> {
-    const apiKey = getGoogleApiKey();
-    if (!apiKey) throw new Error('Chưa có API key.');
+    const token = await getAccessToken();
 
     const res = await fetch(
-        `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${apiKey}`,
+        `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+        { headers: { 'Authorization': `Bearer ${token}` } },
     );
 
-    if (!res.ok) {
-        throw new Error(`Download lỗi (${res.status})`);
-    }
-
+    if (!res.ok) throw new Error(`Download lỗi (${res.status})`);
     return res.arrayBuffer();
 }
 
 /* ─── Google Sheets ─── */
 
-/**
- * Export data to a new Google Sheet.
- * Note: Creating sheets via API key alone requires the sheet to be public.
- * A simpler approach: generate a CSV and let the user import.
- */
 export function exportToCSV(
     data: Record<string, string>,
     fileName = 'data.csv',
@@ -152,9 +187,6 @@ export function exportToCSV(
     URL.revokeObjectURL(url);
 }
 
-/**
- * Export multiple records to CSV (for Sheets import).
- */
 export function exportMultiToCSV(
     records: Record<string, string>[],
     fileName = 'data.csv',
@@ -177,23 +209,21 @@ export function exportMultiToCSV(
     URL.revokeObjectURL(url);
 }
 
-/**
- * Update values in an existing Google Sheet.
- * Requires the spreadsheet ID and range.
- */
 export async function updateGoogleSheet(
     spreadsheetId: string,
     range: string,
     values: string[][],
 ): Promise<void> {
-    const apiKey = getGoogleApiKey();
-    if (!apiKey) throw new Error('Chưa có API key.');
+    const token = await getAccessToken();
 
     const res = await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED&key=${apiKey}`,
+        `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`,
         {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
             body: JSON.stringify({ values }),
         },
     );
@@ -204,12 +234,8 @@ export async function updateGoogleSheet(
     }
 }
 
-/**
- * Open Google Sheets import page with pre-generated CSV.
- */
 export function openSheetsWithData(data: Record<string, string>): void {
     exportToCSV(data, `TaoHoSo_${Date.now()}.csv`);
-    // Open Google Sheets after CSV download
     setTimeout(() => {
         window.open('https://sheets.google.com/create', '_blank');
     }, 500);

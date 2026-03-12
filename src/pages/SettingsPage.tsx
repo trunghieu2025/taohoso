@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { showToast } from '../components/Toast';
-import { getGoogleApiKey, setGoogleApiKey, hasGoogleApiKey } from '../utils/googleApi';
+import { getGoogleClientId, setGoogleClientId, hasGoogleApiKey } from '../utils/googleApi';
 import { isPinSet, setPin, verifyPin, removePin } from '../components/PinLock';
 
 export default function SettingsPage() {
@@ -13,18 +13,18 @@ export default function SettingsPage() {
     const [oldPin, setOldPin] = useState('');
 
     useEffect(() => {
-        setApiKeyState(getGoogleApiKey());
+        setApiKeyState(getGoogleClientId());
         setPinEnabled(isPinSet());
     }, []);
 
     const handleSave = () => {
-        setGoogleApiKey(apiKey);
+        setGoogleClientId(apiKey);
         setSaved(true);
         setTimeout(() => setSaved(false), 2000);
     };
 
     const handleClear = () => {
-        setGoogleApiKey('');
+        setGoogleClientId('');
         setApiKeyState('');
     };
 
@@ -70,7 +70,7 @@ export default function SettingsPage() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
                             <span style={{ fontSize: '1.5rem' }}>☁️</span>
                             <div>
-                                <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Google API Key</h3>
+                                <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Google OAuth Client ID</h3>
                                 <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748b' }}>
                                     Kết nối Google Drive & Sheets
                                 </p>
@@ -85,14 +85,14 @@ export default function SettingsPage() {
 
                         <div style={{ marginBottom: '0.75rem' }}>
                             <label style={{ fontSize: '0.85rem', fontWeight: 600, display: 'block', marginBottom: '0.3rem' }}>
-                                API Key
+                                Client ID
                             </label>
                             <div style={{ display: 'flex', gap: '0.4rem' }}>
                                 <input
                                     type={showKey ? 'text' : 'password'}
                                     value={apiKey}
                                     onChange={e => setApiKeyState(e.target.value)}
-                                    placeholder="AIzaSy..."
+                                    placeholder="xxx.apps.googleusercontent.com"
                                     style={{
                                         flex: 1, padding: '0.5rem 0.75rem', border: '1px solid #cbd5e1',
                                         borderRadius: 6, fontSize: '0.9rem', fontFamily: 'monospace',
@@ -108,7 +108,7 @@ export default function SettingsPage() {
                         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                             <button className="btn btn-primary btn-sm" onClick={handleSave}
                                 disabled={!apiKey.trim()}>
-                                💾 Lưu API Key
+                                💾 Lưu Client ID
                             </button>
                             {apiKey && (
                                 <button className="btn btn-sm" onClick={handleClear}
@@ -128,13 +128,16 @@ export default function SettingsPage() {
                             borderRadius: 8, border: '1px solid #bae6fd', fontSize: '0.82rem',
                             lineHeight: 1.6, color: '#0c4a6e',
                         }}>
-                            <div style={{ fontWeight: 700, marginBottom: '0.3rem' }}>📝 Hướng dẫn lấy API Key:</div>
+                            <div style={{ fontWeight: 700, marginBottom: '0.3rem' }}>📝 Hướng dẫn lấy OAuth Client ID:</div>
                             <ol style={{ margin: 0, paddingLeft: '1.2rem' }}>
                                 <li>Vào <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noreferrer"
                                     style={{ color: '#2563eb', fontWeight: 600 }}>Google Cloud Console</a></li>
                                 <li>Tạo project mới (hoặc chọn project có sẵn)</li>
                                 <li>Bật <strong>Google Drive API</strong> và <strong>Google Sheets API</strong></li>
-                                <li>Tạo <strong>API Key</strong> → Copy và dán vào ô trên</li>
+                                <li>Bấm <strong>Create Credentials</strong> → chọn <strong>OAuth client ID</strong></li>
+                                <li>Application type: <strong>Web application</strong></li>
+                                <li>Authorized JavaScript origins: thêm <code>https://taohoso.vercel.app</code></li>
+                                <li>Copy <strong>Client ID</strong> → dán vào ô trên</li>
                             </ol>
                         </div>
                     </div>
