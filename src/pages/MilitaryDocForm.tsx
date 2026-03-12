@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef, ChangeEvent } from 'react';
+import { showToast } from '../components/Toast';
 import { useNavigate } from 'react-router-dom';
 import { FormInput } from '../components/FormField';
 import ScanReviewModal from '../components/ScanReviewModal';
@@ -537,7 +538,7 @@ export default function MilitaryDocForm() {
             });
             if (Object.keys(errors).length > 0) {
                 setFieldErrors(errors);
-                alert(`⚠️ Vui lòng điền ${Object.keys(errors).length} trường bắt buộc (đánh dấu đỏ)`);
+                showToast(`Vui lòng điền ${Object.keys(errors).length} trường bắt buộc (đánh dấu đỏ)`, 'warning');
                 return;
             }
         }
@@ -558,7 +559,7 @@ export default function MilitaryDocForm() {
                 await generateMilitaryDoc(data, buf);
             }
         } catch (err) {
-            alert('Lỗi khi xuất file: ' + (err as Error).message);
+            showToast('Lỗi khi xuất file: ' + (err as Error).message, 'error');
         } finally {
             setLoading(false);
         }
@@ -591,28 +592,14 @@ export default function MilitaryDocForm() {
 
         // Check for .doc (old format)
         if (file.name.toLowerCase().endsWith('.doc') && !file.name.toLowerCase().endsWith('.docx')) {
-            alert(
-                '⚠️ File .doc (Word cũ) không đọc được trên web.\n\n'
-                + 'Hướng dẫn chuyển sang .docx:\n'
-                + '1. Mở file bằng Word\n'
-                + '2. Vào File → Save As\n'
-                + '3. Chọn định dạng "Word Document (.docx)"\n'
-                + '4. Lưu và upload lại file .docx'
-            );
+            showToast('File .doc không đọc được. Vui lòng mở bằng Word → Save As → chọn .docx rồi upload lại.', 'warning');
             if (fileInputRef.current) fileInputRef.current.value = '';
             return;
         }
 
         // Check for .xls (old Excel format)
         if (file.name.toLowerCase().endsWith('.xls') && !file.name.toLowerCase().endsWith('.xlsx')) {
-            alert(
-                '⚠️ File .xls (Excel cũ) không đọc được đầy đủ trên web.\n\n'
-                + 'Hướng dẫn chuyển sang .xlsx:\n'
-                + '1. Mở file bằng Excel\n'
-                + '2. Vào File → Save As\n'
-                + '3. Chọn định dạng "Excel Workbook (.xlsx)"\n'
-                + '4. Lưu và upload lại file .xlsx'
-            );
+            showToast('File .xls không đọc được. Vui lòng mở bằng Excel → Save As → chọn .xlsx rồi upload lại.', 'warning');
             if (fileInputRef.current) fileInputRef.current.value = '';
             return;
         }
@@ -641,7 +628,7 @@ export default function MilitaryDocForm() {
                 } else {
                     const results = scanExcelDuplicates(buf);
                     if (results.length === 0) {
-                        alert('Không tìm thấy giá trị trùng lặp nào trong file Excel.');
+                        showToast('Không tìm thấy giá trị trùng lặp nào trong file Excel.', 'warning');
                         return;
                     }
                     setRawUploadBuffer(buf);
@@ -668,7 +655,7 @@ export default function MilitaryDocForm() {
                 } else {
                     const results = scanDuplicateTexts(buf);
                     if (results.length === 0) {
-                        alert('Không tìm thấy giá trị trùng lặp nào trong file Word.');
+                        showToast('Không tìm thấy giá trị trùng lặp nào trong file Word.', 'warning');
                         return;
                     }
                     setRawUploadBuffer(buf);
@@ -691,7 +678,7 @@ export default function MilitaryDocForm() {
                 } catch { setDetectedTables([]); }
             }
         } catch (err) {
-            alert('Lỗi đọc file: ' + (err as Error).message);
+            showToast('Lỗi đọc file: ' + (err as Error).message, 'error');
         }
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
@@ -783,7 +770,7 @@ export default function MilitaryDocForm() {
             setCurrentSessionId(id);
             setAutoSaveId(id);
             setSavedSessions(await listSessions());
-            alert('✅ Đã nhân bản hồ sơ!');
+            showToast('Đã nhân bản hồ sơ!', 'success');
         } catch { /* ignore */ }
     };
 
@@ -803,7 +790,7 @@ export default function MilitaryDocForm() {
             }).from(el).save();
             setExportHistory(prev => [...prev, { date: new Date().toISOString(), type: 'PDF' }]);
         } catch (err) {
-            alert('❌ Lỗi xuất PDF: ' + (err as Error).message);
+            showToast('Lỗi xuất PDF: ' + (err as Error).message, 'error');
         }
         setLoading(false);
     };
@@ -826,10 +813,10 @@ export default function MilitaryDocForm() {
             projectData.name = projectName;
             projectData.selectedFields = selectedKeys;
             const projectId = await saveProject(projectData);
-            alert('✅ Đã lưu vào dự án!');
+            showToast('Đã lưu vào dự án!', 'success');
             navigate(`/du-an/${projectId}`);
         } catch (err) {
-            alert('❌ Lỗi: ' + (err as Error).message);
+            showToast('Lỗi: ' + (err as Error).message, 'error');
         }
     };
 
@@ -850,10 +837,10 @@ export default function MilitaryDocForm() {
     // Contractor management
     const handleSaveContractor = async () => {
         const c = formDataToContractor(data);
-        if (!c.name) { alert('Vui lòng nhập tên nhà thầu trước'); return; }
+        if (!c.name) { showToast('Vui lòng nhập tên nhà thầu trước', 'warning'); return; }
         await saveContractor(c);
         setContractors(await listContractors());
-        alert('✅ Đã lưu thông tin nhà thầu: ' + c.name);
+        showToast('Đã lưu nhà thầu: ' + c.name, 'success');
     };
 
     const handleSelectContractor = (c: Contractor) => {
@@ -874,17 +861,17 @@ export default function MilitaryDocForm() {
             const buf = await file.arrayBuffer();
             const rows = readExcelData(buf);
             if (rows.length === 0) {
-                alert('Không tìm thấy dữ liệu trong file Excel.');
+                showToast('Không tìm thấy dữ liệu trong file Excel.', 'warning');
                 return;
             }
             const labels = isCustomTemplate ? customLabels : TAG_LABELS;
             const mapped = mapExcelToTags(rows[0], templateTags, labels);
             if (Object.keys(mapped).length === 0) {
-                alert('Không khớp được cột nào với trường form. Hàng 1 cần chứa tiêu đề khớp với tên trường.');
+                showToast('Không khớp được cột nào. Hàng 1 cần chứa tiêu đề khớp tên trường.', 'warning');
                 return;
             }
             setData(prev => ({ ...prev, ...mapped }));
-            alert(`✅ Đã nhập ${Object.keys(mapped).length} trường từ Excel!`);
+            showToast(`Đã nhập ${Object.keys(mapped).length} trường từ Excel!`, 'success');
         } catch (err) {
             alert('❌ Lỗi đọc file: ' + (err as Error).message);
         }
@@ -928,7 +915,7 @@ export default function MilitaryDocForm() {
             if (imported.tags.length > 0) {
                 setTemplateTags(imported.tags);
             }
-            alert('✅ Đã khôi phục dữ liệu thành công!');
+            showToast('Đã khôi phục dữ liệu thành công!', 'success');
         } catch (err) {
             alert('❌ Lỗi đọc file: ' + (err as Error).message);
         }

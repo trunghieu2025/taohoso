@@ -16,7 +16,7 @@ taohoso/
 
 | Mục | Link |
 |---|---|
-| **Web cho khách** | <https://taohoso-six.vercel.app> |
+| **Web cho khách** | <https://taohoso.vercel.app> |
 | **GitHub** | <https://github.com/trunghieu2025/taohoso> |
 | **Vercel dashboard** | <https://vercel.com> → project taohoso |
 

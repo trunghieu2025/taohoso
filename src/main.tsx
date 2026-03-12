@@ -2,6 +2,8 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
+import { ToastProvider } from './components/Toast.tsx'
+import PinLock from './components/PinLock.tsx'
 
 // ============================================================
 // CACHE BUSTING V2: XÓA TOÀN BỘ SW + CACHE CŨ ngay lập tức
@@ -44,7 +46,11 @@ if ('serviceWorker' in navigator) {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <ToastProvider>
+      <PinLock>
+        <App />
+      </PinLock>
+    </ToastProvider>
   </StrictMode>,
 )
 

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { showToast } from '../components/Toast';
 import { useNavigate } from 'react-router-dom';
 import {
     listContractors, saveContractor, deleteContractor, type Contractor,
@@ -37,7 +38,7 @@ export default function ContractorDirectory() {
     };
 
     const handleSave = async () => {
-        if (!form.name.trim()) { alert('Vui lòng nhập tên nhà thầu'); return; }
+        if (!form.name.trim()) { showToast('Vui lòng nhập tên nhà thầu'); return; }
         await saveContractor({
             ...form,
             ...(editItem?.id ? { id: editItem.id } : {}),

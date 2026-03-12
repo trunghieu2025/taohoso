@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { showToast } from '../components/Toast';
 import { useParams, Link } from 'react-router-dom';
 import {
     loadProject, saveProject,
@@ -353,7 +354,7 @@ export default function ProjectDetail() {
                                                 }
                                                 updateField('selectedFields', [...currentSelected]);
                                             } else {
-                                                alert('Không tìm thấy trường: ' + key);
+                                                showToast('Không tìm thấy trường: ' + key);
                                             }
                                         }
                                     }} style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem' }}>⚙️</button>

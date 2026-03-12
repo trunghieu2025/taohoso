@@ -5,7 +5,7 @@
 
 export function generateMilitaryDocPDF(previewContainer: HTMLElement | null, projectName?: string): void {
     if (!previewContainer) {
-        alert('Không tìm thấy preview để xuất PDF');
+        showToast('Không tìm thấy preview để xuất PDF');
         return;
     }
 
@@ -14,7 +14,7 @@ export function generateMilitaryDocPDF(previewContainer: HTMLElement | null, pro
 
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
-        alert('Trình duyệt đã chặn popup. Vui lòng cho phép popup để xuất PDF.');
+        showToast('Trình duyệt đã chặn popup. Vui lòng cho phép popup để xuất PDF.');
         return;
     }
 

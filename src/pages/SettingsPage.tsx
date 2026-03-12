@@ -1,13 +1,20 @@
 import { useState, useEffect } from 'react';
+import { showToast } from '../components/Toast';
 import { getGoogleApiKey, setGoogleApiKey, hasGoogleApiKey } from '../utils/googleApi';
+import { isPinSet, setPin, verifyPin, removePin } from '../components/PinLock';
 
 export default function SettingsPage() {
     const [apiKey, setApiKeyState] = useState('');
     const [saved, setSaved] = useState(false);
     const [showKey, setShowKey] = useState(false);
+    const [pinEnabled, setPinEnabled] = useState(false);
+    const [newPin, setNewPin] = useState('');
+    const [confirmPin, setConfirmPin] = useState('');
+    const [oldPin, setOldPin] = useState('');
 
     useEffect(() => {
         setApiKeyState(getGoogleApiKey());
+        setPinEnabled(isPinSet());
     }, []);
 
     const handleSave = () => {
@@ -21,12 +28,34 @@ export default function SettingsPage() {
         setApiKeyState('');
     };
 
+    const handleSetPin = async () => {
+        if (newPin.length < 4) { showToast('PIN phải có ít nhất 4 ký tự', 'warning'); return; }
+        if (newPin !== confirmPin) { showToast('PIN không khớp', 'warning'); return; }
+        if (pinEnabled) {
+            const ok = await verifyPin(oldPin);
+            if (!ok) { showToast('PIN cũ không đúng', 'error'); return; }
+        }
+        await setPin(newPin);
+        setPinEnabled(true);
+        setNewPin(''); setConfirmPin(''); setOldPin('');
+        showToast('Đã đặt mã PIN!', 'success');
+    };
+
+    const handleRemovePin = async () => {
+        const ok = await verifyPin(oldPin);
+        if (!ok) { showToast('PIN không đúng', 'error'); return; }
+        removePin();
+        setPinEnabled(false);
+        setOldPin('');
+        showToast('Đã gỡ mã PIN', 'success');
+    };
+
     return (
         <>
             <div className="page-header">
                 <div className="container">
                     <h1>⚙️ Cài đặt</h1>
-                    <p>Quản lý API key và tùy chỉnh ứng dụng</p>
+                    <p>Quản lý API key, bảo mật và tùy chỉnh ứng dụng</p>
                 </div>
             </div>
 
@@ -94,7 +123,6 @@ export default function SettingsPage() {
                             )}
                         </div>
 
-                        {/* Guide */}
                         <div style={{
                             marginTop: '1rem', padding: '0.75rem', background: '#f0f9ff',
                             borderRadius: 8, border: '1px solid #bae6fd', fontSize: '0.82rem',
@@ -108,9 +136,67 @@ export default function SettingsPage() {
                                 <li>Bật <strong>Google Drive API</strong> và <strong>Google Sheets API</strong></li>
                                 <li>Tạo <strong>API Key</strong> → Copy và dán vào ô trên</li>
                             </ol>
-                            <div style={{ marginTop: '0.4rem', color: '#64748b', fontSize: '0.78rem' }}>
-                                ⚠️ API Key lưu trên máy bạn (localStorage), không gửi ra server.
+                        </div>
+                    </div>
+
+                    {/* PIN Lock */}
+                    <div style={{
+                        background: '#fff', borderRadius: 12, padding: '1.5rem',
+                        border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                        marginBottom: '1.5rem',
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                            <span style={{ fontSize: '1.5rem' }}>🔒</span>
+                            <div>
+                                <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Khóa bảo mật (PIN)</h3>
+                                <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748b' }}>
+                                    Đặt PIN để bảo vệ dữ liệu khi mở web
+                                </p>
                             </div>
+                            <span style={{
+                                marginLeft: 'auto', background: pinEnabled ? '#dcfce7' : '#f1f5f9',
+                                color: pinEnabled ? '#166534' : '#64748b',
+                                padding: '0.2rem 0.5rem', borderRadius: 8, fontSize: '0.75rem', fontWeight: 600,
+                            }}>{pinEnabled ? '🔒 Đang bật' : '🔓 Tắt'}</span>
+                        </div>
+
+                        {pinEnabled && (
+                            <div style={{ marginBottom: '0.5rem' }}>
+                                <label style={{ fontSize: '0.82rem', fontWeight: 600, display: 'block', marginBottom: '0.2rem' }}>PIN hiện tại</label>
+                                <input type="password" value={oldPin} onChange={e => setOldPin(e.target.value)}
+                                    placeholder="Nhập PIN cũ..." maxLength={20}
+                                    style={{ width: '100%', padding: '0.4rem 0.75rem', border: '1px solid #cbd5e1', borderRadius: 6, fontSize: '0.85rem', marginBottom: '0.5rem' }} />
+                            </div>
+                        )}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                            <div>
+                                <label style={{ fontSize: '0.82rem', fontWeight: 600, display: 'block', marginBottom: '0.2rem' }}>
+                                    {pinEnabled ? 'PIN mới' : 'Đặt PIN'}
+                                </label>
+                                <input type="password" value={newPin} onChange={e => setNewPin(e.target.value)}
+                                    placeholder="Ít nhất 4 ký tự" maxLength={20}
+                                    style={{ width: '100%', padding: '0.4rem 0.75rem', border: '1px solid #cbd5e1', borderRadius: 6, fontSize: '0.85rem' }} />
+                            </div>
+                            <div>
+                                <label style={{ fontSize: '0.82rem', fontWeight: 600, display: 'block', marginBottom: '0.2rem' }}>Xác nhận PIN</label>
+                                <input type="password" value={confirmPin} onChange={e => setConfirmPin(e.target.value)}
+                                    placeholder="Nhập lại PIN" maxLength={20}
+                                    style={{ width: '100%', padding: '0.4rem 0.75rem', border: '1px solid #cbd5e1', borderRadius: 6, fontSize: '0.85rem' }} />
+                            </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <button className="btn btn-primary btn-sm" onClick={handleSetPin}>
+                                {pinEnabled ? '🔄 Đổi PIN' : '🔒 Đặt PIN'}
+                            </button>
+                            {pinEnabled && (
+                                <button className="btn btn-sm" onClick={handleRemovePin}
+                                    style={{ color: '#ef4444', fontSize: '0.8rem' }}>
+                                    🔓 Gỡ PIN
+                                </button>
+                            )}
+                        </div>
+                        <div style={{ marginTop: '0.75rem', padding: '0.5rem', background: '#fef3c7', borderRadius: 6, fontSize: '0.78rem', color: '#92400e' }}>
+                            ⚠️ PIN bảo vệ theo phiên — đóng tab sẽ khóa lại. Nếu quên PIN, xóa dữ liệu trình duyệt để reset.
                         </div>
                     </div>
 
@@ -121,15 +207,16 @@ export default function SettingsPage() {
                     }}>
                         <h3 style={{ margin: '0 0 0.75rem', fontSize: '1.1rem' }}>📱 Thông tin ứng dụng</h3>
                         <div style={{ fontSize: '0.85rem', lineHeight: 1.8, color: '#334155' }}>
-                            <p>🏷️ <strong>Phiên bản:</strong> 2.7.0</p>
-                            <p>📦 <strong>Tính năng:</strong> PWA Offline, Scan Word, Custom Formula, Batch Export, Google Integration</p>
+                            <p>🏷️ <strong>Phiên bản:</strong> 3.0.0</p>
+                            <p>📦 <strong>Tính năng:</strong> PWA Offline, Toast, Ctrl+K Search, Print, Excel Report, PIN Lock</p>
                             <p>🔒 <strong>Bảo mật:</strong> Tất cả dữ liệu lưu trên máy bạn (IndexedDB + localStorage)</p>
+                            <p>⌨️ <strong>Phím tắt:</strong> Ctrl+K = Tìm kiếm nhanh</p>
                         </div>
                         <button className="btn btn-sm btn-secondary" style={{ marginTop: '0.5rem' }}
                             onClick={() => {
-                                if (confirm('Xóa toàn bộ cache và dữ liệu tạm? (Dữ liệu dự án vẫn giữ nguyên)')) {
+                                if (confirm('Xóa toàn bộ cache và dữ liệu tạm?')) {
                                     caches.keys().then(names => names.forEach(n => caches.delete(n)));
-                                    alert('✅ Đã xóa cache!');
+                                    showToast('Đã xóa cache!', 'success');
                                 }
                             }}>
                             🗑️ Xóa cache

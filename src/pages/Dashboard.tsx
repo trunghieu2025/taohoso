@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
+import { showToast } from '../components/Toast';
 import { Link } from 'react-router-dom';
+import * as XLSX from 'xlsx';
 
 /* ── Types ── */
 interface ProjectStats {
@@ -292,7 +294,7 @@ export default function Dashboard() {
                                 style={{ marginTop: '0.5rem', fontSize: '0.7rem', background: '#dbeafe' }}
                                 onClick={() => {
                                     navigator.clipboard.writeText(generatedNumber);
-                                    alert('Đã copy: ' + generatedNumber);
+                                    showToast('Đã copy: ' + generatedNumber);
                                 }}
                             >
                                 📋 Copy
@@ -302,7 +304,36 @@ export default function Dashboard() {
                 </div>
             </div>
 
-            {/* Quick Navigation */}
+            {/* Export Excel Report */}
+            <div style={{ marginTop: '1.5rem', ...sectionStyle }}>
+                <h2 style={sectionTitleStyle}>📊 Xuất báo cáo Excel</h2>
+                <p style={{ color: '#64748b', fontSize: '0.8rem', marginBottom: '0.75rem' }}>
+                    Tổng hợp toàn bộ dữ liệu (dự án, phiên, lịch sử) thành 1 file Excel.
+                </p>
+                <button className="btn btn-primary btn-sm" onClick={() => {
+                    try {
+                        const wb = XLSX.utils.book_new();
+                        const projects = JSON.parse(localStorage.getItem('taohoso_projects') || '[]');
+                        if (projects.length > 0) {
+                            const rows = projects.map((p: any) => ({ 'Tên dự án': p.name || '', 'Ngày tạo': p.createdAt ? new Date(p.createdAt).toLocaleDateString('vi-VN') : '', 'Số trường': Object.keys(p.data || {}).length }));
+                            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Dự án');
+                        }
+                        if (stats.recentSessions.length > 0) {
+                            const rows = stats.recentSessions.map(s => ({ 'Tên phiên': s.name, 'Ngày': s.date ? new Date(s.date).toLocaleDateString('vi-VN') : '', 'Số trường': s.fields }));
+                            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Phiên');
+                        }
+                        if (history.length > 0) {
+                            const rows = history.map(h => ({ 'Hành động': h.action, 'Phiên': h.sessionName, 'Trường': h.fieldsCount, 'Thời gian': new Date(h.timestamp).toLocaleString('vi-VN') }));
+                            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Lịch sử');
+                        }
+                        XLSX.writeFile(wb, `BaoCao_TaoHoSo_${new Date().toISOString().slice(0,10)}.xlsx`);
+                        showToast('Đã xuất báo cáo Excel!', 'success');
+                    } catch (err) { showToast('Lỗi: ' + (err as Error).message, 'error'); }
+                }}>
+                    📥 Xuất báo cáo tổng hợp (.xlsx)
+                </button>
+            </div>
+
             <div style={{ marginTop: '2rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
                 <Link to="/goi-mau" className="btn btn-primary">📦 Gói mẫu</Link>
                 <Link to="/quan-ly-du-an" className="btn btn-outline">📋 Quản lý dự án</Link>

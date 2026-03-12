@@ -1,37 +1,59 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Analytics } from '@vercel/analytics/react';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import ScrollToTop from './components/ScrollToTop';
-import Home from './pages/Home';
-import RentalContract from './pages/RentalContract';
-import CT01Form from './pages/CT01Form';
-import InvoiceForm from './pages/InvoiceForm';
-import About from './pages/About';
-import SearchPage from './pages/SearchPage';
-import MilitaryDocForm from './pages/MilitaryDocForm';
-import BundleForm from './pages/BundleForm';
-import ProjectList from './pages/ProjectList';
-import ProjectDetail from './pages/ProjectDetail';
-import ContractorDirectory from './pages/ContractorDirectory';
-import ProjectSearchAll from './pages/ProjectSearchAll';
-import ProjectCompare from './pages/ProjectCompare';
-import Dashboard from './pages/Dashboard';
-import FileDiff from './pages/FileDiff';
-import TemplateMarketplace from './pages/TemplateMarketplace';
-import SettingsPage from './pages/SettingsPage';
-import NotFoundPage from './pages/NotFoundPage';
-import TemporaryResidence from './pages/guides/TemporaryResidence';
-import PermanentResidence from './pages/guides/PermanentResidence';
-import CT07Guide from './pages/guides/CT07Guide';
-import LandTitle from './pages/guides/LandTitle';
+import QuickSearch from './components/QuickSearch';
+
+// Lazy-loaded pages — each page is loaded only when navigated to
+const Home = lazy(() => import('./pages/Home'));
+const RentalContract = lazy(() => import('./pages/RentalContract'));
+const CT01Form = lazy(() => import('./pages/CT01Form'));
+const InvoiceForm = lazy(() => import('./pages/InvoiceForm'));
+const About = lazy(() => import('./pages/About'));
+const SearchPage = lazy(() => import('./pages/SearchPage'));
+const MilitaryDocForm = lazy(() => import('./pages/MilitaryDocForm'));
+const BundleForm = lazy(() => import('./pages/BundleForm'));
+const ProjectList = lazy(() => import('./pages/ProjectList'));
+const ProjectDetail = lazy(() => import('./pages/ProjectDetail'));
+const ContractorDirectory = lazy(() => import('./pages/ContractorDirectory'));
+const ProjectSearchAll = lazy(() => import('./pages/ProjectSearchAll'));
+const ProjectCompare = lazy(() => import('./pages/ProjectCompare'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const FileDiff = lazy(() => import('./pages/FileDiff'));
+const TemplateMarketplace = lazy(() => import('./pages/TemplateMarketplace'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
+const TemporaryResidence = lazy(() => import('./pages/guides/TemporaryResidence'));
+const PermanentResidence = lazy(() => import('./pages/guides/PermanentResidence'));
+const CT07Guide = lazy(() => import('./pages/guides/CT07Guide'));
+const LandTitle = lazy(() => import('./pages/guides/LandTitle'));
+
+function LoadingSpinner() {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      minHeight: '60vh', gap: '0.75rem', color: '#64748b', fontSize: '1rem',
+    }}>
+      <div style={{
+        width: 28, height: 28, border: '3px solid #e2e8f0',
+        borderTopColor: '#10b981', borderRadius: '50%',
+        animation: 'spin 0.8s linear infinite',
+      }} />
+      Đang tải...
+    </div>
+  );
+}
 
 export default function App() {
   return (
     <BrowserRouter>
       <ScrollToTop />
       <Header />
+      <QuickSearch />
       <main>
+        <Suspense fallback={<LoadingSpinner />}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/hop-dong-thue-nha" element={<RentalContract />} />
@@ -59,6 +81,7 @@ export default function App() {
           <Route path="/tim-kiem" element={<SearchPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
+        </Suspense>
       </main>
       <Footer />
       <Analytics />

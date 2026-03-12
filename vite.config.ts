@@ -10,7 +10,35 @@ export default defineConfig({
   },
   plugins: [
     react(),
-    // VitePWA tạm tắt để kill-switch SW xóa cache cũ
-    // VitePWA({...}),
+    VitePWA({
+      registerType: 'autoUpdate',
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: { cacheName: 'google-fonts-cache', expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 } },
+          },
+          {
+            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: { cacheName: 'gstatic-fonts-cache', expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 } },
+          },
+        ],
+      },
+      manifest: {
+        name: 'TạoHồSơ — Tự động hóa hồ sơ',
+        short_name: 'TạoHồSơ',
+        description: 'Tạo, quản lý và xuất hồ sơ hành chính tại Việt Nam',
+        theme_color: '#10b981',
+        background_color: '#ffffff',
+        display: 'standalone',
+        lang: 'vi',
+        icons: [
+          { src: '/vite.svg', sizes: '64x64', type: 'image/svg+xml' },
+        ],
+      },
+    }),
   ],
 })

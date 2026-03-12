@@ -1,4 +1,5 @@
 import { useState, ChangeEvent } from 'react';
+import { showToast } from '../components/Toast';
 import { extractTextSegments } from '../utils/militaryDocGenerator';
 import * as XLSX from 'xlsx';
 
@@ -99,7 +100,7 @@ export default function FileDiff() {
 
     const runDiff = () => {
         if (filesA.length === 0 || filesB.length === 0) {
-            alert('Vui lòng upload file ở cả 2 bên.');
+            showToast('Vui lòng upload file ở cả 2 bên.');
             return;
         }
         const textA = filesA[selectedA]?.text || '';

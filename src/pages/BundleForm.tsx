@@ -1,4 +1,5 @@
 import { useState, useRef, ChangeEvent, useCallback, useEffect } from 'react';
+import { showToast } from '../components/Toast';
 import {
     scanDuplicateTexts,
     extractTextSegments,
@@ -245,7 +246,7 @@ export default function BundleForm() {
                     setAllTags(tags);
                     setLabels(newLabels);
                     setStep('form');
-                    alert(`✅ Đã tải bộ mẫu "${template.name}" với ${tags.length} trường.\n\n📁 Upload file Word rồi điền dữ liệu nhé!`);
+                    showToast(`Đã tải bộ mẫu "${template.name}" với ${tags.length} trường.\n\n📁 Upload file Word rồi điền dữ liệu nhé!`, 'success');
                 }
             }
         } catch { /* ignore */ }
@@ -311,11 +312,11 @@ export default function BundleForm() {
             const folder = relPath ? relPath.split('/').slice(0, -1).join('/') : '';
             newFiles.push({ name: f.name, folder, buffer: buf });
         }
-        if (newFiles.length === 0) { alert('Không tìm thấy file .docx/.xlsx nào.'); return; }
+        if (newFiles.length === 0) { showToast('Không tìm thấy file .docx/.xlsx nào.'); return; }
         setStagedFiles(prev => {
             const existing = new Set(prev.map(f => f.name));
             const unique = newFiles.filter(f => !existing.has(f.name));
-            if (unique.length < newFiles.length) alert(`Bỏ qua ${newFiles.length - unique.length} file trùng tên.`);
+            if (unique.length < newFiles.length) showToast(`Bỏ qua ${newFiles.length - unique.length} file trùng tên.`);
             return [...prev, ...unique];
         });
         if (fileInputRef.current) fileInputRef.current.value = '';
@@ -340,11 +341,11 @@ export default function BundleForm() {
                 }
             }
         }
-        if (newFiles.length === 0) { alert('Không tìm thấy file .docx/.xlsx nào.'); return; }
+        if (newFiles.length === 0) { showToast('Không tìm thấy file .docx/.xlsx nào.'); return; }
         setStagedFiles(prev => {
             const existing = new Set(prev.map(f => f.name));
             const unique = newFiles.filter(f => !existing.has(f.name));
-            if (unique.length < newFiles.length) alert(`Bỏ qua ${newFiles.length - unique.length} file trùng tên.`);
+            if (unique.length < newFiles.length) showToast(`Bỏ qua ${newFiles.length - unique.length} file trùng tên.`);
             return [...prev, ...unique];
         });
     };
@@ -574,7 +575,7 @@ export default function BundleForm() {
     /* ── Scan confirm ── */
     const handleScanConfirm = (selected: { text: string; tag: string; label: string }[]) => {
         const replacements = selected.map(r => ({ text: r.text, tag: r.tag }));
-        if (replacements.length === 0) { alert('Vui lòng chọn ít nhất 1 trường.'); return; }
+        if (replacements.length === 0) { showToast('Vui lòng chọn ít nhất 1 trường.'); return; }
         const bundleFiles: BundleFile[] = stagedFiles.map(f => {
             const templateBuffer = createTemplateWithTags(f.buffer, replacements);
             const tags = extractTags(templateBuffer);
@@ -665,7 +666,7 @@ export default function BundleForm() {
         const updated = [...presets, preset];
         savePresets(updated);
         setPresets(updated);
-        alert(`Đã lưu bộ mẫu "${name}" (${stagedFiles.length} file).`);
+        showToast(`Đã lưu bộ mẫu "${name}" (${stagedFiles.length} file).`);
     };
 
     const handleDeletePreset = (id: string) => {
@@ -703,12 +704,12 @@ export default function BundleForm() {
                             return [...merged].sort();
                         });
                     }
-                    alert(`✅ Đã nhập ${Object.keys(imported.data).length} trường dữ liệu!`);
+                    showToast(`Đã nhập ${Object.keys(imported.data).length} trường dữ liệu!`, 'success');
                     logHistory('Nhập dữ liệu từ JSON', file.name, Object.keys(imported.data).length);
                 } else {
-                    alert('File JSON không hợp lệ. Cần có trường "data".');
+                    showToast('File JSON không hợp lệ. Cần có trường "data".');
                 }
-            } catch { alert('Lỗi đọc file JSON.'); }
+            } catch { showToast('Lỗi đọc file JSON.'); }
         };
         input.click();
     };
@@ -718,7 +719,7 @@ export default function BundleForm() {
         const file = e.target.files?.[0];
         if (!file || files.length === 0) return;
         const selectedFiles = files.filter(f => f.selected);
-        if (selectedFiles.length === 0) { alert('Chọn ít nhất 1 file.'); return; }
+        if (selectedFiles.length === 0) { showToast('Chọn ít nhất 1 file.'); return; }
         setExporting(true);
         try {
             const XLSX = await import('xlsx');
@@ -726,7 +727,7 @@ export default function BundleForm() {
             const wb = XLSX.read(buf, { type: 'array' });
             const ws = wb.Sheets[wb.SheetNames[0]];
             const rows = XLSX.utils.sheet_to_json<Record<string, string>>(ws, { defval: '' });
-            if (rows.length === 0) { alert('File Excel rỗng.'); setExporting(false); return; }
+            if (rows.length === 0) { showToast('File Excel rỗng.'); setExporting(false); return; }
 
             const zip = new JSZip();
             for (let ri = 0; ri < rows.length; ri++) {
@@ -761,8 +762,8 @@ export default function BundleForm() {
             const zipBlob = await zip.generateAsync({ type: 'blob' });
             saveAs(zipBlob, `HangLoat_${rows.length}bo_${selectedFiles.length}file.zip`);
             setExportCount(prev => prev + rows.length);
-            alert(`Đã xuất ${rows.length} bộ × ${selectedFiles.length} file = ${rows.length * selectedFiles.length} file!`);
-        } catch (err) { alert('Lỗi xuất hàng loạt: ' + (err as Error).message); }
+            showToast(`Đã xuất ${rows.length} bộ × ${selectedFiles.length} file = ${rows.length * selectedFiles.length} file!`);
+        } catch (err) { showToast('Lỗi xuất hàng loạt: ' + (err as Error).message); }
         setExporting(false);
         if (e.target) e.target.value = '';
     };
@@ -800,7 +801,7 @@ export default function BundleForm() {
         const sessions = [...savedSessions, session];
         saveBundleSessions(sessions);
         setSavedSessions(sessions);
-        alert('Đã nhân bản thành công!');
+        showToast('Đã nhân bản thành công!');
     };
 
     /* ── Save/Load sessions ── */
@@ -815,14 +816,14 @@ export default function BundleForm() {
         const sessions = [...savedSessions, session];
         saveBundleSessions(sessions);
         setSavedSessions(sessions);
-        alert('Đã lưu!');
+        showToast('Đã lưu!');
     };
 
     const handleLoadSession = (session: BundleSession) => {
         setData(session.data);
         setLabels(session.labels);
         setAllTags(session.allTags);
-        alert(`Đã tải "${session.name}". Lưu ý: cần upload lại file template nếu chưa có.`);
+        showToast(`Đã tải "${session.name}". Lưu ý: cần upload lại file template nếu chưa có.`);
     };
 
     const handleDeleteSession = (id: string) => {
@@ -848,8 +849,8 @@ export default function BundleForm() {
                 if (backup.data) setData(backup.data);
                 if (backup.labels) setLabels(backup.labels);
                 if (backup.allTags) setAllTags(backup.allTags);
-                alert('Đã khôi phục dữ liệu! Cần upload lại file template nếu chưa có.');
-            } catch { alert('File JSON không hợp lệ.'); }
+                showToast('Đã khôi phục dữ liệu! Cần upload lại file template nếu chưa có.');
+            } catch { showToast('File JSON không hợp lệ.'); }
         };
         reader.readAsText(file);
     };
@@ -864,7 +865,7 @@ export default function BundleForm() {
             const wb = XLSX.read(buf, { type: 'array' });
             const ws = wb.Sheets[wb.SheetNames[0]];
             const rows = XLSX.utils.sheet_to_json<Record<string, string>>(ws, { defval: '' });
-            if (rows.length === 0) { alert('File Excel rỗng.'); return; }
+            if (rows.length === 0) { showToast('File Excel rỗng.'); return; }
             // Map first row values to tags
             const firstRow = rows[0];
             const newData: Record<string, string> = { ...data };
@@ -878,15 +879,15 @@ export default function BundleForm() {
                 }
             }
             setData(newData);
-            alert(`Đã nhập dữ liệu từ "${file.name}" (${Object.keys(firstRow).length} cột).`);
-        } catch (err) { alert('Lỗi đọc Excel: ' + (err as Error).message); }
+            showToast(`Đã nhập dữ liệu từ "${file.name}" (${Object.keys(firstRow).length} cột).`);
+        } catch (err) { showToast('Lỗi đọc Excel: ' + (err as Error).message); }
         if (excelInputRef.current) excelInputRef.current.value = '';
     };
 
     /* ── Export ZIP ── */
     const handleExportZIP = async () => {
         const selectedFiles = files.filter(f => f.selected);
-        if (selectedFiles.length === 0) { alert('Chọn ít nhất 1 file.'); return; }
+        if (selectedFiles.length === 0) { showToast('Chọn ít nhất 1 file.'); return; }
         setExporting(true);
         try {
             const zip = new JSZip();
@@ -898,7 +899,7 @@ export default function BundleForm() {
             const zipBlob = await zip.generateAsync({ type: 'blob' });
             saveAs(zipBlob, `GoiMau_${selectedFiles.length}file_${new Date().toISOString().slice(0, 10)}.zip`);
             setExportCount(prev => prev + 1);
-        } catch (err) { alert('Lỗi xuất: ' + (err as Error).message); }
+        } catch (err) { showToast('Lỗi xuất: ' + (err as Error).message); }
         setExporting(false);
     };
 
@@ -921,7 +922,7 @@ export default function BundleForm() {
                 image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
             }).from(previewRef.current).save();
-        } catch (err) { alert('Lỗi xuất PDF: ' + (err as Error).message); }
+        } catch (err) { showToast('Lỗi xuất PDF: ' + (err as Error).message); }
         setExporting(false);
     };
 
@@ -940,10 +941,10 @@ export default function BundleForm() {
             projectData.selectedFields = selectedKeys;
             projectData.bundleSessionIds = savedSessions.map(s => s.id);
             const projectId = await saveProject(projectData);
-            alert('✅ Đã lưu vào dự án!');
+            showToast('Đã lưu vào dự án!', 'success');
             navigate(`/du-an/${projectId}`);
         } catch (err) {
-            alert('❌ Lỗi: ' + (err as Error).message);
+            showToast('❌ Lỗi: ' + (err as Error).message);
         }
     };
 
@@ -1183,7 +1184,7 @@ export default function BundleForm() {
                                 style={{ fontSize: '0.85rem', padding: '0.5rem 1rem' }}>📄 Xuất PDF</button>
                             <button className="btn btn-secondary" onClick={() => {
                                 const first = files.find(f => f.selected);
-                                if (!first) { alert('Chọn ít nhất 1 file!'); return; }
+                                if (!first) { showToast('Chọn ít nhất 1 file!'); return; }
                                 const filled = fillTemplate(first.buffer, data);
                                 setPreviewBuffer(filled);
                                 setPreviewName(first.name);
@@ -1200,14 +1201,14 @@ export default function BundleForm() {
                                 <>
                                     <button className="btn btn-secondary" onClick={async () => {
                                         const first = files.find(f => f.selected);
-                                        if (!first) { alert('Chọn ít nhất 1 file!'); return; }
+                                        if (!first) { showToast('Chọn ít nhất 1 file!'); return; }
                                         try {
                                             const filled = fillTemplate(first.buffer, data);
                                             const result = await uploadToDrive(first.name, filled);
-                                            alert(`✅ Đã upload lên Google Drive!\nFile ID: ${result.id}`);
+                                            showToast(`Đã upload lên Google Drive!\nFile ID: ${result.id}`, 'success');
                                             if (result.webViewLink) window.open(result.webViewLink, '_blank');
                                         } catch (err) {
-                                            alert('❌ ' + (err as Error).message);
+                                            showToast('❌ ' + (err as Error).message);
                                         }
                                     }} style={{ fontSize: '0.85rem', padding: '0.5rem 1rem', background: '#fef3c7', borderColor: '#fbbf24', color: '#92400e' }}>
                                         ☁️ Lưu Drive
