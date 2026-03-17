@@ -82,6 +82,9 @@ export default function Header() {
               <Link to="/cai-dat" onClick={() => setMobileOpen(false)}>
                 🔒 Bảo mật, lưu trữ
               </Link>
+              <Link to="/huong-dan" onClick={() => setMobileOpen(false)}>
+                📖 Hướng dẫn sử dụng
+              </Link>
             </div>
           </div>
 

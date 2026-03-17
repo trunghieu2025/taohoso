@@ -25,6 +25,7 @@ const FileDiff = lazy(() => import('./pages/FileDiff'));
 const TemplateMarketplace = lazy(() => import('./pages/TemplateMarketplace'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
+const GuidePage = lazy(() => import('./pages/GuidePage'));
 
 
 function LoadingSpinner() {
@@ -74,6 +75,7 @@ export default function App() {
           <Route path="/so-sanh-file" element={<FileDiff />} />
           <Route path="/thu-vien-mau" element={<TemplateMarketplace />} />
           <Route path="/cai-dat" element={<SettingsPage />} />
+          <Route path="/huong-dan" element={<GuidePage />} />
           <Route path="/tim-kiem" element={<SearchPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
