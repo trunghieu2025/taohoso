@@ -69,11 +69,9 @@
       "!**/*.{iml,o,hprof,orig,pyc,pyo,rbc,swp,csproj,sln,xproj}",
       "!.editorconfig",
       "!**/._*",
-      "!**/{.DS_Store,.git,.hg,.svn,CVS,RCS,SCCS,.gitignore,.gitattributes}"
+      "!**/{.DS_Store,.git,.hg,.svn,CVS,RCS,SCCS,.gitignore,.gitattributes}",
+      "!**/locales/!(en-US).pak"
     ],
-    "electronDownload": {
-      "stripLocales": true
-    },
     "asarUnpack": [],
     "extraMetadata": {
       "main": "electron/main.cjs"
