@@ -5,15 +5,21 @@ import App from './App.tsx'
 import { ToastProvider } from './components/Toast.tsx'
 import PinLock from './components/PinLock.tsx'
 
+// Detect desktop (Electron) mode
+const isDesktop = typeof window !== 'undefined' && (
+  (window as any).electronAPI?.isDesktop || window.location.protocol === 'file:'
+)
+
 // ============================================================
 // CACHE BUSTING V2: XÓA TOÀN BỘ SW + CACHE CŨ ngay lập tức
+// (Chỉ chạy trên web, KHÔNG chạy trên desktop)
 // ============================================================
 
-// Build-time version hash (thay đổi mỗi lần Vite build)
-const APP_VERSION = '__BUILD_' + (import.meta.env.VITE_APP_VERSION || '0') + '__'
-const STORED_VERSION = localStorage.getItem('app-version')
+if (!isDesktop && 'serviceWorker' in navigator) {
+  // Build-time version hash (thay đổi mỗi lần Vite build)
+  const APP_VERSION = '__BUILD_' + (import.meta.env.VITE_APP_VERSION || '0') + '__'
+  const STORED_VERSION = localStorage.getItem('app-version')
 
-if ('serviceWorker' in navigator) {
   // Version check — if version changed, clear old caches first
   if (STORED_VERSION !== APP_VERSION) {
     if ('caches' in window) {

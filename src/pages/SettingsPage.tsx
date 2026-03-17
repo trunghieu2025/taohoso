@@ -2,6 +2,10 @@ import { useState, useEffect } from 'react';
 import { showToast } from '../components/Toast';
 import { getGoogleClientId, setGoogleClientId, hasGoogleApiKey } from '../utils/googleApi';
 import { isPinSet, setPin, verifyPin, removePin } from '../components/PinLock';
+import { isDesktop } from '../utils/desktopFileHelper';
+import { listSessions } from '../utils/templateStorage';
+import { listProjects } from '../utils/projectStorage';
+import { listContractors } from '../utils/contractorStorage';
 
 export default function SettingsPage() {
     const [apiKey, setApiKeyState] = useState('');
@@ -48,6 +52,116 @@ export default function SettingsPage() {
         setPinEnabled(false);
         setOldPin('');
         showToast('Đã gỡ mã PIN', 'success');
+    };
+
+    /* ── Backup / Restore ── */
+    const [backupBusy, setBackupBusy] = useState(false);
+
+    const handleExportBackup = async () => {
+        setBackupBusy(true);
+        try {
+            const sessions = await listSessions();
+            const projects = await listProjects();
+            const contractors = await listContractors();
+            // Collect localStorage items
+            const lsData: Record<string, string> = {};
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key) lsData[key] = localStorage.getItem(key) || '';
+            }
+            const backup = {
+                version: 1,
+                exportedAt: new Date().toISOString(),
+                sessions,
+                projects,
+                contractors,
+                localStorage: lsData,
+            };
+            const jsonStr = JSON.stringify(backup, null, 2);
+
+            if (isDesktop() && window.electronAPI) {
+                const result = await window.electronAPI.exportBackup(jsonStr);
+                if (result.success) showToast(`Đã sao lưu tại ${result.filePath}`, 'success');
+            } else {
+                const blob = new Blob([jsonStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `TaoHoSo_Backup_${new Date().toISOString().slice(0, 10)}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                showToast('Đã tải file sao lưu!', 'success');
+            }
+        } catch (err) {
+            showToast('Lỗi sao lưu: ' + (err as Error).message, 'error');
+        }
+        setBackupBusy(false);
+    };
+
+    const handleImportBackup = async () => {
+        setBackupBusy(true);
+        try {
+            let jsonStr: string;
+
+            if (isDesktop() && window.electronAPI) {
+                const result = await window.electronAPI.importBackup();
+                if (!result.success || !result.data) { setBackupBusy(false); return; }
+                jsonStr = result.data;
+            } else {
+                // Web: use file input
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.json';
+                const file = await new Promise<File | null>((resolve) => {
+                    input.onchange = () => resolve(input.files?.[0] || null);
+                    input.click();
+                });
+                if (!file) { setBackupBusy(false); return; }
+                jsonStr = await file.text();
+            }
+
+            const backup = JSON.parse(jsonStr);
+            if (!backup.version || !backup.sessions) {
+                showToast('File backup không hợp lệ', 'error');
+                setBackupBusy(false);
+                return;
+            }
+
+            // Restore localStorage
+            if (backup.localStorage) {
+                for (const [key, value] of Object.entries(backup.localStorage)) {
+                    localStorage.setItem(key, value as string);
+                }
+            }
+
+            // Restore IndexedDB data
+            const dbReq = indexedDB.open('TaoHoSoDB', 3);
+            dbReq.onsuccess = () => {
+                const db = dbReq.result;
+                const tx = db.transaction(['sessions', 'projects', 'contractors'], 'readwrite');
+                // Clear and restore sessions
+                const sessStore = tx.objectStore('sessions');
+                sessStore.clear();
+                for (const s of backup.sessions || []) { sessStore.put(s); }
+                // Clear and restore projects
+                const projStore = tx.objectStore('projects');
+                projStore.clear();
+                for (const p of backup.projects || []) { projStore.put(p); }
+                // Clear and restore contractors
+                const contStore = tx.objectStore('contractors');
+                contStore.clear();
+                for (const c of backup.contractors || []) { contStore.put(c); }
+
+                tx.oncomplete = () => {
+                    showToast('Khôi phục thành công! Đang tải lại...', 'success');
+                    setTimeout(() => window.location.reload(), 1500);
+                };
+                tx.onerror = () => showToast('Lỗi khôi phục dữ liệu', 'error');
+            };
+        } catch (err) {
+            showToast('Lỗi: ' + (err as Error).message, 'error');
+        }
+        setBackupBusy(false);
     };
 
     return (
@@ -136,7 +250,12 @@ export default function SettingsPage() {
                                 <li>Bật <strong>Google Drive API</strong> và <strong>Google Sheets API</strong></li>
                                 <li>Bấm <strong>Create Credentials</strong> → chọn <strong>OAuth client ID</strong></li>
                                 <li>Application type: <strong>Web application</strong></li>
-                                <li>Authorized JavaScript origins: thêm <code>https://taohoso.vercel.app</code></li>
+                                <li>Authorized JavaScript origins: thêm{' '}
+                                    {isDesktop()
+                                        ? <><code>http://localhost</code> (bản desktop)</>  
+                                        : <code>https://taohoso.vercel.app</code>
+                                    }
+                                </li>
                                 <li>Copy <strong>Client ID</strong> → dán vào ô trên</li>
                             </ol>
                         </div>
@@ -203,27 +322,57 @@ export default function SettingsPage() {
                         </div>
                     </div>
 
+                    {/* Backup / Restore */}
+                    <div style={{
+                        background: '#fff', borderRadius: 12, padding: '1.5rem',
+                        border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                        marginBottom: '1.5rem',
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                            <span style={{ fontSize: '1.5rem' }}>💾</span>
+                            <div>
+                                <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Sao lưu & Khôi phục dữ liệu</h3>
+                                <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748b' }}>
+                                    Export/Import toàn bộ hồ sơ, dự án, nhà thầu
+                                </p>
+                            </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            <button className="btn btn-primary btn-sm" onClick={handleExportBackup} disabled={backupBusy}>
+                                📤 Sao lưu (Export)
+                            </button>
+                            <button className="btn btn-sm btn-secondary" onClick={handleImportBackup} disabled={backupBusy}>
+                                📥 Khôi phục (Import)
+                            </button>
+                        </div>
+                        <div style={{ marginTop: '0.75rem', padding: '0.5rem', background: '#f0f9ff', borderRadius: 6, fontSize: '0.78rem', color: '#0c4a6e' }}>
+                            💡 File backup chứa toàn bộ dữ liệu (hồ sơ, dự án, nhà thầu, cài đặt). Sao lưu thường xuyên để tránh mất dữ liệu.
+                        </div>
+                    </div>
+
                     {/* App Info */}
                     <div style={{
                         background: '#fff', borderRadius: 12, padding: '1.5rem',
                         border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
                     }}>
-                        <h3 style={{ margin: '0 0 0.75rem', fontSize: '1.1rem' }}>📱 Thông tin ứng dụng</h3>
+                        <h3 style={{ margin: '0 0 0.75rem', fontSize: '1.1rem' }}>{isDesktop() ? '🖥️' : '📱'} Thông tin ứng dụng</h3>
                         <div style={{ fontSize: '0.85rem', lineHeight: 1.8, color: '#334155' }}>
-                            <p>🏷️ <strong>Phiên bản:</strong> 3.0.0</p>
-                            <p>📦 <strong>Tính năng:</strong> PWA Offline, Toast, Ctrl+K Search, Print, Excel Report, PIN Lock</p>
+                            <p>🏷️ <strong>Phiên bản:</strong> 3.0.0 {isDesktop() && <span style={{ color: '#10b981', fontWeight: 600 }}>(Desktop)</span>}</p>
+                            <p>📦 <strong>Tính năng:</strong> {isDesktop() ? 'Native Save, ' : 'PWA Offline, '}Toast, Ctrl+K Search, Print, Excel Report, PIN Lock</p>
                             <p>🔒 <strong>Bảo mật:</strong> Tất cả dữ liệu lưu trên máy bạn (IndexedDB + localStorage)</p>
                             <p>⌨️ <strong>Phím tắt:</strong> Ctrl+K = Tìm kiếm nhanh</p>
                         </div>
-                        <button className="btn btn-sm btn-secondary" style={{ marginTop: '0.5rem' }}
-                            onClick={() => {
-                                if (confirm('Xóa toàn bộ cache và dữ liệu tạm?')) {
-                                    caches.keys().then(names => names.forEach(n => caches.delete(n)));
-                                    showToast('Đã xóa cache!', 'success');
-                                }
-                            }}>
-                            🗑️ Xóa cache
-                        </button>
+                        {!isDesktop() && (
+                            <button className="btn btn-sm btn-secondary" style={{ marginTop: '0.5rem' }}
+                                onClick={() => {
+                                    if (confirm('Xóa toàn bộ cache và dữ liệu tạm?')) {
+                                        caches.keys().then(names => names.forEach(n => caches.delete(n)));
+                                        showToast('Đã xóa cache!', 'success');
+                                    }
+                                }}>
+                                🗑️ Xóa cache
+                            </button>
+                        )}
                     </div>
                 </div>
             </section>
