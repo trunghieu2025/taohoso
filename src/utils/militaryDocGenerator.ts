@@ -672,21 +672,16 @@ export function detectListGroups(templateBuffer: ArrayBuffer): ListGroup[] {
         const pXml = match[0];
         // Extract plain text by removing all XML tags
         const plainText = pXml.replace(/<[^>]+>/g, '').trim();
-        // Check if this paragraph contains a bracket field
-        // More lenient: paragraph contains [text] even with prefix/suffix
-        const bracketMatch = plainText.match(/\[([^\]]{2,})\]/);
+        // Check if this paragraph is a LIST ITEM containing a bracket field.
+        // List items look like: "- [Đồng chí ABC...]" or just "[text]"
+        // NOT like: "1. Thời gian: [value]" (this is a labeled field)
         let bracketTag: string | null = null;
-        if (bracketMatch) {
-            const text = bracketMatch[1].trim();
-            // Skip purely numeric, very short, or very long
+        // Pattern: optional list markers (-, *, •) then bracket takes up most of remaining text
+        const listItemMatch = plainText.match(/^[\s]*[-–—*•]?\s*\[([^\]]{2,})\]\s*[;.,]?\s*$/);
+        if (listItemMatch) {
+            const text = listItemMatch[1].trim();
             if (!/^\d+$/.test(text) && text.length >= 3 && text.length <= 200) {
-                // Check that the bracket content is a significant part of the paragraph
-                // (not just a tiny [x] inside a long sentence)
-                const bracketLen = bracketMatch[0].length;
-                const totalLen = plainText.length;
-                if (bracketLen / totalLen > 0.3) {  // bracket is at least 30% of the paragraph
-                    bracketTag = textToTag(text);
-                }
+                bracketTag = textToTag(text);
             }
         }
         paragraphs.push({ xml: pXml, plainText, bracketTag });
