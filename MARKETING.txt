@@ -1,0 +1,42 @@
+========================================
+  TÀI LIỆU MARKETING - TẠO HỒ SƠ v1.0
+========================================
+
+
+--- BÀI ĐĂNG FACEBOOK (SEO) ---
+
+⚡ TỰ ĐỘNG HÓA HỒ SƠ VĂN PHÒNG — CHỈ 1 CLICK
+
+Bạn đang mất hàng giờ điền hồ sơ thủ công? Phần mềm Tạo Hồ Sơ giúp bạn:
+
+✅ Upload mẫu Word → điền 1 lần → xuất tất cả file tự động
+📄 Tạo hợp đồng thuê nhà, hoá đơn, tờ khai CT01
+📦 Gói mẫu nhiều file — nhập 1 lần, xuất hàng loạt ZIP
+🧮 Công thức tính tự động (thuế, chiết khấu, tổng tiền)
+👁️ Xem trước file Word ngay trước khi tải
+
+🔒 Bảo mật 100% — dữ liệu lưu trên máy tính, không qua internet
+💰 Hoàn toàn MIỄN PHÍ — không ẩn phí, không giới hạn
+📴 Không cần mạng — cài đặt và dùng offline
+
+📥 Inbox để nhận file cài đặt!
+
+#TựĐộngHóa #HồSơVănPhòng #PhầnMềmMiễnPhí #TạoHồSơ #QuảnLýDựÁn #OneClick #Offline #BảoMật
+
+
+--- PROMPT TẠO ẢNH (NANO BANANA 2) ---
+
+{
+  "prompt": "A premium Facebook promotional banner for Vietnamese office automation software. Dark navy blue gradient background with golden particle effects. Center: a modern laptop with a glowing green interface showing document forms. Multiple Word and PDF documents flying out of the screen in a golden glow, representing one-click automation. Top text in bold white Vietnamese: 'TỰ ĐỘNG HÓA HỒ SƠ VĂN PHÒNG' with a golden lightning bolt icon. Below it in large golden text: 'ONE CLICK'. Bottom of image: three badges in a row — green badge '✅ Miễn phí', blue badge '🔒 Bảo mật 100%', red badge '📴 Không cần internet'. Professional marketing material, cinematic golden and green lighting, ultra high quality 3D render.",
+  "negative_prompt": "blurry, low quality, watermark, ugly, distorted text, misspelled words, extra fingers, deformed laptop, cluttered, messy layout",
+  "aspect_ratio": "1:1",
+  "style": "photorealistic 3D render"
+}
+
+
+--- PROMPT ẢNH KHÔNG CÓ TEXT (NẾU CHỮ BỊ LỖI) ---
+
+A stunning Facebook promotional image for a Vietnamese office automation software. Center: a modern laptop showing a beautiful interface where a user clicks ONE BUTTON and multiple Word documents, PDF files, and forms are generated simultaneously — visualized by glowing documents flying out of the screen in a fan pattern. Around the laptop: a golden "one-click" button icon glowing brightly, a green shield with a lock (100% security), a WiFi icon with a red cross (no internet needed), and a "FREE" badge. Background: dark navy blue gradient with subtle golden particles. Style: premium 3D render, cinematic lighting with golden and green highlights. Square 1:1 format. No text. Clean space at top and bottom for Vietnamese text overlay.
+
+
+========================================
