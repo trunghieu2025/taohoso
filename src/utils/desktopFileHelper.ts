@@ -13,6 +13,7 @@ interface ElectronAPI {
   ) => Promise<{ success: boolean; canceled?: boolean; filePath?: string; error?: string }>;
   exportBackup: (jsonString: string) => Promise<{ success: boolean; canceled?: boolean; filePath?: string; error?: string }>;
   importBackup: () => Promise<{ success: boolean; canceled?: boolean; data?: string; error?: string }>;
+  convertDoc: (fileName: string, data: number[]) => Promise<{ success: boolean; data?: number[]; newFileName?: string; error?: string; needInstall?: boolean }>;
 }
 
 declare global {

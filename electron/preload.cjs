@@ -23,4 +23,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Import backup JSON
   importBackup: () =>
     ipcRenderer.invoke('import-backup'),
+
+  // Convert .doc/.xls to .docx/.xlsx via LibreOffice
+  convertDoc: (fileName, data) =>
+    ipcRenderer.invoke('convert-doc', { fileName, data: Array.from(data) }),
 });

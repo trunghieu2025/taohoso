@@ -587,21 +587,65 @@ export default function MilitaryDocForm() {
     };
 
     const handleUploadTemplate = async (e: ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
+        let file = e.target.files?.[0];
         if (!file) return;
 
-        // Check for .doc (old format)
+        // Check for .doc (old format) — try auto-convert on desktop
         if (file.name.toLowerCase().endsWith('.doc') && !file.name.toLowerCase().endsWith('.docx')) {
-            showToast('File .doc không đọc được. Vui lòng mở bằng Word → Save As → chọn .docx rồi upload lại.', 'warning');
-            if (fileInputRef.current) fileInputRef.current.value = '';
-            return;
+            if ((window as any).electronAPI?.isDesktop) {
+                showToast('Đang chuyển đổi .doc → .docx...', 'info');
+                try {
+                    const buf = await file.arrayBuffer();
+                    const result = await (window as any).electronAPI.convertDoc(file.name, Array.from(new Uint8Array(buf)));
+                    if (!result.success) {
+                        showToast(result.error || 'Chuyển đổi thất bại.', 'error');
+                        if (fileInputRef.current) fileInputRef.current.value = '';
+                        return;
+                    }
+                    // Create a new File-like object from converted data
+                    const convertedBuf = new Uint8Array(result.data).buffer;
+                    const convertedFile = new File([convertedBuf], result.newFileName || file.name.replace(/\.doc$/i, '.docx'), { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+                    showToast('✅ Đã chuyển đổi thành công!', 'success');
+                    // Use the converted file from here on
+                    file = convertedFile;
+                } catch (err) {
+                    showToast('Lỗi chuyển đổi: ' + (err as Error).message, 'error');
+                    if (fileInputRef.current) fileInputRef.current.value = '';
+                    return;
+                }
+            } else {
+                showToast('File .doc không đọc được. Vui lòng mở bằng Word → Save As → chọn .docx rồi upload lại.', 'warning');
+                if (fileInputRef.current) fileInputRef.current.value = '';
+                return;
+            }
         }
 
-        // Check for .xls (old Excel format)
+        // Check for .xls (old Excel format) — try auto-convert on desktop
         if (file.name.toLowerCase().endsWith('.xls') && !file.name.toLowerCase().endsWith('.xlsx')) {
-            showToast('File .xls không đọc được. Vui lòng mở bằng Excel → Save As → chọn .xlsx rồi upload lại.', 'warning');
-            if (fileInputRef.current) fileInputRef.current.value = '';
-            return;
+            if ((window as any).electronAPI?.isDesktop) {
+                showToast('Đang chuyển đổi .xls → .xlsx...', 'info');
+                try {
+                    const buf = await file.arrayBuffer();
+                    const result = await (window as any).electronAPI.convertDoc(file.name, Array.from(new Uint8Array(buf)));
+                    if (!result.success) {
+                        showToast(result.error || 'Chuyển đổi thất bại.', 'error');
+                        if (fileInputRef.current) fileInputRef.current.value = '';
+                        return;
+                    }
+                    const convertedBuf = new Uint8Array(result.data).buffer;
+                    const convertedFile = new File([convertedBuf], result.newFileName || file.name.replace(/\.xls$/i, '.xlsx'), { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                    showToast('✅ Đã chuyển đổi thành công!', 'success');
+                    file = convertedFile;
+                } catch (err) {
+                    showToast('Lỗi chuyển đổi: ' + (err as Error).message, 'error');
+                    if (fileInputRef.current) fileInputRef.current.value = '';
+                    return;
+                }
+            } else {
+                showToast('File .xls không đọc được. Vui lòng mở bằng Excel → Save As → chọn .xlsx rồi upload lại.', 'warning');
+                if (fileInputRef.current) fileInputRef.current.value = '';
+                return;
+            }
         }
 
         // Detect file type

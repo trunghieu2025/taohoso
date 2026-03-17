@@ -1,6 +1,7 @@
 const { app, BrowserWindow, shell, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { execFile } = require('child_process');
 
 // Detect dev mode (Vite dev server running)
 const isDev = process.env.ELECTRON_DEV === 'true';
@@ -139,6 +140,82 @@ ipcMain.handle('import-backup', async () => {
     const content = fs.readFileSync(result.filePaths[0], 'utf-8');
     return { success: true, data: content };
   } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+// Convert .doc/.xls to .docx/.xlsx using LibreOffice
+ipcMain.handle('convert-doc', async (event, { fileName, data }) => {
+  // Find LibreOffice soffice.exe on Windows
+  const possiblePaths = [
+    'C:\\Program Files\\LibreOffice\\program\\soffice.exe',
+    'C:\\Program Files (x86)\\LibreOffice\\program\\soffice.exe',
+    path.join(process.env.LOCALAPPDATA || '', 'Programs', 'LibreOffice', 'program', 'soffice.exe'),
+  ];
+  
+  let sofficePath = null;
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) {
+      sofficePath = p;
+      break;
+    }
+  }
+  
+  if (!sofficePath) {
+    return {
+      success: false,
+      error: 'LibreOffice chưa được cài đặt. Vui lòng tải LibreOffice tại: https://www.libreoffice.org/download/',
+      needInstall: true,
+    };
+  }
+  
+  // Write temp file
+  const tmpDir = app.getPath('temp');
+  const tmpFile = path.join(tmpDir, `taohoso_convert_${Date.now()}_${fileName}`);
+  
+  try {
+    fs.writeFileSync(tmpFile, Buffer.from(data));
+    
+    // Determine output format
+    const ext = path.extname(fileName).toLowerCase();
+    const convertTo = (ext === '.doc') ? 'docx' : (ext === '.xls') ? 'xlsx' : 'docx';
+
+    // Run LibreOffice conversion
+    await new Promise((resolve, reject) => {
+      execFile(sofficePath, [
+        '--headless',
+        '--convert-to', convertTo,
+        '--outdir', tmpDir,
+        tmpFile,
+      ], { timeout: 30000 }, (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+    
+    // Read converted file
+    const baseName = path.basename(tmpFile, path.extname(tmpFile));
+    const convertedFile = path.join(tmpDir, `${baseName}.${convertTo}`);
+    
+    if (!fs.existsSync(convertedFile)) {
+      throw new Error('Chuyển đổi thất bại — file output không tìm thấy.');
+    }
+    
+    const convertedBuffer = fs.readFileSync(convertedFile);
+    const result = {
+      success: true,
+      data: Array.from(new Uint8Array(convertedBuffer)),
+      newFileName: fileName.replace(/\.(doc|xls)$/i, `.${convertTo}`),
+    };
+    
+    // Cleanup temp files
+    try { fs.unlinkSync(tmpFile); } catch { }
+    try { fs.unlinkSync(convertedFile); } catch { }
+    
+    return result;
+  } catch (err) {
+    // Cleanup on error
+    try { fs.unlinkSync(tmpFile); } catch { }
     return { success: false, error: err.message };
   }
 });
