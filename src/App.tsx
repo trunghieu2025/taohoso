@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { HashRouter, Routes, Route } from 'react-router-dom';
 import { Analytics } from '@vercel/analytics/react';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -46,9 +46,14 @@ function LoadingSpinner() {
   );
 }
 
+// Detect desktop mode
+const isDesktop = typeof window !== 'undefined' && (
+  (window as any).electronAPI?.isDesktop || window.location.protocol === 'file:'
+);
+
 export default function App() {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <ScrollToTop />
       <Header />
       <QuickSearch />
@@ -84,7 +89,7 @@ export default function App() {
         </Suspense>
       </main>
       <Footer />
-      <Analytics />
-    </BrowserRouter>
+      {!isDesktop && <Analytics />}
+    </HashRouter>
   );
 }

@@ -1,13 +1,18 @@
 {
   "name": "taohoso",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "Tạo Hồ Sơ - Công cụ tạo hồ sơ hành chính",
+  "main": "electron/main.cjs",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && cross-env ELECTRON_DEV=true electron .\"",
+    "electron:build": "cross-env ELECTRON_BUILD=true vite build && electron-builder --win",
+    "electron:pack": "cross-env ELECTRON_BUILD=true vite build && electron-builder --win --dir"
   },
   "dependencies": {
     "@vercel/analytics": "^1.6.1",
@@ -33,11 +38,40 @@
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
+    "concurrently": "^9.2.1",
+    "cross-env": "^7.0.3",
+    "electron": "^41.0.2",
+    "electron-builder": "^26.8.1",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
     "typescript": "^5.9.3",
-    "vite": "^7.3.1"
+    "vite": "^7.3.1",
+    "wait-on": "^9.0.4"
+  },
+  "build": {
+    "appId": "com.taohoso.desktop",
+    "productName": "Tạo Hồ Sơ",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "public/icon-512.png"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "public/icon-512.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerLanguages": [
+        "vi_VN",
+        "en_US"
+      ]
+    }
   }
 }

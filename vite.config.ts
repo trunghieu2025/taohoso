@@ -2,8 +2,12 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
+const isElectron = process.env.ELECTRON_BUILD === 'true'
+
 // https://vite.dev/config/
 export default defineConfig({
+  // Use relative paths for Electron production build
+  base: isElectron ? './' : '/',
   // Inject version mỗi lần build để cache busting phát hiện phiên bản mới
   define: {
     'import.meta.env.VITE_APP_VERSION': JSON.stringify(Date.now().toString()),
