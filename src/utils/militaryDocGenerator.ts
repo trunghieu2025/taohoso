@@ -720,6 +720,88 @@ export function detectListGroups(templateBuffer: ArrayBuffer): ListGroup[] {
 }
 
 /**
+ * Replace the bracket field [text] inside a paragraph XML with new text.
+ * PRESERVES all XML formatting:
+ * - <w:pPr> (paragraph properties: alignment, indentation, spacing) — untouched
+ * - <w:rPr> (run properties: font, bold, italic, size, color) — kept from first run
+ * 
+ * Strategy: Find all <w:t> elements, concatenate their text, find and replace
+ * the bracket content, then put the new text into a single <w:r> with the
+ * formatting of the original bracket's run, while keeping prefix runs intact.
+ */
+function replaceBracketInParagraphXml(paragraphXml: string, newText: string): string {
+    // Step 1: Collect all <w:t> content with positions
+    const runRegex = /<w:r(?:\s[^>]*)?>[\s\S]*?<\/w:r>/g;
+    const runs: { fullXml: string; rPr: string; text: string }[] = [];
+    let rm;
+    while ((rm = runRegex.exec(paragraphXml)) !== null) {
+        const runXml = rm[0];
+        // Extract <w:rPr>...</w:rPr>
+        const rPrMatch = runXml.match(/<w:rPr>[\s\S]*?<\/w:rPr>/);
+        const rPr = rPrMatch ? rPrMatch[0] : '';
+        // Extract <w:t> text (may have xml:space="preserve")
+        const tMatches = runXml.match(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g);
+        let text = '';
+        if (tMatches) {
+            for (const t of tMatches) {
+                const content = t.replace(/<w:t[^>]*>/, '').replace(/<\/w:t>/, '');
+                text += content;
+            }
+        }
+        runs.push({ fullXml: runXml, rPr, text });
+    }
+
+    // Step 2: Concatenate all run texts
+    const fullText = runs.map(r => r.text).join('');
+
+    // Step 3: Find bracket [text] in concatenated text
+    const bracketMatch = fullText.match(/\[([^\]]{2,})\]/);
+    if (!bracketMatch) {
+        // No bracket found, return as-is
+        return paragraphXml;
+    }
+
+    // Step 4: Build new full text with bracket replaced
+    const bracketStart = bracketMatch.index!;
+    const bracketEnd = bracketStart + bracketMatch[0].length;
+    // Keep text before bracket as prefix (like "- "), replace bracket content, keep text after
+    const prefix = fullText.substring(0, bracketStart);
+    const suffix = fullText.substring(bracketEnd);
+    const newFullText = prefix + newText + suffix;
+
+    // Step 5: Find which run contained the bracket start to get its formatting
+    let charPos = 0;
+    let bracketRunIdx = 0;
+    for (let i = 0; i < runs.length; i++) {
+        if (charPos + runs[i].text.length > bracketStart) {
+            bracketRunIdx = i;
+            break;
+        }
+        charPos += runs[i].text.length;
+    }
+    const bracketRPr = runs[bracketRunIdx].rPr;
+
+    // Step 6: Extract <w:pPr> (paragraph properties) — KEEP UNTOUCHED
+    const pPrMatch = paragraphXml.match(/<w:pPr>[\s\S]*?<\/w:pPr>/);
+    const pPr = pPrMatch ? pPrMatch[0] : '';
+
+    // Step 7: Build new paragraph XML
+    // Use single run with bracket's formatting for the entire text
+    const escapedText = newFullText
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+    // Extract the paragraph opening tag (may contain attributes like w:rsidR)
+    const pOpenMatch = paragraphXml.match(/^(<w:p[^>]*>)/);
+    const pOpen = pOpenMatch ? pOpenMatch[1] : '<w:p>';
+
+    const newParagraph = `${pOpen}${pPr}<w:r>${bracketRPr}<w:t xml:space="preserve">${escapedText}</w:t></w:r></w:p>`;
+
+    return newParagraph;
+}
+
+/**
  * Fill a template with data, supporting dynamic list groups.
  * For list groups, user data is stored as: listData[groupId] = string[] (array of text values).
  * - If user has MORE items than original tags → clone paragraphs
@@ -779,29 +861,14 @@ export function fillTemplateWithLists(
         const originalParagraphs = allParagraphs.slice(groupStart, groupStart + group.tags.length);
         const originalXmlBlock = originalParagraphs.map(p => p.xml).join('');
 
+        // Use the FIRST paragraph's XML as the template for cloning
+        // (preserves the style/format of the first item in the list)
+        const templateP = originalParagraphs[0].xml;
+
         // Build new paragraphs from user data
-        // Use the last paragraph's XML as template, replacing bracket content
-        const templateP = group.templateParagraphXml;
         const newParagraphs: string[] = [];
         for (const item of filteredItems) {
-            // Replace the bracket field text in the template paragraph
-            let newP = templateP;
-            // Find bracket in template paragraph's plain text
-            const tPlain = templateP.replace(/<[^>]+>/g, '');
-            const tBracket = tPlain.match(/\[([^\]]{2,})\]/);
-            if (tBracket) {
-                // Replace the bracket text (might be split across XML runs)
-                if (newP.includes(tBracket[0])) {
-                    newP = newP.split(tBracket[0]).join(item);
-                } else {
-                    // Try to find and replace just the text content inside <w:t> tags
-                    const bracketText = tBracket[1];
-                    newP = newP.replace(bracketText, item);
-                    // Also remove bracket characters [ and ]
-                    newP = newP.replace(/\[/g, '').replace(/\]/g, '');
-                }
-            }
-            newParagraphs.push(newP);
+            newParagraphs.push(replaceBracketInParagraphXml(templateP, item));
         }
 
         // Replace the original block with new paragraphs
