@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { HashRouter, Routes, Route } from 'react-router-dom';
-import { Analytics } from '@vercel/analytics/react';
+
 import Header from './components/Header';
 import Footer from './components/Footer';
 import ScrollToTop from './components/ScrollToTop';
@@ -25,10 +25,7 @@ const FileDiff = lazy(() => import('./pages/FileDiff'));
 const TemplateMarketplace = lazy(() => import('./pages/TemplateMarketplace'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
-const TemporaryResidence = lazy(() => import('./pages/guides/TemporaryResidence'));
-const PermanentResidence = lazy(() => import('./pages/guides/PermanentResidence'));
-const CT07Guide = lazy(() => import('./pages/guides/CT07Guide'));
-const LandTitle = lazy(() => import('./pages/guides/LandTitle'));
+
 
 function LoadingSpinner() {
   return (
@@ -64,13 +61,7 @@ export default function App() {
           <Route path="/hop-dong-thue-nha" element={<RentalContract />} />
           <Route path="/dien-form-ct01" element={<CT01Form />} />
           <Route path="/gioi-thieu" element={<About />} />
-          <Route path="/huong-dan/tam-tru" element={<TemporaryResidence />} />
-          <Route
-            path="/huong-dan/thuong-tru"
-            element={<PermanentResidence />}
-          />
-          <Route path="/huong-dan/ct07" element={<CT07Guide />} />
-          <Route path="/huong-dan/sang-ten-so-hong" element={<LandTitle />} />
+
           <Route path="/hoa-don-ban-hang" element={<InvoiceForm />} />
           <Route path="/ho-so-sua-chua" element={<MilitaryDocForm />} />
           <Route path="/goi-mau" element={<BundleForm />} />
@@ -89,7 +80,7 @@ export default function App() {
         </Suspense>
       </main>
       <Footer />
-      {!isDesktop && <Analytics />}
+
     </HashRouter>
   );
 }
