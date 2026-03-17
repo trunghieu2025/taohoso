@@ -645,12 +645,26 @@ export function extractTags(templateBuffer: ArrayBuffer): string[] {
  */
 export function fillTemplate(templateBuffer: ArrayBuffer, data: Record<string, string>): ArrayBuffer {
     const zip = new PizZip(templateBuffer);
+
+    // Pre-process list fields: convert JSON arrays to newline-separated text
+    const processedData = { ...data };
+    for (const [key, value] of Object.entries(processedData)) {
+        if ((key.startsWith('DANH_SACH_') || key.startsWith('DS_')) && value) {
+            try {
+                const parsed = JSON.parse(value);
+                if (Array.isArray(parsed)) {
+                    processedData[key] = parsed.filter(item => item?.trim()).map(item => `- ${item}`).join('\n');
+                }
+            } catch { /* not JSON, keep as-is */ }
+        }
+    }
+
     const doc = new Docxtemplater(zip, {
         nullGetter() { return ''; },
         paragraphLoop: true,
         linebreaks: true,
     });
-    doc.render(data);
+    doc.render(processedData);
 
     // Also replace [text] bracket fields in XML content
     // Handle case where bracket text is split across XML runs
@@ -672,8 +686,8 @@ export function fillTemplate(templateBuffer: ArrayBuffer, data: Record<string, s
             const bracketText = m[1].trim();
             if (/^\d+$/.test(bracketText) || bracketText.length > 200) continue;
             const tag = textToTag(bracketText);
-            if (tag && data[tag]) {
-                replacements.push({ original: m[0], replacement: data[tag] });
+            if (tag && processedData[tag]) {
+                replacements.push({ original: m[0], replacement: processedData[tag] });
             }
         }
 

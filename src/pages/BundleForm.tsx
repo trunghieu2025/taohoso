@@ -1330,9 +1330,35 @@ export default function BundleForm() {
                                             if (hasFormula) {
                                                 const computed = evaluateFormula(formulas[tag], data);
                                                 if (computed !== data[tag] && !computed.startsWith('⚠️')) {
-                                                    // Update data with computed value (deferred)
                                                     setTimeout(() => setData(prev => ({ ...prev, [tag]: computed })), 0);
                                                 }
+                                            }
+                                            // List field editor for DANH_SACH_* / DS_* tags
+                                            const isListField = tag.startsWith('DANH_SACH_') || tag.startsWith('DS_');
+                                            if (isListField) {
+                                                let items: string[] = [];
+                                                try { const p = JSON.parse(data[tag] || '[]'); items = Array.isArray(p) ? p : [data[tag] || '']; } catch { items = (data[tag] || '').split('\n').filter(Boolean); if (items.length === 0) items = ['']; }
+                                                return (
+                                                    <div key={tag} id={`field-${tag}`} style={{ marginBottom: '0.75rem', padding: '0.75rem', background: '#f0f9ff', borderRadius: 8, border: '1px solid #bae6fd' }}>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                                            <label style={{ fontWeight: 600, fontSize: '0.85rem', color: '#0369a1' }}>
+                                                                📋 {labels[tag] || tag.replace(/^(DANH_SACH_|DS_)/, '').replace(/_/g, ' ')}
+                                                                <span style={{ fontWeight: 400, fontSize: '0.75rem', color: '#64748b', marginLeft: '0.3rem' }}>({items.filter(i => i.trim()).length} mục)</span>
+                                                            </label>
+                                                            <button className="btn btn-sm" onClick={() => { const ni = [...items, '']; setData(prev => ({ ...prev, [tag]: JSON.stringify(ni) })); }}
+                                                                style={{ fontSize: '0.75rem', padding: '0.15rem 0.5rem', background: '#dbeafe', color: '#1d4ed8', border: '1px solid #93c5fd', borderRadius: 4 }}>➕ Thêm dòng</button>
+                                                        </div>
+                                                        {items.map((item, idx) => (
+                                                            <div key={idx} style={{ display: 'flex', gap: '0.3rem', marginBottom: '0.3rem', alignItems: 'center' }}>
+                                                                <span style={{ fontSize: '0.75rem', color: '#64748b', minWidth: 20 }}>{idx + 1}.</span>
+                                                                <input value={item} onChange={(e) => { const ni = [...items]; ni[idx] = e.target.value; setData(prev => ({ ...prev, [tag]: JSON.stringify(ni) })); }}
+                                                                    placeholder={`Dòng ${idx + 1}...`} style={{ flex: 1, padding: '0.3rem 0.5rem', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: 4 }} />
+                                                                {items.length > 1 && (<button onClick={() => { const ni = items.filter((_, i) => i !== idx); setData(prev => ({ ...prev, [tag]: JSON.stringify(ni) })); }}
+                                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '0.85rem' }} title="Xóa">✕</button>)}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                );
                                             }
                                             return (
                                                 <div key={tag} id={`field-${tag}`} style={{ transition: 'background 0.3s', position: 'relative' }}>

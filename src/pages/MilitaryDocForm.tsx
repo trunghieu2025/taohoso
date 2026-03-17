@@ -1123,17 +1123,74 @@ export default function MilitaryDocForm() {
                         if (!fieldSearch) return true;
                         const label = customLabels[tag] || TAG_LABELS[tag] || tag;
                         return label.toLowerCase().includes(fieldSearch.toLowerCase()) || tag.toLowerCase().includes(fieldSearch.toLowerCase());
-                    }).map((tag) => (
-                        <div key={tag} id={`field-${tag}`}>
-                            <FormInput
-                                label={customLabels[tag] || TAG_LABELS[tag] || tag.replace(/_/g, ' ')}
-                                name={tag}
-                                value={data[tag] || ''}
-                                onChange={handleChange}
-                                placeholder={TAG_PLACEHOLDERS[tag] || `Nhập ${(customLabels[tag] || tag).replace(/_/g, ' ').toLowerCase()}`}
-                            />
-                        </div>
-                    ))}
+                    }).map((tag) => {
+                        const isListField = tag.startsWith('DANH_SACH_') || tag.startsWith('DS_');
+                        if (isListField) {
+                            // Parse JSON array or split by newline
+                            let items: string[] = [];
+                            try {
+                                const parsed = JSON.parse(data[tag] || '[]');
+                                items = Array.isArray(parsed) ? parsed : [data[tag] || ''];
+                            } catch {
+                                items = (data[tag] || '').split('\n').filter(Boolean);
+                                if (items.length === 0) items = [''];
+                            }
+                            return (
+                                <div key={tag} id={`field-${tag}`} style={{ marginBottom: '0.75rem', padding: '0.75rem', background: '#f0f9ff', borderRadius: 8, border: '1px solid #bae6fd' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                        <label style={{ fontWeight: 600, fontSize: '0.85rem', color: '#0369a1' }}>
+                                            📋 {customLabels[tag] || tag.replace(/^(DANH_SACH_|DS_)/, '').replace(/_/g, ' ')}
+                                            <span style={{ fontWeight: 400, fontSize: '0.75rem', color: '#64748b', marginLeft: '0.3rem' }}>({items.filter(i => i.trim()).length} m\u1ee5c)</span>
+                                        </label>
+                                        <button
+                                            className="btn btn-sm"
+                                            onClick={() => {
+                                                const newItems = [...items, ''];
+                                                setData(prev => ({ ...prev, [tag]: JSON.stringify(newItems) }));
+                                            }}
+                                            style={{ fontSize: '0.75rem', padding: '0.15rem 0.5rem', background: '#dbeafe', color: '#1d4ed8', border: '1px solid #93c5fd', borderRadius: 4 }}
+                                        >\u2795 Th\u00eam d\u00f2ng</button>
+                                    </div>
+                                    {items.map((item, idx) => (
+                                        <div key={idx} style={{ display: 'flex', gap: '0.3rem', marginBottom: '0.3rem', alignItems: 'center' }}>
+                                            <span style={{ fontSize: '0.75rem', color: '#64748b', minWidth: 20 }}>{idx + 1}.</span>
+                                            <input
+                                                value={item}
+                                                onChange={(e) => {
+                                                    const newItems = [...items];
+                                                    newItems[idx] = e.target.value;
+                                                    setData(prev => ({ ...prev, [tag]: JSON.stringify(newItems) }));
+                                                }}
+                                                placeholder={`D\u00f2ng ${idx + 1}...`}
+                                                style={{ flex: 1, padding: '0.3rem 0.5rem', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: 4 }}
+                                            />
+                                            {items.length > 1 && (
+                                                <button
+                                                    onClick={() => {
+                                                        const newItems = items.filter((_, i) => i !== idx);
+                                                        setData(prev => ({ ...prev, [tag]: JSON.stringify(newItems) }));
+                                                    }}
+                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '0.85rem', padding: '0 0.2rem' }}
+                                                    title="X\u00f3a d\u00f2ng"
+                                                >\u2715</button>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            );
+                        }
+                        return (
+                            <div key={tag} id={`field-${tag}`}>
+                                <FormInput
+                                    label={customLabels[tag] || TAG_LABELS[tag] || tag.replace(/_/g, ' ')}
+                                    name={tag}
+                                    value={data[tag] || ''}
+                                    onChange={handleChange}
+                                    placeholder={TAG_PLACEHOLDERS[tag] || `Nh\u1eadp ${(customLabels[tag] || tag).replace(/_/g, ' ').toLowerCase()}`}
+                                />
+                            </div>
+                        );
+                    })}
                 </div>
             );
         }
