@@ -104,6 +104,15 @@ export default function Home() {
               </p>
               <span className="card-link">Bắt đầu →</span>
             </Link>
+            <Link to="/giay-moi" className="tool-card">
+              <div className="card-icon">📨</div>
+              <h3>Giấy mời & Danh sách</h3>
+              <p>
+                Tạo giấy mời, văn bản có danh sách đại biểu, phân công nhiệm
+                vụ. Thêm/bớt người linh động, xuất Word/PDF.
+              </p>
+              <span className="card-link">Tạo ngay →</span>
+            </Link>
           </div>
         </div>
       </section>

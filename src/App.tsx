@@ -26,6 +26,7 @@ const TemplateMarketplace = lazy(() => import('./pages/TemplateMarketplace'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 const GuidePage = lazy(() => import('./pages/GuidePage'));
+const InvitationForm = lazy(() => import('./pages/InvitationForm'));
 
 
 function LoadingSpinner() {
@@ -66,6 +67,7 @@ export default function App() {
           <Route path="/hoa-don-ban-hang" element={<InvoiceForm />} />
           <Route path="/ho-so-sua-chua" element={<MilitaryDocForm />} />
           <Route path="/goi-mau" element={<BundleForm />} />
+          <Route path="/giay-moi" element={<InvitationForm />} />
           <Route path="/quan-ly-du-an" element={<ProjectList />} />
           <Route path="/du-an/:id" element={<ProjectDetail />} />
           <Route path="/danh-ba-nha-thau" element={<ContractorDirectory />} />
