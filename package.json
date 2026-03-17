@@ -53,26 +53,43 @@
   },
   "build": {
     "appId": "com.taohoso.desktop",
-    "productName": "Tạo Hồ Sơ",
+    "productName": "Tao Ho So",
+    "copyright": "Copyright © 2026",
+    "asar": true,
     "directories": {
       "output": "release"
     },
     "files": [
       "dist/**/*",
       "electron/**/*",
-      "public/icon-512.png"
+      "public/icon.ico"
     ],
+    "extraMetadata": {
+      "main": "electron/main.cjs"
+    },
     "win": {
-      "target": "nsis",
-      "icon": "public/icon-512.png"
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "public/icon.ico",
+      "artifactName": "TaoHoSo-Setup-${version}.${ext}",
+      "signAndEditExecutable": false,
+      "forceCodeSigning": false
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "installerLanguages": [
-        "vi_VN",
-        "en_US"
-      ]
+      "installerIcon": "public/icon.ico",
+      "uninstallerIcon": "public/icon.ico",
+      "installerHeaderIcon": "public/icon.ico",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Tao Ho So",
+      "installerLanguages": ["vi_VN", "en_US"],
+      "language": "1066"
     }
   }
 }
