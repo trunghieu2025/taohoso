@@ -32,7 +32,8 @@ function createWindow() {
   if (isDev) {
     // Dev mode: load from Vite dev server
     win.loadURL('http://localhost:5173');
-    win.webContents.openDevTools();
+    // DevTools: bấm Ctrl+Shift+I nếu cần debug
+    // win.webContents.openDevTools();
   } else {
     // Production: load built files
     win.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));

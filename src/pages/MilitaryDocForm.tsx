@@ -344,6 +344,7 @@ export default function MilitaryDocForm() {
     const [scanResults, setScanResults] = useState<ScanResult[]>([]);
     const [rawUploadBuffer, setRawUploadBuffer] = useState<ArrayBuffer | null>(null);
     const [rawUploadName, setRawUploadName] = useState('');
+    const [hasBracketTags, setHasBracketTags] = useState(false);
 
     // Preview state
     const [previewLoading, setPreviewLoading] = useState(false);
@@ -685,17 +686,65 @@ export default function MilitaryDocForm() {
                 // Word file
                 const existingTags = extractTags(buf);
                 if (existingTags.length > 0) {
-                    setTemplateBuffer(buf);
-                    setTemplateName(file.name);
-                    setTemplateTags(existingTags);
-                    setIsCustomTemplate(true);
-                    setFileType('word');
-                    setCustomLabels({});
-                    setData((prev) => {
-                        const newData: Record<string, string> = {};
-                        existingTags.forEach(tag => { newData[tag] = prev[tag] || ''; });
-                        return newData;
-                    });
+                    // Check if tags came from bracket patterns [text]
+                    const zip = new (await import('pizzip')).default(buf);
+                    const docXml = zip.file('word/document.xml')?.asText() || '';
+                    const plainText = docXml.replace(/<[^>]+>/g, '');
+                    const bracketMatches = plainText.match(/\[([^\]]{2,})\]/g) || [];
+                    
+                    if (bracketMatches.length > 0) {
+                        // Has [text] brackets → show scan modal for renaming
+                        const bracketResults: ScanResult[] = bracketMatches
+                            .map(m => m.slice(1, -1).trim())
+                            .filter(t => t.length >= 2 && !/^\d+$/.test(t) && t.length <= 200)
+                            .filter((v, i, a) => a.indexOf(v) === i) // deduplicate
+                            .map(text => ({
+                                text,
+                                count: (plainText.match(new RegExp('\\[' + text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\]', 'g')) || []).length,
+                                locations: ['Placeholder trong template'],
+                                suggestedTag: text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').replace(/[^a-zA-Z0-9\s]/g, '').trim().replace(/\s+/g, '_').toUpperCase().slice(0, 40),
+                                suggestedLabel: text.length > 30 ? text.slice(0, 30) + '...' : text,
+                                selected: true,
+                                category: 'data' as const,
+                                dataScore: 80,
+                                fieldType: 'bracket' as const,
+                            }));
+                        
+                        if (bracketResults.length > 0) {
+                            setRawUploadBuffer(buf);
+                            setRawUploadName(file.name);
+                            setFileType('word');
+                            setHasBracketTags(true);
+                            setScanResults(bracketResults);
+                            setShowScanModal(true);
+                        } else {
+                            // Curly-brace {tag} only → use directly
+                            setTemplateBuffer(buf);
+                            setTemplateName(file.name);
+                            setTemplateTags(existingTags);
+                            setIsCustomTemplate(true);
+                            setFileType('word');
+                            setCustomLabels({});
+                            setData((prev) => {
+                                const newData: Record<string, string> = {};
+                                existingTags.forEach(tag => { newData[tag] = prev[tag] || ''; });
+                                return newData;
+                            });
+                        }
+                    } else {
+                        // {tag} placeholders only → use directly (no renaming needed)
+                        setTemplateBuffer(buf);
+                        setTemplateName(file.name);
+                        setTemplateTags(existingTags);
+                        setIsCustomTemplate(true);
+                        setFileType('word');
+                        setCustomLabels({});
+                        setData((prev) => {
+                            const newData: Record<string, string> = {};
+                            existingTags.forEach(tag => { newData[tag] = prev[tag] || ''; });
+                            return newData;
+                        });
+                    }
                 } else {
                     const results = scanDuplicateTexts(buf);
                     if (results.length === 0) {
@@ -729,6 +778,28 @@ export default function MilitaryDocForm() {
 
     const handleScanConfirm = (selected: { text: string; tag: string; label: string }[]) => {
         if (!rawUploadBuffer || selected.length === 0) return;
+
+        if (hasBracketTags) {
+            // Template already has [text] brackets — just map tags to labels
+            // The fillTemplate function already handles [text] → data[TAG] replacement
+            const tags = selected.map(s => s.tag);
+            const labels: Record<string, string> = {};
+            selected.forEach(s => { labels[s.tag] = s.label; });
+
+            setTemplateBuffer(rawUploadBuffer);
+            setTemplateName(rawUploadName);
+            setTemplateTags(tags);
+            setIsCustomTemplate(true);
+            setCustomLabels(labels);
+            setShowScanModal(false);
+            setHasBracketTags(false);
+            setPreviewReady(false);
+
+            const newData: Record<string, string> = {};
+            tags.forEach(tag => { newData[tag] = ''; });
+            setData(newData);
+            return;
+        }
 
         // Create template with {tag} placeholders
         const replacements = selected.map(s => ({ text: s.text, tag: s.tag }));
