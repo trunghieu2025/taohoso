@@ -85,32 +85,6 @@ export default function Header() {
             </div>
           </div>
 
-          <div className="nav-item">
-            <span className="nav-link">Hướng dẫn ▾</span>
-            <div className="nav-dropdown">
-              <Link
-                to="/huong-dan/tam-tru"
-                onClick={() => setMobileOpen(false)}
-              >
-                🏠 Đăng ký tạm trú
-              </Link>
-              <Link
-                to="/huong-dan/thuong-tru"
-                onClick={() => setMobileOpen(false)}
-              >
-                🏡 Đăng ký thường trú
-              </Link>
-              <Link to="/huong-dan/ct07" onClick={() => setMobileOpen(false)}>
-                📋 Xin giấy CT07
-              </Link>
-              <Link
-                to="/huong-dan/sang-ten-so-hong"
-                onClick={() => setMobileOpen(false)}
-              >
-                🏘️ Sang tên sổ hồng
-              </Link>
-            </div>
-          </div>
 
           <Link
             to="/gioi-thieu"
