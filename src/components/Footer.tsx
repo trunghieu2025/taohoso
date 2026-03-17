@@ -12,7 +12,7 @@ export default function Footer() {
                         </Link>
                         <p>
                             Công cụ tạo hồ sơ hành chính miễn phí. Điền form CT01, tạo hợp đồng thuê nhà,
-                            hướng dẫn thủ tục cư trú & sang tên sổ hồng. Bảo mật, xử lý trên trình duyệt.
+                            tự động hóa hồ sơ. Bảo mật, xử lý 100% trên máy tính.
                         </p>
                     </div>
 
@@ -39,14 +39,13 @@ export default function Footer() {
                         <h4 className="footer-title">Liên kết</h4>
                         <ul className="footer-links">
                             <li><Link to="/gioi-thieu">Giới thiệu</Link></li>
-                            <li><a href="https://dichvucong.gov.vn" target="_blank" rel="noopener noreferrer">Dịch vụ công QG</a></li>
-                            <li><a href="https://dichvucong.dancuquocgia.gov.vn" target="_blank" rel="noopener noreferrer">Cổng dân cư QG</a></li>
+                            <li><Link to="/cai-dat">Bảo mật, lưu trữ</Link></li>
                         </ul>
                     </div>
                 </div>
 
                 <div className="footer-bottom">
-                    <p>© {new Date().getFullYear()} Tạo Hồ Sơ. Miễn phí & mã nguồn mở. Dữ liệu được xử lý 100% trên trình duyệt của bạn.</p>
+                    <p>© {new Date().getFullYear()} Tạo Hồ Sơ. Miễn phí. Dữ liệu được xử lý 100% trên máy tính của bạn.</p>
                 </div>
             </div>
         </footer>

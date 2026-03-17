@@ -25,7 +25,7 @@ export default function About() {
 
                 <h2>🔒 Bảo mật</h2>
                 <p>
-                    Tất cả dữ liệu của bạn được xử lý <strong>100% trên trình duyệt</strong>.
+                    Tất cả dữ liệu của bạn được xử lý <strong>100% trên máy tính</strong>.
                     Chúng tôi không thu thập, không lưu trữ và không gửi bất kỳ thông tin cá nhân nào
                     lên máy chủ. Dữ liệu của bạn chỉ tồn tại trên thiết bị của bạn.
                 </p>
@@ -39,7 +39,7 @@ export default function About() {
                     <div className="card">
                         <div className="card-icon">🔐</div>
                         <div className="card-title">Bảo mật tuyệt đối</div>
-                        <div className="card-desc">Xử lý trên trình duyệt, không gửi dữ liệu lên server</div>
+                        <div className="card-desc">Xử lý trên máy tính, không gửi dữ liệu lên server</div>
                     </div>
                     <div className="card">
                         <div className="card-icon">⚡</div>
@@ -47,9 +47,9 @@ export default function About() {
                         <div className="card-desc">Tạo hồ sơ chỉ trong 5 phút với form thông minh</div>
                     </div>
                     <div className="card">
-                        <div className="card-icon">📱</div>
-                        <div className="card-title">Mọi thiết bị</div>
-                        <div className="card-desc">Hoạt động trên máy tính, tablet và điện thoại</div>
+                        <div className="card-icon">💻</div>
+                        <div className="card-title">Hoạt động offline</div>
+                        <div className="card-desc">Không cần internet, chạy hoàn toàn trên máy tính</div>
                     </div>
                 </div>
 
@@ -62,21 +62,16 @@ export default function About() {
                     <li><Link to="/goi-mau"><strong>Gói mẫu nhiều file</strong></Link> — Upload nhiều Word → điền 1 lần → xuất ZIP</li>
                     <li><Link to="/quan-ly-du-an"><strong>Quản lý dự án</strong></Link> — Theo dõi tiến độ, gắn nhãn, so sánh phiên</li>
                     <li><Link to="/thu-vien-mau"><strong>Thư viện mẫu</strong></Link> — Bộ mẫu hồ sơ sẵn cho giám sát, xây lắp, QLDA</li>
-                    <li><Link to="/huong-dan/tam-tru"><strong>Hướng dẫn đăng ký tạm trú</strong></Link> — Quy trình chi tiết từ A-Z</li>
-                    <li><Link to="/huong-dan/thuong-tru"><strong>Hướng dẫn đăng ký thường trú</strong></Link> — Điều kiện và thủ tục</li>
-                    <li><Link to="/huong-dan/ct07"><strong>Hướng dẫn xin giấy CT07</strong></Link> — Xác nhận thông tin cư trú</li>
-                    <li><Link to="/huong-dan/sang-ten-so-hong"><strong>Hướng dẫn sang tên sổ hồng</strong></Link> — Chi phí và quy trình 2026</li>
+
                 </ul>
 
-                <h2>🆕 Tính năng mới (v2.7)</h2>
+                <h2>🆕 Tính năng nổi bật</h2>
                 <ul>
-                    <li><strong>📱 PWA Offline</strong> — Cài app trên điện thoại, sử dụng offline không cần mạng</li>
+                    <li><strong>💾 Lưu trữ an toàn</strong> — Dữ liệu lưu 100% trên máy tính, không qua internet</li>
                     <li><strong>🧮 Công thức tính</strong> — Tự tạo công thức cho trường dữ liệu (% thuế, chiết khấu)</li>
-                    <li><strong>👁️ Xem trước Word</strong> — Preview file Word đã điền ngay trên trình duyệt trước khi tải</li>
-                    <li><strong>☁️ Google Drive</strong> — Upload hồ sơ Word trực tiếp lên Drive (<Link to="/cai-dat">Cài đặt API Key</Link>)</li>
-                    <li><strong>📊 Google Sheets</strong> — Xuất dữ liệu form sang CSV, mở Google Sheets để nhập</li>
-                    <li><strong>🔔 Nhắc deadline</strong> — Thông báo trình duyệt khi dự án sắp hết hạn</li>
-                    <li><strong>🎯 Hướng dẫn tương tác</strong> — Tour 4 bước cho người mới sử dụng trang Gói mẫu</li>
+                    <li><strong>👁️ Xem trước Word</strong> — Preview file Word đã điền ngay trước khi tải</li>
+                    <li><strong>🔒 Bảo mật PIN</strong> — Đặt PIN bảo vệ dữ liệu khi mở ứng dụng</li>
+                    <li><strong>🎯 Hướng dẫn tương tác</strong> — Tour 4 bước cho người mới sử dụng</li>
                     <li><strong>📦 Xuất hàng loạt</strong> — Upload JSON/Excel → xuất nhiều bộ hồ sơ trong 1 file ZIP</li>
                 </ul>
 

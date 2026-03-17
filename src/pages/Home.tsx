@@ -14,9 +14,8 @@ export default function Home() {
               <span>dễ dàng hơn bao giờ hết</span>
             </h1>
             <p>
-              Tạo hợp đồng thuê nhà, điền tờ khai CT01, hướng dẫn đăng ký tạm
-              trú & thường trú. Tất cả miễn phí, xử lý trực tiếp trên trình
-              duyệt, không cần đăng nhập.
+              Tạo hợp đồng thuê nhà, điền tờ khai CT01, tự động hóa hồ sơ.
+              Tất cả miễn phí, xử lý 100% trên máy tính, bảo mật tuyệt đối.
             </p>
             <div className="hero-actions">
               <Link to="/hop-dong-thue-nha" className="btn btn-primary btn-lg">
@@ -40,7 +39,7 @@ export default function Home() {
           <div className="stat-card animate-in delay-100">
             <div className="stat-value">🔒</div>
             <div className="stat-label">
-              Xử lý trên trình duyệt, bảo mật tuyệt đối
+              Xử lý trên máy tính, bảo mật tuyệt đối
             </div>
           </div>
           <div className="stat-card animate-in delay-200">
@@ -208,11 +207,10 @@ export default function Home() {
             gap: '1rem', marginTop: '1.5rem',
           }}>
             {[
-              { icon: '📱', title: 'PWA Offline', desc: 'Cài app trên điện thoại, dùng offline không cần mạng', color: '#0ea5e9', bg: '#f0f9ff' },
+              { icon: '💾', title: 'Lưu trữ an toàn', desc: 'Dữ liệu lưu 100% trên máy tính, không qua internet', color: '#0ea5e9', bg: '#f0f9ff' },
               { icon: '🧮', title: 'Công thức tính', desc: 'Tự tạo công thức: {GIÁ_TRỊ} * {THUẾ} / 100', color: '#7c3aed', bg: '#faf5ff' },
-              { icon: '👁️', title: 'Xem trước Word', desc: 'Preview file Word đã điền ngay trên trình duyệt', color: '#059669', bg: '#f0fdf4' },
-
-              { icon: '🔔', title: 'Nhắc deadline', desc: 'Thông báo trình duyệt khi dự án sắp hết hạn', color: '#dc2626', bg: '#fef2f2' },
+              { icon: '👁️', title: 'Xem trước Word', desc: 'Preview file Word đã điền ngay trước khi tải', color: '#059669', bg: '#f0fdf4' },
+              { icon: '🔒', title: 'Bảo mật PIN', desc: 'Đặt PIN bảo vệ dữ liệu khi mở ứng dụng', color: '#dc2626', bg: '#fef2f2' },
               { icon: '🎯', title: 'Hướng dẫn tương tác', desc: 'Tour hướng dẫn 4 bước cho người mới sử dụng', color: '#2563eb', bg: '#eff6ff' },
               { icon: '📦', title: 'Xuất hàng loạt', desc: 'Upload JSON/Excel → xuất nhiều file ZIP cùng lúc', color: '#0891b2', bg: '#ecfeff' },
             ].map(f => (
@@ -238,7 +236,7 @@ export default function Home() {
       <section className="cta-section">
         <div className="container">
           <h2>Bắt đầu tạo hồ sơ ngay</h2>
-          <p>Miễn phí, nhanh chóng và bảo mật. Không cần đăng ký tài khoản.</p>
+          <p>Miễn phí, nhanh chóng và bảo mật. Xử lý hoàn toàn trên máy tính.</p>
           <div className="hero-actions">
             <Link to="/hop-dong-thue-nha" className="btn btn-lg">
               📄 Tạo hợp đồng thuê nhà
