@@ -183,6 +183,20 @@ export default function InvitationForm() {
         setLoading(false);
     };
 
+    /* ── Helper: ArrayBuffer <-> Base64 ── */
+    const bufferToBase64 = (buf: ArrayBuffer): string => {
+        const bytes = new Uint8Array(buf);
+        let binary = '';
+        for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+        return btoa(binary);
+    };
+    const base64ToBuffer = (b64: string): ArrayBuffer => {
+        const binary = atob(b64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        return bytes.buffer;
+    };
+
     /* ── Save/Load session ── */
     const handleSave = () => {
         const name = prompt('Tên phiên:', `Giấy mời ${new Date().toLocaleDateString('vi-VN')}`);
@@ -190,6 +204,7 @@ export default function InvitationForm() {
         const session = {
             id: Date.now().toString(), name, data, labels: customLabels, tags, templateName,
             listData, listGroups,
+            templateBase64: templateBuffer ? bufferToBase64(templateBuffer) : null,
             date: new Date().toISOString()
         };
         const sessions = [...savedSessions, session];
@@ -202,9 +217,18 @@ export default function InvitationForm() {
         setData(s.data || {});
         setCustomLabels(s.labels || {});
         setTags(s.tags || []);
+        setTemplateName(s.templateName || '');
         if (s.listData) setListData(s.listData);
         if (s.listGroups) setListGroups(s.listGroups);
-        showToast(`Đã tải "${s.name}"`);
+        // Restore template buffer from base64
+        if (s.templateBase64) {
+            const buf = base64ToBuffer(s.templateBase64);
+            setTemplateBuffer(buf);
+            showToast(`Đã tải "${s.name}" — sẵn sàng chỉnh sửa & xuất file`);
+            setTimeout(() => handlePreview(buf), 300);
+        } else {
+            showToast(`Đã tải dữ liệu "${s.name}" — cần upload lại file mẫu`);
+        }
     };
 
     const handleDelete = (id: string) => {
