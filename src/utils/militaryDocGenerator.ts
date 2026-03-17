@@ -503,7 +503,7 @@ function textToTag(text: string): string {
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '') // remove diacritics
         .replace(/đ/g, 'd').replace(/Đ/g, 'D')
-        .replace(/[^a-zA-Z0-9\s]/g, '')
+        .replace(/[^a-zA-Z0-9_\s]/g, '')  // keep underscores
         .trim()
         .replace(/\s+/g, '_')
         .toUpperCase()

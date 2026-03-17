@@ -13,7 +13,9 @@ import { FormInput } from '../components/FormField';
 import { showToast } from '../components/Toast';
 
 /* ── Helper: detect list field ── */
-const isListTag = (tag: string) => tag.startsWith('DANH_SACH_') || tag.startsWith('DS_');
+const isListTag = (tag: string) =>
+    tag.startsWith('DANH_SACH_') || tag.startsWith('DS_') ||
+    tag.startsWith('DANHSACH') || tag.startsWith('DANH_SACH');
 
 export default function InvitationForm() {
     const navigate = useNavigate();
