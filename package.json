@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@fontsource/inter": "^5.2.8",
-    "@vercel/analytics": "^1.6.1",
+
     "docx-preview": "^0.3.7",
     "docxtemplater": "^3.68.3",
     "file-saver": "^2.0.5",
@@ -62,8 +62,19 @@
     "files": [
       "dist/**/*",
       "electron/**/*",
-      "public/icon.ico"
+      "public/icon.ico",
+      "!**/node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}",
+      "!**/node_modules/*/{test,__tests__,tests,powered-test,example,examples}",
+      "!**/node_modules/*.d.ts",
+      "!**/*.{iml,o,hprof,orig,pyc,pyo,rbc,swp,csproj,sln,xproj}",
+      "!.editorconfig",
+      "!**/._*",
+      "!**/{.DS_Store,.git,.hg,.svn,CVS,RCS,SCCS,.gitignore,.gitattributes}"
     ],
+    "electronDownload": {
+      "stripLocales": true
+    },
+    "asarUnpack": [],
     "extraMetadata": {
       "main": "electron/main.cjs"
     },
@@ -89,7 +100,8 @@
       "createStartMenuShortcut": true,
       "shortcutName": "Tao Ho So",
       "installerLanguages": ["vi_VN", "en_US"],
-      "language": "1066"
+      "language": "1066",
+      "differentialPackage": false
     }
   }
 }

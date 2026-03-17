@@ -14,7 +14,8 @@ export default defineConfig({
   },
   plugins: [
     react(),
-    VitePWA({
+    // PWA only for web builds, skip for Electron desktop
+    ...(!isElectron ? [VitePWA({
       registerType: 'autoUpdate',
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
@@ -43,6 +44,6 @@ export default defineConfig({
           { src: '/vite.svg', sizes: '64x64', type: 'image/svg+xml' },
         ],
       },
-    }),
+    })] : []),
   ],
 })
