@@ -34,32 +34,46 @@ export default function InvitationForm() {
     });
     const saveSessions = (s: any[]) => { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); };
 
-    /* ── File upload ── */
-    const handleUpload = async (e: ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        if (!file.name.endsWith('.docx')) { showToast('Chỉ hỗ trợ file .docx'); return; }
-        const buffer = await file.arrayBuffer();
+    /* ── Load template from buffer ── */
+    const loadTemplateBuffer = (buffer: ArrayBuffer, name: string) => {
         setTemplateBuffer(buffer);
-        setTemplateName(file.name);
-        // Scan tags
+        setTemplateName(name);
         const scanned = extractTags(buffer);
         setTags(scanned);
         const newData: Record<string, string> = {};
         const newLabels: Record<string, string> = {};
         scanned.forEach((tag: string) => {
             newData[tag] = '';
-            // Auto-label: remove DANH_SACH_ prefix and replace _ with space
             if (isListTag(tag)) {
                 newLabels[tag] = tag.replace(/^(DANH_SACH_|DS_)/, '').replace(/_/g, ' ');
-                newData[tag] = '[""]';  // Start with 1 empty row
+                newData[tag] = '[""]';
             }
         });
         setData(newData);
         setCustomLabels(newLabels);
-        showToast(`Đã quét ${scanned.length} trường từ "${file.name}"`);
-        // Auto preview
+        showToast(`Đã quét ${scanned.length} trường từ "${name}"`);
         handlePreview(buffer);
+    };
+
+    /* ── File upload ── */
+    const handleUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (!file.name.endsWith('.docx')) { showToast('Chỉ hỗ trợ file .docx'); return; }
+        const buffer = await file.arrayBuffer();
+        loadTemplateBuffer(buffer, file.name);
+    };
+
+    /* ── Load sample template ── */
+    const loadSampleTemplate = async () => {
+        try {
+            const res = await fetch('/templates/mau-giay-moi.docx');
+            if (!res.ok) throw new Error('Không tìm thấy file mẫu');
+            const buffer = await res.arrayBuffer();
+            loadTemplateBuffer(buffer, 'mau-giay-moi.docx');
+        } catch (err) {
+            showToast('Lỗi tải mẫu: ' + (err as Error).message);
+        }
     };
 
     /* ── Preview ── */
@@ -184,10 +198,16 @@ export default function InvitationForm() {
                         Đặt <code>[DANH_SACH_DAI_BIEU]</code>, <code>[DANH_SACH_PHAN_CONG]</code> v.v. trong template để tạo danh sách động.
                         <br />Các trường thường như <code>[HỌ TÊN]</code>, <code>[NGÀY]</code> vẫn hoạt động bình thường.
                     </p>
-                    <button className="btn btn-primary" onClick={() => fileRef.current?.click()}
-                        style={{ padding: '0.6rem 1.5rem', fontSize: '1rem' }}>
-                        📂 Chọn file Word
-                    </button>
+                    <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                        <button className="btn btn-primary" onClick={() => fileRef.current?.click()}
+                            style={{ padding: '0.6rem 1.5rem', fontSize: '1rem' }}>
+                            📂 Chọn file Word của bạn
+                        </button>
+                        <button className="btn btn-secondary" onClick={loadSampleTemplate}
+                            style={{ padding: '0.6rem 1.5rem', fontSize: '1rem', background: '#fef3c7', borderColor: '#fbbf24', color: '#92400e' }}>
+                            📨 Dùng mẫu giấy mời sẵn
+                        </button>
+                    </div>
                     <input ref={fileRef} type="file" accept=".docx" style={{ display: 'none' }} onChange={handleUpload} />
 
                     {/* Saved sessions */}
