@@ -670,14 +670,23 @@ export function detectListGroups(templateBuffer: ArrayBuffer): ListGroup[] {
     let match;
     while ((match = pRegex.exec(xml)) !== null) {
         const pXml = match[0];
+        // Extract plain text by removing all XML tags
         const plainText = pXml.replace(/<[^>]+>/g, '').trim();
-        // Check if this paragraph contains exactly one bracket field
-        const bracketMatch = plainText.match(/^\s*[-–—*•]?\s*\[([^\]]{2,})\]\s*[;.,]?\s*$/);
+        // Check if this paragraph contains a bracket field
+        // More lenient: paragraph contains [text] even with prefix/suffix
+        const bracketMatch = plainText.match(/\[([^\]]{2,})\]/);
         let bracketTag: string | null = null;
         if (bracketMatch) {
             const text = bracketMatch[1].trim();
-            if (!/^\d+$/.test(text) && text.length <= 200) {
-                bracketTag = textToTag(text);
+            // Skip purely numeric, very short, or very long
+            if (!/^\d+$/.test(text) && text.length >= 3 && text.length <= 200) {
+                // Check that the bracket content is a significant part of the paragraph
+                // (not just a tiny [x] inside a long sentence)
+                const bracketLen = bracketMatch[0].length;
+                const totalLen = plainText.length;
+                if (bracketLen / totalLen > 0.3) {  // bracket is at least 30% of the paragraph
+                    bracketTag = textToTag(text);
+                }
             }
         }
         paragraphs.push({ xml: pXml, plainText, bracketTag });
@@ -740,11 +749,11 @@ export function fillTemplateWithLists(
         while ((m = pRegex.exec(xml)) !== null) {
             const pXml = m[0];
             const plainText = pXml.replace(/<[^>]+>/g, '').trim();
-            const bracketMatch = plainText.match(/^\s*[-–—*•]?\s*\[([^\]]{2,})\]\s*[;.,]?\s*$/);
+            const bracketMatch = plainText.match(/\[([^\]]{2,})\]/);
             let tag: string | null = null;
             if (bracketMatch) {
                 const text = bracketMatch[1].trim();
-                if (!/^\d+$/.test(text) && text.length <= 200) {
+                if (!/^\d+$/.test(text) && text.length >= 3 && text.length <= 200) {
                     tag = textToTag(text);
                 }
             }
