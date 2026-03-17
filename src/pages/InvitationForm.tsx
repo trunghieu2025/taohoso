@@ -46,6 +46,13 @@ export default function InvitationForm() {
     });
     const saveSessions = (s: any[]) => { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); };
 
+    /* ── Saved project templates (reusable blank templates) ── */
+    const TEMPLATE_KEY = 'invitation_templates';
+    const [savedTemplates, setSavedTemplates] = useState<any[]>(() => {
+        try { return JSON.parse(localStorage.getItem(TEMPLATE_KEY) || '[]'); } catch { return []; }
+    });
+    const saveTemplates = (t: any[]) => { localStorage.setItem(TEMPLATE_KEY, JSON.stringify(t)); };
+
     /* ── Load template from buffer ── */
     const loadTemplateBuffer = (buffer: ArrayBuffer, name: string) => {
         setTemplateBuffer(buffer);
@@ -248,6 +255,37 @@ export default function InvitationForm() {
         setSavedSessions(sessions);
     };
 
+    /* ── Save/Load/Delete project templates ── */
+    const handleSaveAsTemplate = () => {
+        if (!templateBuffer) return;
+        const name = prompt('Tên mẫu dự án:', templateName.replace('.docx', ''));
+        if (!name) return;
+        const tmpl = {
+            id: Date.now().toString(), name, templateName,
+            tags, listGroups, labels: customLabels,
+            templateBase64: bufferToBase64(templateBuffer),
+            date: new Date().toISOString()
+        };
+        const templates = [...savedTemplates, tmpl];
+        saveTemplates(templates);
+        setSavedTemplates(templates);
+        showToast(`Đã lưu mẫu dự án "${name}" — dùng lại không cần upload!`);
+    };
+
+    const handleLoadTemplate = (t: any) => {
+        if (!t.templateBase64) { showToast('Mẫu không có file template'); return; }
+        const buf = base64ToBuffer(t.templateBase64);
+        loadTemplateBuffer(buf, t.templateName || 'template.docx');
+        showToast(`Đã tải mẫu "${t.name}" — điền dữ liệu mới!`);
+    };
+
+    const handleDeleteTemplate = (id: string) => {
+        if (!confirm('Xóa mẫu dự án này?')) return;
+        const templates = savedTemplates.filter(t => t.id !== id);
+        saveTemplates(templates);
+        setSavedTemplates(templates);
+    };
+
     /* ── Styles ── */
     const S: React.CSSProperties = { background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 8, padding: '1rem', marginBottom: '0.75rem' };
     const btnSm: React.CSSProperties = { fontSize: '0.75rem', padding: '0.2rem 0.5rem', border: '1px solid #e2e8f0', borderRadius: 4, cursor: 'pointer', background: '#f8fafc' };
@@ -288,10 +326,32 @@ export default function InvitationForm() {
                     </div>
                     <input ref={fileRef} type="file" accept=".docx" style={{ display: 'none' }} onChange={handleUpload} />
 
+                    {/* Saved project templates */}
+                    {savedTemplates.length > 0 && (
+                        <div style={{ marginTop: '1.5rem', textAlign: 'left', ...S, background: '#faf5ff', borderColor: '#c4b5fd' }}>
+                            <div style={{ fontWeight: 600, color: '#6d28d9', marginBottom: '0.5rem' }}>🗂️ Mẫu dự án đã lưu ({savedTemplates.length})</div>
+                            <p style={{ fontSize: '0.75rem', color: '#7c3aed', margin: '0 0 0.5rem' }}>Click để dùng lại — không cần upload lại file!</p>
+                            {savedTemplates.map(t => (
+                                <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem', padding: '0.35rem 0.5rem', marginBottom: '0.3rem', borderRadius: 6, background: '#ede9fe', cursor: 'pointer' }}
+                                    onClick={() => handleLoadTemplate(t)}>
+                                    <span style={{ flex: 1, color: '#6d28d9', fontWeight: 500 }}>
+                                        📚 {t.name}
+                                        <span style={{ fontWeight: 400, color: '#94a3b8', fontSize: '0.7rem', marginLeft: '0.3rem' }}>
+                                            ({t.tags?.length || 0} trường • {new Date(t.date).toLocaleDateString('vi-VN')})
+                                        </span>
+                                    </span>
+                                    <button onClick={(e) => { e.stopPropagation(); handleDeleteTemplate(t.id); }}
+                                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '0.8rem' }} title="Xóa mẫu">✕</button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
                     {/* Saved sessions */}
                     {savedSessions.length > 0 && (
-                        <div style={{ marginTop: '1.5rem', textAlign: 'left', ...S, background: '#f0fdf4', borderColor: '#86efac' }}>
+                        <div style={{ marginTop: '1rem', textAlign: 'left', ...S, background: '#f0fdf4', borderColor: '#86efac' }}>
                             <div style={{ fontWeight: 600, color: '#166534', marginBottom: '0.5rem' }}>📂 Phiên đã lưu ({savedSessions.length})</div>
+                            <p style={{ fontSize: '0.75rem', color: '#166534', margin: '0 0 0.5rem' }}>Click để tiếp tục chỉnh sửa (có sẵn dữ liệu đã điền)</p>
                             {savedSessions.map(s => (
                                 <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem', padding: '0.25rem 0', borderBottom: '1px solid #dcfce7' }}>
                                     <span style={{ flex: 1, cursor: 'pointer', color: '#166534' }} onClick={() => handleLoad(s)} title="Click để tải">
@@ -318,6 +378,7 @@ export default function InvitationForm() {
                             {/* Data management buttons */}
                             <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
                                 <button className="btn btn-sm" onClick={handleSave} style={btnSm}>💿 Lưu phiên</button>
+                                <button className="btn btn-sm" onClick={handleSaveAsTemplate} style={{ ...btnSm, background: '#faf5ff', color: '#7c3aed', borderColor: '#c4b5fd' }}>📚 Lưu làm mẫu dự án</button>
                                 <button className="btn btn-sm" onClick={() => { setTemplateBuffer(null); setTags([]); setData({}); setListGroups([]); setListData({}); }} style={{ ...btnSm, color: '#ef4444' }}>↩️ Đổi mẫu</button>
                             </div>
 
