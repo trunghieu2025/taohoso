@@ -2,9 +2,12 @@ import { useState, useRef, ChangeEvent, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     fillTemplate,
+    fillTemplateWithLists,
     extractTags,
     textToTag,
     renderDocxPreview,
+    detectListGroups,
+    type ListGroup,
 } from '../utils/militaryDocGenerator';
 import { FormInput } from '../components/FormField';
 import { showToast } from '../components/Toast';
@@ -27,6 +30,13 @@ export default function InvitationForm() {
     const [previewLoading, setPreviewLoading] = useState(false);
     const [loading, setLoading] = useState(false);
 
+    /* ── List groups (auto-detected) ── */
+    const [listGroups, setListGroups] = useState<ListGroup[]>([]);
+    const [listData, setListData] = useState<Record<string, string[]>>({});
+
+    // Tags that belong to a list group (should be hidden from regular form)
+    const listGroupTags = new Set(listGroups.flatMap(g => g.tags));
+
     /* ── Saved sessions ── */
     const STORAGE_KEY = 'invitation_sessions';
     const [savedSessions, setSavedSessions] = useState<any[]>(() => {
@@ -38,6 +48,8 @@ export default function InvitationForm() {
     const loadTemplateBuffer = (buffer: ArrayBuffer, name: string) => {
         setTemplateBuffer(buffer);
         setTemplateName(name);
+
+        // Scan tags
         const scanned = extractTags(buffer);
         setTags(scanned);
         const newData: Record<string, string> = {};
@@ -51,7 +63,20 @@ export default function InvitationForm() {
         });
         setData(newData);
         setCustomLabels(newLabels);
-        showToast(`Đã quét ${scanned.length} trường từ "${name}"`);
+
+        // Auto-detect list groups
+        const groups = detectListGroups(buffer);
+        setListGroups(groups);
+        // Initialize list data with default values from tags
+        const newListData: Record<string, string[]> = {};
+        for (const g of groups) {
+            newListData[g.id] = g.tags.map(() => ''); // Empty rows matching original count
+        }
+        setListData(newListData);
+
+        const listCount = groups.reduce((sum, g) => sum + g.tags.length, 0);
+        const regularCount = scanned.length - listCount;
+        showToast(`Đã quét ${scanned.length} trường (${groups.length} nhóm danh sách, ${regularCount} trường thường)`);
         handlePreview(buffer);
     };
 
@@ -76,13 +101,29 @@ export default function InvitationForm() {
         }
     };
 
+    /* ── Build merged data for preview/export ── */
+    const getMergedData = () => {
+        const merged = { ...data };
+        // List group tags should NOT be in merged data (they're handled separately)
+        for (const tag of listGroupTags) {
+            delete merged[tag];
+        }
+        return merged;
+    };
+
     /* ── Preview ── */
     const handlePreview = async (buf?: ArrayBuffer) => {
         const b = buf || templateBuffer;
         if (!b || !previewRef.current) return;
         setPreviewLoading(true);
         try {
-            await renderDocxPreview(b, data, previewRef.current);
+            if (listGroups.length > 0) {
+                // Use list-aware fill
+                const filled = fillTemplateWithLists(b, getMergedData(), listGroups, listData);
+                await renderDocxPreview(filled, {}, previewRef.current);
+            } else {
+                await renderDocxPreview(b, data, previewRef.current);
+            }
         } catch { /* ignore */ }
         setPreviewLoading(false);
     };
@@ -93,7 +134,7 @@ export default function InvitationForm() {
             const t = setTimeout(() => handlePreview(), 500);
             return () => clearTimeout(t);
         }
-    }, [data, templateBuffer]);
+    }, [data, listData, templateBuffer]);
 
     /* ── handleChange for regular inputs ── */
     const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -105,7 +146,12 @@ export default function InvitationForm() {
         if (!templateBuffer) return;
         setLoading(true);
         try {
-            const filled = fillTemplate(templateBuffer, data);
+            let filled: ArrayBuffer;
+            if (listGroups.length > 0) {
+                filled = fillTemplateWithLists(templateBuffer, getMergedData(), listGroups, listData);
+            } else {
+                filled = fillTemplate(templateBuffer, data);
+            }
             const blob = new Blob([filled], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -139,7 +185,11 @@ export default function InvitationForm() {
     const handleSave = () => {
         const name = prompt('Tên phiên:', `Giấy mời ${new Date().toLocaleDateString('vi-VN')}`);
         if (!name) return;
-        const session = { id: Date.now().toString(), name, data, labels: customLabels, tags, templateName, date: new Date().toISOString() };
+        const session = {
+            id: Date.now().toString(), name, data, labels: customLabels, tags, templateName,
+            listData, listGroups,
+            date: new Date().toISOString()
+        };
         const sessions = [...savedSessions, session];
         saveSessions(sessions);
         setSavedSessions(sessions);
@@ -150,6 +200,8 @@ export default function InvitationForm() {
         setData(s.data || {});
         setCustomLabels(s.labels || {});
         setTags(s.tags || []);
+        if (s.listData) setListData(s.listData);
+        if (s.listGroups) setListGroups(s.listGroups);
         showToast(`Đã tải "${s.name}"`);
     };
 
@@ -181,7 +233,7 @@ export default function InvitationForm() {
             <div style={{ ...S, background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)', borderColor: '#93c5fd', textAlign: 'center' }}>
                 <h2 style={{ margin: 0, color: '#1e40af', fontSize: '1.3rem' }}>📨 Giấy mời & Văn bản có danh sách</h2>
                 <p style={{ color: '#475569', fontSize: '0.85rem', margin: '0.3rem 0 0' }}>
-                    Upload mẫu Word với trường [DANH_SACH_XXX] → thêm/bớt người linh động → xuất file
+                    Upload mẫu Word của bạn → app tự nhận diện danh sách → thêm/bớt người linh động → xuất file
                 </p>
                 <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginTop: '0.5rem' }}>
                     <button className="btn btn-sm" onClick={() => navigate('/huong-dan/tao-ho-so')} style={{ ...btnSm, background: '#dbeafe', color: '#1d4ed8' }}>❓ Hướng dẫn</button>
@@ -195,8 +247,8 @@ export default function InvitationForm() {
                     <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>📄</div>
                     <h3 style={{ marginBottom: '0.5rem', color: '#1e293b' }}>Upload mẫu giấy mời Word (.docx)</h3>
                     <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '1rem' }}>
-                        Đặt <code>[DANH_SACH_DAI_BIEU]</code>, <code>[DANH_SACH_PHAN_CONG]</code> v.v. trong template để tạo danh sách động.
-                        <br />Các trường thường như <code>[HỌ TÊN]</code>, <code>[NGÀY]</code> vẫn hoạt động bình thường.
+                        App sẽ <b>tự nhận diện</b> các danh sách đại biểu, phân công nhiệm vụ trong file của bạn.
+                        <br />Không cần chỉnh sửa file mẫu — upload nguyên bản!
                     </p>
                     <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
                         <button className="btn btn-primary" onClick={() => fileRef.current?.click()}
@@ -240,30 +292,73 @@ export default function InvitationForm() {
                             {/* Data management buttons */}
                             <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
                                 <button className="btn btn-sm" onClick={handleSave} style={btnSm}>💿 Lưu phiên</button>
-                                <button className="btn btn-sm" onClick={() => { setTemplateBuffer(null); setTags([]); setData({}); }} style={{ ...btnSm, color: '#ef4444' }}>↩️ Đổi mẫu</button>
+                                <button className="btn btn-sm" onClick={() => { setTemplateBuffer(null); setTags([]); setData({}); setListGroups([]); setListData({}); }} style={{ ...btnSm, color: '#ef4444' }}>↩️ Đổi mẫu</button>
                             </div>
 
-                            {/* Progress bar */}
-                            {(() => {
-                                const filled = tags.filter(t => {
-                                    if (isListTag(t)) {
-                                        try { const p = JSON.parse(data[t] || '[]'); return Array.isArray(p) && p.some(i => i?.trim()); } catch { return !!data[t]?.trim(); }
-                                    }
-                                    return !!data[t]?.trim();
-                                }).length;
-                                const pct = tags.length > 0 ? Math.round((filled / tags.length) * 100) : 0;
-                                return (
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                                        <div style={{ flex: 1, height: 6, background: '#e2e8f0', borderRadius: 3 }}>
-                                            <div style={{ height: '100%', borderRadius: 3, width: `${pct}%`, background: pct === 100 ? '#10b981' : '#3b82f6', transition: 'width 0.3s' }} />
-                                        </div>
-                                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: pct === 100 ? '#059669' : '#3b82f6' }}>{pct}%</span>
+                            {/* ═══ LIST GROUPS (auto-detected) ═══ */}
+                            {listGroups.length > 0 && (
+                                <div style={{ marginBottom: '1rem' }}>
+                                    <div style={{ fontWeight: 600, fontSize: '0.85rem', color: '#7c3aed', marginBottom: '0.5rem' }}>
+                                        🔍 Đã nhận diện {listGroups.length} nhóm danh sách — thêm/bớt tùy ý
                                     </div>
-                                );
-                            })()}
+                                    {listGroups.map((group, gIdx) => {
+                                        const items = listData[group.id] || [];
+                                        return (
+                                            <div key={group.id} style={{ marginBottom: '0.75rem', padding: '0.75rem', background: '#faf5ff', borderRadius: 8, border: '1px solid #c4b5fd' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                                    <label style={{ fontWeight: 600, fontSize: '0.85rem', color: '#6d28d9' }}>
+                                                        📋 Nhóm {gIdx + 1}: {group.tags.length} dòng gốc
+                                                        <span style={{ fontWeight: 400, fontSize: '0.75rem', color: '#64748b', marginLeft: '0.3rem' }}>
+                                                            (hiện: {items.length} dòng)
+                                                        </span>
+                                                    </label>
+                                                    <button className="btn btn-sm"
+                                                        onClick={() => {
+                                                            setListData(prev => ({
+                                                                ...prev,
+                                                                [group.id]: [...(prev[group.id] || []), '']
+                                                            }));
+                                                        }}
+                                                        style={{ fontSize: '0.75rem', padding: '0.15rem 0.5rem', background: '#ede9fe', color: '#7c3aed', border: '1px solid #c4b5fd', borderRadius: 4 }}>
+                                                        ➕ Thêm dòng
+                                                    </button>
+                                                </div>
+                                                {items.map((item, idx) => (
+                                                    <div key={idx} style={{ display: 'flex', gap: '0.3rem', marginBottom: '0.3rem', alignItems: 'center' }}>
+                                                        <span style={{ fontSize: '0.75rem', color: '#6d28d9', minWidth: 20, fontWeight: 600 }}>{idx + 1}.</span>
+                                                        <input
+                                                            value={item}
+                                                            onChange={(e) => {
+                                                                setListData(prev => {
+                                                                    const newItems = [...(prev[group.id] || [])];
+                                                                    newItems[idx] = e.target.value;
+                                                                    return { ...prev, [group.id]: newItems };
+                                                                });
+                                                            }}
+                                                            placeholder={group.tags[idx] ? `Gốc: ${group.tags[idx].replace(/_/g, ' ').toLowerCase()}` : `Dòng mới ${idx + 1}...`}
+                                                            style={{ flex: 1, padding: '0.35rem 0.5rem', fontSize: '0.8rem', border: '1px solid #c4b5fd', borderRadius: 4, background: '#fff' }}
+                                                        />
+                                                        {items.length > 1 && (
+                                                            <button
+                                                                onClick={() => {
+                                                                    setListData(prev => ({
+                                                                        ...prev,
+                                                                        [group.id]: (prev[group.id] || []).filter((_, i) => i !== idx)
+                                                                    }));
+                                                                }}
+                                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '0.85rem' }}
+                                                                title="Xóa dòng">✕</button>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
 
-                            {/* Fields */}
-                            {tags.map(tag => {
+                            {/* ═══ REGULAR FIELDS (non-list) ═══ */}
+                            {tags.filter(tag => !listGroupTags.has(tag)).map(tag => {
                                 if (isListTag(tag)) {
                                     let items: string[] = [];
                                     try { const p = JSON.parse(data[tag] || '[""]'); items = Array.isArray(p) ? p : ['']; } catch { items = ['']; }

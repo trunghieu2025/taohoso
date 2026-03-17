@@ -639,6 +639,221 @@ export function extractTags(templateBuffer: ArrayBuffer): string[] {
     return [...new Set(tags)].sort();
 }
 
+// ─── List Group Detection ───────────────────────────────────────────────
+// Detects consecutive paragraphs in Word XML that each contain a single bracket field.
+// These form "list groups" that can be dynamically expanded/collapsed.
+
+export interface ListGroup {
+    /** Unique group ID */
+    id: string;
+    /** Tags belonging to this group, in order */
+    tags: string[];
+    /** The XML of the last paragraph in the group (used as template for new rows) */
+    templateParagraphXml: string;
+}
+
+/**
+ * Detect list groups from a template buffer.
+ * Scans word/document.xml for consecutive <w:p> paragraphs where each contains
+ * exactly one bracket field like [Some text here].
+ * Returns groups of 2+ consecutive bracket-field paragraphs.
+ */
+export function detectListGroups(templateBuffer: ArrayBuffer): ListGroup[] {
+    const zip = new PizZip(templateBuffer);
+    const xmlFile = zip.file('word/document.xml');
+    if (!xmlFile) return [];
+    const xml = xmlFile.asText();
+
+    // Split XML into paragraphs
+    const pRegex = /<w:p[\s>][\s\S]*?<\/w:p>/g;
+    const paragraphs: { xml: string; plainText: string; bracketTag: string | null }[] = [];
+    let match;
+    while ((match = pRegex.exec(xml)) !== null) {
+        const pXml = match[0];
+        const plainText = pXml.replace(/<[^>]+>/g, '').trim();
+        // Check if this paragraph contains exactly one bracket field
+        const bracketMatch = plainText.match(/^\s*[-–—*•]?\s*\[([^\]]{2,})\]\s*[;.,]?\s*$/);
+        let bracketTag: string | null = null;
+        if (bracketMatch) {
+            const text = bracketMatch[1].trim();
+            if (!/^\d+$/.test(text) && text.length <= 200) {
+                bracketTag = textToTag(text);
+            }
+        }
+        paragraphs.push({ xml: pXml, plainText, bracketTag });
+    }
+
+    // Find consecutive paragraphs with bracket fields
+    const groups: ListGroup[] = [];
+    let i = 0;
+    while (i < paragraphs.length) {
+        if (paragraphs[i].bracketTag) {
+            const start = i;
+            while (i < paragraphs.length && paragraphs[i].bracketTag) {
+                i++;
+            }
+            if (i - start >= 2) {
+                // Found a group of 2+ consecutive bracket paragraphs
+                const tags = paragraphs.slice(start, i).map(p => p.bracketTag!);
+                const lastParagraphXml = paragraphs[i - 1].xml;
+                groups.push({
+                    id: `list_group_${start}`,
+                    tags,
+                    templateParagraphXml: lastParagraphXml,
+                });
+            }
+        } else {
+            i++;
+        }
+    }
+
+    return groups;
+}
+
+/**
+ * Fill a template with data, supporting dynamic list groups.
+ * For list groups, user data is stored as: listData[groupId] = string[] (array of text values).
+ * - If user has MORE items than original tags → clone paragraphs
+ * - If user has FEWER items → remove paragraphs
+ */
+export function fillTemplateWithLists(
+    templateBuffer: ArrayBuffer,
+    data: Record<string, string>,
+    listGroups: ListGroup[],
+    listData: Record<string, string[]>,
+): ArrayBuffer {
+    const zip = new PizZip(templateBuffer);
+    const xmlFile = zip.file('word/document.xml');
+    if (!xmlFile) return fillTemplate(templateBuffer, data);
+    let xml = xmlFile.asText();
+
+    // Process each list group: replace paragraphs
+    for (const group of listGroups) {
+        const items = listData[group.id] || [];
+        const filteredItems = items.filter(item => item.trim());
+        if (filteredItems.length === 0) continue;
+
+        // Find all paragraph XMLs for this group's tags in the document
+        const pRegex = /<w:p[\s>][\s\S]*?<\/w:p>/g;
+        const allParagraphs: { xml: string; tag: string | null; startIdx: number }[] = [];
+        let m;
+        while ((m = pRegex.exec(xml)) !== null) {
+            const pXml = m[0];
+            const plainText = pXml.replace(/<[^>]+>/g, '').trim();
+            const bracketMatch = plainText.match(/^\s*[-–—*•]?\s*\[([^\]]{2,})\]\s*[;.,]?\s*$/);
+            let tag: string | null = null;
+            if (bracketMatch) {
+                const text = bracketMatch[1].trim();
+                if (!/^\d+$/.test(text) && text.length <= 200) {
+                    tag = textToTag(text);
+                }
+            }
+            allParagraphs.push({ xml: pXml, tag, startIdx: m.index });
+        }
+
+        // Find the consecutive run of this group's tags
+        let groupStart = -1;
+        for (let j = 0; j < allParagraphs.length; j++) {
+            if (allParagraphs[j].tag === group.tags[0]) {
+                // Check if subsequent paragraphs match the group tags
+                let matches = true;
+                for (let k = 1; k < group.tags.length && j + k < allParagraphs.length; k++) {
+                    if (allParagraphs[j + k].tag !== group.tags[k]) { matches = false; break; }
+                }
+                if (matches) { groupStart = j; break; }
+            }
+        }
+
+        if (groupStart === -1) continue;
+
+        // Get the original paragraph XMLs for this group
+        const originalParagraphs = allParagraphs.slice(groupStart, groupStart + group.tags.length);
+        const originalXmlBlock = originalParagraphs.map(p => p.xml).join('');
+
+        // Build new paragraphs from user data
+        // Use the last paragraph's XML as template, replacing bracket content
+        const templateP = group.templateParagraphXml;
+        const newParagraphs: string[] = [];
+        for (const item of filteredItems) {
+            // Replace the bracket field text in the template paragraph
+            let newP = templateP;
+            // Find bracket in template paragraph's plain text
+            const tPlain = templateP.replace(/<[^>]+>/g, '');
+            const tBracket = tPlain.match(/\[([^\]]{2,})\]/);
+            if (tBracket) {
+                // Replace the bracket text (might be split across XML runs)
+                if (newP.includes(tBracket[0])) {
+                    newP = newP.split(tBracket[0]).join(item);
+                } else {
+                    // Try to find and replace just the text content inside <w:t> tags
+                    const bracketText = tBracket[1];
+                    newP = newP.replace(bracketText, item);
+                    // Also remove bracket characters [ and ]
+                    newP = newP.replace(/\[/g, '').replace(/\]/g, '');
+                }
+            }
+            newParagraphs.push(newP);
+        }
+
+        // Replace the original block with new paragraphs
+        xml = xml.replace(originalXmlBlock, newParagraphs.join(''));
+    }
+
+    // Save modified XML back
+    zip.file('word/document.xml', xml);
+
+    // Now do standard fillTemplate processing for remaining non-list fields
+    const doc = new Docxtemplater(zip, {
+        nullGetter() { return ''; },
+        paragraphLoop: true,
+        linebreaks: true,
+    });
+
+    // Pre-process DANH_SACH_ fields
+    const processedData = { ...data };
+    for (const [key, value] of Object.entries(processedData)) {
+        if ((key.startsWith('DANH_SACH_') || key.startsWith('DS_')) && value) {
+            try {
+                const parsed = JSON.parse(value);
+                if (Array.isArray(parsed)) {
+                    processedData[key] = parsed.filter(item => item?.trim()).map(item => `- ${item}`).join('\n');
+                }
+            } catch { /* not JSON, keep as-is */ }
+        }
+    }
+
+    doc.render(processedData);
+
+    // Bracket replacement for remaining fields
+    const filledZip = doc.getZip();
+    const xmlFiles = ['word/document.xml', 'word/header1.xml', 'word/header2.xml', 'word/footer1.xml', 'word/footer2.xml'];
+    for (const fname of xmlFiles) {
+        const f = filledZip.file(fname);
+        if (!f) continue;
+        let fxml = f.asText();
+        const plainText = fxml.replace(/<[^>]+>/g, '');
+        const bracketRe = /\[([^\]]{2,})\]/g;
+        let bm;
+        const replacements: { original: string; replacement: string }[] = [];
+        while ((bm = bracketRe.exec(plainText)) !== null) {
+            const bracketText = bm[1].trim();
+            if (/^\d+$/.test(bracketText) || bracketText.length > 200) continue;
+            const tag = textToTag(bracketText);
+            if (tag && processedData[tag]) {
+                replacements.push({ original: bm[0], replacement: processedData[tag] });
+            }
+        }
+        for (const { original, replacement } of replacements) {
+            if (fxml.includes(original)) {
+                fxml = fxml.split(original).join(replacement);
+            }
+        }
+        filledZip.file(fname, fxml);
+    }
+
+    return filledZip.generate({ type: 'arraybuffer', compression: 'DEFLATE' });
+}
+
 /**
  * Fill a template buffer with data using docxtemplater.
  * Returns the filled ArrayBuffer.
