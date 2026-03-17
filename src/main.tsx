@@ -17,6 +17,11 @@ const isDesktop = typeof window !== 'undefined' && (
   (window as any).electronAPI?.isDesktop || window.location.protocol === 'file:'
 )
 
+// Add CSS class for desktop-specific styling (title bar padding etc.)
+if (isDesktop) {
+  document.body.classList.add('electron-desktop');
+}
+
 // ============================================================
 // CACHE BUSTING V2: XÓA TOÀN BỘ SW + CACHE CŨ ngay lập tức
 // (Chỉ chạy trên web, KHÔNG chạy trên desktop)

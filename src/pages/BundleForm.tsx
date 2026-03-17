@@ -1517,7 +1517,7 @@ export default function BundleForm() {
 
                     {/* ── RIGHT COLUMN: Preview ── */}
                     {(!isMobile || showMobilePreview) && (
-                        <div style={{ position: isMobile ? 'static' : 'sticky', top: '1rem', alignSelf: 'start' }}>
+                        <div style={{ position: isMobile ? 'static' : 'sticky', top: '2.5rem', alignSelf: 'start' }}>
                             {/* Tab selector */}
                             <div style={{ display: 'flex', gap: '0.2rem', marginBottom: '0.4rem', flexWrap: 'wrap', overflowX: 'auto' }}>
                                 {files.map((f, i) => (

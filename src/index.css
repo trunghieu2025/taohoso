@@ -4,6 +4,26 @@
    DESIGN SYSTEM - Clean Light Theme
    ============================================ */
 
+/* Electron desktop: offset for custom title bar overlay (36px) */
+body.electron-desktop {
+  padding-top: 36px;
+}
+body.electron-desktop .header {
+  -webkit-app-region: drag;
+}
+body.electron-desktop .header a,
+body.electron-desktop .header button,
+body.electron-desktop .header select {
+  -webkit-app-region: no-drag;
+}
+/* Prevent preview controls from overlapping window buttons */
+body.electron-desktop .contract-preview-header {
+  padding-right: 140px;
+}
+body.electron-desktop .contract-preview {
+  margin-top: 0;
+}
+
 :root {
   /* Colors */
   --primary: #10b981;
