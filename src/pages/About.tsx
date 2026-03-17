@@ -78,7 +78,7 @@ export default function About() {
                 <h2>📞 Liên hệ</h2>
                 <p>
                     Nếu bạn có thắc mắc hoặc góp ý, vui lòng liên hệ qua email:
-                    <a href="mailto:contact@taohoso.com"> contact@taohoso.com</a>
+                    <a href="mailto:dangtrunghieu.dthvhc@gmail.com"> dangtrunghieu.dthvhc@gmail.com</a>
                 </p>
             </div>
         </>

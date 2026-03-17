@@ -1360,15 +1360,7 @@ export default function MilitaryDocForm() {
                                             )}
                                             <button
                                                 className="btn btn-sm"
-                                                onClick={() => {
-                                                    const w = window.open('', '_blank', 'width=900,height=700');
-                                                    if (w) {
-                                                        w.document.title = 'Hướng dẫn sử dụng — TạoHồSơ';
-                                                        w.document.head.innerHTML = '<style>body{font-family:Inter,system-ui,sans-serif}</style>';
-                                                        w.document.body.style.cssText = 'font-family:Inter,sans-serif;padding:2rem;line-height:1.8;color:#1e293b;max-width:850px;margin:0 auto';
-                                                        w.document.body.innerHTML = GUIDE_HTML;
-                                                    }
-                                                }}
+                                                onClick={() => navigate('/huong-dan/tao-ho-so')}
                                                 style={{ background: '#dbeafe', color: '#1d4ed8' }}
                                             >
                                                 📖 Hướng dẫn

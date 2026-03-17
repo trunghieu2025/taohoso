@@ -1,8 +1,16 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useParams } from 'react-router-dom';
 
 export default function GuidePage() {
-  const [tab, setTab] = useState<'tao-ho-so' | 'goi-mau'>('tao-ho-so');
+  const { section } = useParams<{ section?: string }>();
+  const [tab, setTab] = useState<'tao-ho-so' | 'goi-mau'>(
+    section === 'goi-mau' ? 'goi-mau' : 'tao-ho-so'
+  );
+
+  useEffect(() => {
+    if (section === 'goi-mau') setTab('goi-mau');
+    else if (section === 'tao-ho-so') setTab('tao-ho-so');
+  }, [section]);
 
   return (
     <div className="container" style={{ padding: '2rem 1.5rem', maxWidth: 900 }}>

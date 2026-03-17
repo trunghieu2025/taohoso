@@ -76,6 +76,7 @@ export default function App() {
           <Route path="/thu-vien-mau" element={<TemplateMarketplace />} />
           <Route path="/cai-dat" element={<SettingsPage />} />
           <Route path="/huong-dan" element={<GuidePage />} />
+          <Route path="/huong-dan/:section" element={<GuidePage />} />
           <Route path="/tim-kiem" element={<SearchPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>

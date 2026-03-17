@@ -827,9 +827,34 @@ export default function BundleForm() {
     };
 
     const handleDeleteSession = (id: string) => {
+        if (!confirm('Xóa phiên này?')) return;
         const sessions = savedSessions.filter(s => s.id !== id);
         saveBundleSessions(sessions);
         setSavedSessions(sessions);
+    };
+
+    const handleRenameSession = (id: string) => {
+        const session = savedSessions.find(s => s.id === id);
+        if (!session) return;
+        const newName = prompt('Đổi tên phiên:', session.name);
+        if (!newName || newName === session.name) return;
+        const sessions = savedSessions.map(s => s.id === id ? { ...s, name: newName } : s);
+        saveBundleSessions(sessions);
+        setSavedSessions(sessions);
+        showToast(`Đã đổi tên thành "${newName}"`);
+    };
+
+    /* ── Rescan: reopen scan modal keeping files ── */
+    const handleRescan = () => {
+        if (files.length > 0) {
+            const reStaged = files.map(f => ({ name: f.name, folder: f.folder, buffer: f.buffer }));
+            setStagedFiles(reStaged);
+            setTimeout(() => handleStartScan(), 100);
+        } else if (stagedFiles.length > 0) {
+            handleStartScan();
+        } else {
+            showToast('Chưa có file nào. Hãy upload file trước.');
+        }
     };
 
     /* ── Backup/Restore JSON ── */
@@ -964,7 +989,7 @@ export default function BundleForm() {
                         Upload nhiều file Word/Excel → điền 1 lần → xuất tất cả
                     </p>
                 </div>
-                <button className="btn btn-sm" onClick={() => setShowTour(true)} style={{ ...btnSm, background: '#dbeafe', color: '#1d4ed8' }}>
+                <button className="btn btn-sm" onClick={() => navigate('/huong-dan/goi-mau')} style={{ ...btnSm, background: '#dbeafe', color: '#1d4ed8' }}>
                     ❓ Hướng dẫn
                 </button>
             </div>
@@ -1105,21 +1130,30 @@ export default function BundleForm() {
                                 </label>
                                 <button className="btn btn-sm" onClick={handleSaveSession} style={btnSm}>💿 Lưu phiên</button>
                                 <button className="btn btn-sm" onClick={handleClone} style={btnSm}>📋 Nhân bản</button>
+                                <button className="btn btn-sm" onClick={handleRescan} style={{ ...btnSm, background: '#dbeafe', color: '#1d4ed8' }}>🔄 Chọn lại trường</button>
                                 <button className="btn btn-sm" onClick={handleClearAll} style={{ ...btnSm, color: '#ef4444' }}>🗑️ Xóa tất cả</button>
                             </div>
-                            {savedSessions.length > 0 && (
-                                <div style={{ marginTop: '0.5rem', borderTop: '1px solid #bbf7d0', paddingTop: '0.5rem' }}>
-                                    <div style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.3rem' }}>📁 Phiên đã lưu ({savedSessions.length})</div>
+                            <div style={{ marginTop: '0.5rem', borderTop: '1px solid #bbf7d0', paddingTop: '0.5rem' }}>
+                                <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#166534' }}
+                                    onClick={() => { const el = document.getElementById('bundle-saved-list'); if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none'; }}>
+                                    📂 Mẫu đã lưu ({savedSessions.length}) <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>▼</span>
+                                </div>
+                                <div id="bundle-saved-list" style={{ display: savedSessions.length > 0 ? 'block' : 'none' }}>
+                                    {savedSessions.length === 0 && (
+                                        <div style={{ fontSize: '0.8rem', color: '#94a3b8', padding: '0.3rem 0' }}>Chưa có phiên nào. Bấm "💿 Lưu phiên" để lưu.</div>
+                                    )}
                                     {savedSessions.map(s => (
-                                        <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem', padding: '0.2rem 0' }}>
-                                            <span style={{ flex: 1, cursor: 'pointer', color: '#166534' }} onClick={() => handleLoadSession(s)}>
-                                                📄 {s.name} <span style={{ color: '#94a3b8', fontSize: '0.7rem' }}>({new Date(s.date).toLocaleDateString('vi-VN')})</span>
+                                        <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem', padding: '0.25rem 0', borderBottom: '1px solid #f0fdf4' }}>
+                                            <span style={{ flex: 1, cursor: 'pointer', color: '#166534' }} onClick={() => handleLoadSession(s)} title="Click để tải phiên này">
+                                                📄 {s.name}
+                                                <span style={{ color: '#94a3b8', fontSize: '0.7rem', marginLeft: '0.3rem' }}>({new Date(s.date).toLocaleDateString('vi-VN')})</span>
                                             </span>
-                                            <button onClick={() => handleDeleteSession(s.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '0.8rem' }}>✕</button>
+                                            <button onClick={() => handleRenameSession(s.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#3b82f6', fontSize: '0.8rem' }} title="Đổi tên">✏️</button>
+                                            <button onClick={() => handleDeleteSession(s.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '0.8rem' }} title="Xóa">✕</button>
                                         </div>
                                     ))}
                                 </div>
-                            )}
+                            </div>
 
                             {/* Session diff */}
                             {savedSessions.length >= 2 && (
