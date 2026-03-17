@@ -1249,7 +1249,7 @@ export default function MilitaryDocForm() {
                                                     const w = window.open('', '_blank', 'width=900,height=700');
                                                     if (w) {
                                                         w.document.title = 'Hướng dẫn sử dụng — TạoHồSơ';
-                                                        w.document.head.innerHTML = '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">';
+                                                        w.document.head.innerHTML = '<style>body{font-family:Inter,system-ui,sans-serif}</style>';
                                                         w.document.body.style.cssText = 'font-family:Inter,sans-serif;padding:2rem;line-height:1.8;color:#1e293b;max-width:850px;margin:0 auto';
                                                         w.document.body.innerHTML = GUIDE_HTML;
                                                     }
@@ -1478,7 +1478,7 @@ export default function MilitaryDocForm() {
                                         style={{ fontSize: '0.85rem', background: '#eff6ff', borderColor: '#93c5fd', color: '#2563eb' }}>
                                         📊 Lưu vào dự án
                                     </button>
-                                    {hasGoogleApiKey() && fileType === 'word' && templateBuffer && (
+                                    {hasGoogleApiKey() && !(window as any).electronAPI?.isDesktop && fileType === 'word' && templateBuffer && (
                                         <>
                                             <button className="btn btn-secondary" onClick={async () => {
                                                 try {
@@ -1496,7 +1496,7 @@ export default function MilitaryDocForm() {
                                             </button>
                                         </>
                                     )}
-                                    {!hasGoogleApiKey() && (
+                                    {!hasGoogleApiKey() && !(window as any).electronAPI?.isDesktop && (
                                         <a href="/cai-dat" className="btn btn-sm" style={{ fontSize: '0.75rem', color: '#64748b', textDecoration: 'none' }}>
                                             ☁️ Kết nối Google
                                         </a>

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { showToast } from '../components/Toast';
 import { Link } from 'react-router-dom';
 import * as XLSX from 'xlsx';
+import { isDesktop } from '../utils/desktopFileHelper';
 
 /* ── Types ── */
 interface ProjectStats {
@@ -208,9 +209,9 @@ export default function Dashboard() {
             </div>
 
             {/* Tools row */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginTop: '1.5rem' }}>
-                {/* QR Code Generator */}
-                <div style={sectionStyle}>
+            <div style={{ display: 'grid', gridTemplateColumns: isDesktop() ? '1fr' : '1fr 1fr', gap: '1.5rem', marginTop: '1.5rem' }}>
+                {/* QR Code Generator — ẩn trên desktop (cần internet) */}
+                {!isDesktop() && (<div style={sectionStyle}>
                     <h2 style={sectionTitleStyle}>📱 Tạo QR Code</h2>
                     <p style={{ color: '#64748b', fontSize: '0.8rem', marginBottom: '0.75rem' }}>
                         Tạo QR chứa link bộ hồ sơ để chia sẻ nhanh.
@@ -244,7 +245,7 @@ export default function Dashboard() {
                             </p>
                         </div>
                     )}
-                </div>
+                </div>)}
 
                 {/* Auto Document Numbering */}
                 <div style={sectionStyle}>

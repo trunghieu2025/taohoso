@@ -175,8 +175,8 @@ export default function SettingsPage() {
 
             <section className="section">
                 <div className="container" style={{ maxWidth: 700 }}>
-                    {/* Google API Key */}
-                    <div style={{
+                    {/* Google API Key — chỉ hiện trên web (cần internet) */}
+                    {!isDesktop() && <div style={{
                         background: '#fff', borderRadius: 12, padding: '1.5rem',
                         border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
                         marginBottom: '1.5rem',
@@ -259,7 +259,7 @@ export default function SettingsPage() {
                                 <li>Copy <strong>Client ID</strong> → dán vào ô trên</li>
                             </ol>
                         </div>
-                    </div>
+                    </div>}
 
                     {/* PIN Lock */}
                     <div style={{

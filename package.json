@@ -15,6 +15,7 @@
     "electron:pack": "cross-env ELECTRON_BUILD=true vite build && electron-builder --win --dir"
   },
   "dependencies": {
+    "@fontsource/inter": "^5.2.8",
     "@vercel/analytics": "^1.6.1",
     "docx-preview": "^0.3.7",
     "docxtemplater": "^3.68.3",
