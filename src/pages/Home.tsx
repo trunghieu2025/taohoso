@@ -211,8 +211,7 @@ export default function Home() {
               { icon: '📱', title: 'PWA Offline', desc: 'Cài app trên điện thoại, dùng offline không cần mạng', color: '#0ea5e9', bg: '#f0f9ff' },
               { icon: '🧮', title: 'Công thức tính', desc: 'Tự tạo công thức: {GIÁ_TRỊ} * {THUẾ} / 100', color: '#7c3aed', bg: '#faf5ff' },
               { icon: '👁️', title: 'Xem trước Word', desc: 'Preview file Word đã điền ngay trên trình duyệt', color: '#059669', bg: '#f0fdf4' },
-              { icon: '☁️', title: 'Google Drive', desc: 'Upload file Word trực tiếp lên Google Drive', color: '#d97706', bg: '#fffbeb' },
-              { icon: '📊', title: 'Google Sheets', desc: 'Xuất dữ liệu form sang CSV cho Google Sheets', color: '#16a34a', bg: '#f0fdf4' },
+
               { icon: '🔔', title: 'Nhắc deadline', desc: 'Thông báo trình duyệt khi dự án sắp hết hạn', color: '#dc2626', bg: '#fef2f2' },
               { icon: '🎯', title: 'Hướng dẫn tương tác', desc: 'Tour hướng dẫn 4 bước cho người mới sử dụng', color: '#2563eb', bg: '#eff6ff' },
               { icon: '📦', title: 'Xuất hàng loạt', desc: 'Upload JSON/Excel → xuất nhiều file ZIP cùng lúc', color: '#0891b2', bg: '#ecfeff' },
@@ -228,9 +227,6 @@ export default function Home() {
             ))}
           </div>
           <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
-            <Link to="/cai-dat" className="btn btn-outline" style={{ marginRight: '0.5rem' }}>
-              ⚙️ Cài đặt Google API
-            </Link>
             <Link to="/goi-mau" className="btn btn-primary">
               📦 Thử ngay
             </Link>

@@ -168,8 +168,8 @@ export default function SettingsPage() {
         <>
             <div className="page-header">
                 <div className="container">
-                    <h1>⚙️ Cài đặt</h1>
-                    <p>Quản lý API key, bảo mật và tùy chỉnh ứng dụng</p>
+                    <h1>🔒 Bảo mật, lưu trữ</h1>
+                    <p>Quản lý bảo mật và sao lưu dữ liệu</p>
                 </div>
             </div>
 
@@ -350,30 +350,6 @@ export default function SettingsPage() {
                         </div>
                     </div>
 
-                    {/* App Info */}
-                    <div style={{
-                        background: '#fff', borderRadius: 12, padding: '1.5rem',
-                        border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-                    }}>
-                        <h3 style={{ margin: '0 0 0.75rem', fontSize: '1.1rem' }}>{isDesktop() ? '🖥️' : '📱'} Thông tin ứng dụng</h3>
-                        <div style={{ fontSize: '0.85rem', lineHeight: 1.8, color: '#334155' }}>
-                            <p>🏷️ <strong>Phiên bản:</strong> 3.0.0 {isDesktop() && <span style={{ color: '#10b981', fontWeight: 600 }}>(Desktop)</span>}</p>
-                            <p>📦 <strong>Tính năng:</strong> {isDesktop() ? 'Native Save, ' : 'PWA Offline, '}Toast, Ctrl+K Search, Print, Excel Report, PIN Lock</p>
-                            <p>🔒 <strong>Bảo mật:</strong> Tất cả dữ liệu lưu trên máy bạn (IndexedDB + localStorage)</p>
-                            <p>⌨️ <strong>Phím tắt:</strong> Ctrl+K = Tìm kiếm nhanh</p>
-                        </div>
-                        {!isDesktop() && (
-                            <button className="btn btn-sm btn-secondary" style={{ marginTop: '0.5rem' }}
-                                onClick={() => {
-                                    if (confirm('Xóa toàn bộ cache và dữ liệu tạm?')) {
-                                        caches.keys().then(names => names.forEach(n => caches.delete(n)));
-                                        showToast('Đã xóa cache!', 'success');
-                                    }
-                                }}>
-                                🗑️ Xóa cache
-                            </button>
-                        )}
-                    </div>
                 </div>
             </section>
         </>

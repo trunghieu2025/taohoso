@@ -80,7 +80,7 @@ export default function Header() {
               </Link>
               <div style={{ borderTop: '1px solid #e2e8f0', margin: '0.25rem 0' }} />
               <Link to="/cai-dat" onClick={() => setMobileOpen(false)}>
-                ⚙️ Cài đặt
+                🔒 Bảo mật, lưu trữ
               </Link>
             </div>
           </div>
