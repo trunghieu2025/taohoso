@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useT } from '../i18n/i18n';
 
 // Search input rendered inside the Header — navigates to /tim-kiem?q=<query>
 export default function HeaderSearchInput() {
     const [query, setQuery] = useState('');
     const navigate = useNavigate();
+    const t = useT();
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -22,14 +24,14 @@ export default function HeaderSearchInput() {
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Tìm kiếm..."
-                aria-label="Tìm kiếm"
+                placeholder={t('nav_search')}
+                aria-label={t('nav_search')}
                 style={{ fontSize: '0.85rem', padding: '0.3rem 0.6rem', width: '160px', height: 'auto' }}
             />
             <button
                 type="submit"
                 className="btn btn-primary btn-sm"
-                aria-label="Tìm"
+                aria-label="Search"
                 style={{ padding: '0.3rem 0.6rem', fontSize: '0.85rem' }}
             >
                 🔍
@@ -37,3 +39,4 @@ export default function HeaderSearchInput() {
         </form>
     );
 }
+
