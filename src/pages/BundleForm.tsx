@@ -57,6 +57,8 @@ interface BundleSession {
     labels: Record<string, string>;
     allTags: string[];
     fileNames: string[];
+    // Template files stored as base64 for full restore
+    templateFiles?: { name: string; folder: string; base64: string; tags: string[] }[];
 }
 
 type FormChangeEvent = ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>;
@@ -165,6 +167,25 @@ function saveBundleSessions(sessions: BundleSession[]) { localStorage.setItem(ST
 function loadBundleSessions(): BundleSession[] { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch { return []; } }
 function savePresets(p: FilePreset[]) { localStorage.setItem(PRESETS_KEY, JSON.stringify(p)); }
 function loadPresets(): FilePreset[] { try { return JSON.parse(localStorage.getItem(PRESETS_KEY) || '[]'); } catch { return []; } }
+
+/* ── Bundle template storage ── */
+const BUNDLE_TEMPLATE_KEY = 'bundle_templates';
+function saveBundleTemplates(t: BundleSession[]) { localStorage.setItem(BUNDLE_TEMPLATE_KEY, JSON.stringify(t)); }
+function loadBundleTemplates(): BundleSession[] { try { return JSON.parse(localStorage.getItem(BUNDLE_TEMPLATE_KEY) || '[]'); } catch { return []; } }
+
+/* ── ArrayBuffer <-> Base64 helpers ── */
+function bufToB64(buf: ArrayBuffer): string {
+    const bytes = new Uint8Array(buf);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary);
+}
+function b64ToBuf(b64: string): ArrayBuffer {
+    const binary = atob(b64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes.buffer;
+}
 
 /* ── Number detection for auto Vietnamese text ── */
 const NUMBER_KEYWORDS = ['GIA_TRI', 'THANH_TIEN', 'TONG', 'SO_TIEN', 'GIA', 'CHI_PHI', 'KINH_PHI', 'DU_TOAN', 'PHI'];
@@ -808,22 +829,83 @@ export default function BundleForm() {
     const handleSaveSession = () => {
         const name = prompt('Đặt tên cho phiên này:');
         if (!name) return;
+        // Store template files as base64 for full restore
+        const templateFiles = files.map(f => ({
+            name: f.name, folder: f.folder, tags: f.tags,
+            base64: bufToB64(f.templateBuffer),
+        }));
         const session: BundleSession = {
             id: Date.now().toString(), name, date: new Date().toISOString(),
             data: { ...data }, labels: { ...labels }, allTags: [...allTags],
             fileNames: files.map(f => f.name),
+            templateFiles,
         };
         const sessions = [...savedSessions, session];
         saveBundleSessions(sessions);
         setSavedSessions(sessions);
-        showToast('Đã lưu!');
+        showToast('Đã lưu phiên (gồm file mẫu + dữ liệu)!');
     };
 
     const handleLoadSession = (session: BundleSession) => {
         setData(session.data);
         setLabels(session.labels);
         setAllTags(session.allTags);
-        showToast(`Đã tải "${session.name}". Lưu ý: cần upload lại file template nếu chưa có.`);
+        // Restore template files if available
+        if (session.templateFiles && session.templateFiles.length > 0) {
+            const restored: BundleFile[] = session.templateFiles.map(tf => {
+                const buf = b64ToBuf(tf.base64);
+                return { name: tf.name, folder: tf.folder, buffer: buf, templateBuffer: buf, tags: tf.tags, selected: true };
+            });
+            setFiles(restored);
+            showToast(`Đã tải "${session.name}" — file mẫu + dữ liệu khôi phục đầy đủ!`);
+        } else {
+            showToast(`Đã tải dữ liệu "${session.name}". Lưu ý: cần upload lại file template.`);
+        }
+    };
+
+    /* ── Save/Load project templates ── */
+    const [savedBundleTemplates, setSavedBundleTemplates] = useState<BundleSession[]>(loadBundleTemplates);
+
+    const handleSaveAsTemplate = () => {
+        if (files.length === 0) { showToast('Chưa có file nào!'); return; }
+        const name = prompt('Tên mẫu dự án:', `Mẫu ${files.length} file`);
+        if (!name) return;
+        const templateFiles = files.map(f => ({
+            name: f.name, folder: f.folder, tags: f.tags,
+            base64: bufToB64(f.templateBuffer),
+        }));
+        const tmpl: BundleSession = {
+            id: Date.now().toString(), name, date: new Date().toISOString(),
+            data: {}, labels: { ...labels }, allTags: [...allTags],
+            fileNames: files.map(f => f.name),
+            templateFiles,
+        };
+        const templates = [...savedBundleTemplates, tmpl];
+        saveBundleTemplates(templates);
+        setSavedBundleTemplates(templates);
+        showToast(`Đã lưu mẫu dự án "${name}" — dùng lại không cần upload!`);
+    };
+
+    const handleLoadTemplate = (tmpl: BundleSession) => {
+        if (!tmpl.templateFiles || tmpl.templateFiles.length === 0) {
+            showToast('Mẫu không có file template'); return;
+        }
+        const restored: BundleFile[] = tmpl.templateFiles.map(tf => {
+            const buf = b64ToBuf(tf.base64);
+            return { name: tf.name, folder: tf.folder, buffer: buf, templateBuffer: buf, tags: tf.tags, selected: true };
+        });
+        setFiles(restored);
+        setAllTags(tmpl.allTags || []);
+        setLabels(tmpl.labels || {});
+        setData({}); // Empty data for template
+        showToast(`Đã tải mẫu "${tmpl.name}" (${restored.length} file) — điền dữ liệu mới!`);
+    };
+
+    const handleDeleteTemplate = (id: string) => {
+        if (!confirm('Xóa mẫu dự án này?')) return;
+        const templates = savedBundleTemplates.filter(t => t.id !== id);
+        saveBundleTemplates(templates);
+        setSavedBundleTemplates(templates);
     };
 
     const handleDeleteSession = (id: string) => {
@@ -1129,6 +1211,7 @@ export default function BundleForm() {
                                     <input ref={excelInputRef} type="file" accept=".xlsx,.xls" style={{ display: 'none' }} onChange={handleExcelImport} />
                                 </label>
                                 <button className="btn btn-sm" onClick={handleSaveSession} style={btnSm}>💿 Lưu phiên</button>
+                                <button className="btn btn-sm" onClick={handleSaveAsTemplate} style={{ ...btnSm, background: '#faf5ff', color: '#7c3aed', borderColor: '#c4b5fd' }}>📚 Lưu làm mẫu dự án</button>
                                 <button className="btn btn-sm" onClick={handleClone} style={btnSm}>📋 Nhân bản</button>
                                 <button className="btn btn-sm" onClick={handleRescan} style={{ ...btnSm, background: '#dbeafe', color: '#1d4ed8' }}>🔄 Chọn lại trường</button>
                                 <button className="btn btn-sm" onClick={handleClearAll} style={{ ...btnSm, color: '#ef4444' }}>🗑️ Xóa tất cả</button>
@@ -1154,6 +1237,28 @@ export default function BundleForm() {
                                     ))}
                                 </div>
                             </div>
+
+                            {/* Saved project templates */}
+                            {savedBundleTemplates.length > 0 && (
+                                <div style={{ marginTop: '0.5rem', borderTop: '1px solid #c4b5fd', paddingTop: '0.5rem' }}>
+                                    <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem', color: '#6d28d9' }}>
+                                        🗂️ Mẫu dự án ({savedBundleTemplates.length})
+                                    </div>
+                                    {savedBundleTemplates.map(t => (
+                                        <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem', padding: '0.3rem 0.4rem', marginBottom: '0.2rem', borderRadius: 6, background: '#ede9fe', cursor: 'pointer' }}
+                                            onClick={() => handleLoadTemplate(t)}>
+                                            <span style={{ flex: 1, color: '#6d28d9', fontWeight: 500 }}>
+                                                📚 {t.name}
+                                                <span style={{ fontWeight: 400, color: '#94a3b8', fontSize: '0.7rem', marginLeft: '0.3rem' }}>
+                                                    ({t.fileNames?.length || 0} file • {new Date(t.date).toLocaleDateString('vi-VN')})
+                                                </span>
+                                            </span>
+                                            <button onClick={(e) => { e.stopPropagation(); handleDeleteTemplate(t.id); }}
+                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '0.8rem' }} title="Xóa mẫu">✕</button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
 
                             {/* Session diff */}
                             {savedSessions.length >= 2 && (
