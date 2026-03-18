@@ -13,6 +13,8 @@ export type RuleStatus = 'pass' | 'fail' | 'warn' | 'skip';
 
 export interface RuleResult {
     id: string;
+    group?: string;
+    groupEn?: string;
     name: string;
     nameEn: string;
     status: RuleStatus;
@@ -20,11 +22,50 @@ export interface RuleResult {
     detailEn: string;
 }
 
+const RULE_GROUP_MAP: Record<string, { group: string; groupEn: string }> = {
+    page_size: { group: '📐 Khổ giấy & Lề', groupEn: '📐 Page & Margins' },
+    margins: { group: '📐 Khổ giấy & Lề', groupEn: '📐 Page & Margins' },
+    font: { group: '🔤 Phông chữ & Cỡ chữ', groupEn: '🔤 Font & Size' },
+    noi_dung: { group: '🔤 Phông chữ & Cỡ chữ', groupEn: '🔤 Font & Size' },
+    line_spacing: { group: '🔤 Phông chữ & Cỡ chữ', groupEn: '🔤 Font & Size' },
+    quoc_hieu: { group: '🏛️ Tiêu đề văn bản', groupEn: '🏛️ Document Header' },
+    tieu_ngu: { group: '🏛️ Tiêu đề văn bản', groupEn: '🏛️ Document Header' },
+    ten_co_quan: { group: '🏛️ Tiêu đề văn bản', groupEn: '🏛️ Document Header' },
+    header_table: { group: '🏛️ Tiêu đề văn bản', groupEn: '🏛️ Document Header' },
+    so_ky_hieu: { group: '📝 Nội dung', groupEn: '📝 Content' },
+    dia_danh_ngay: { group: '📝 Nội dung', groupEn: '📝 Content' },
+    trich_yeu: { group: '📝 Nội dung', groupEn: '📝 Content' },
+    justify: { group: '📝 Nội dung', groupEn: '📝 Content' },
+    first_indent: { group: '📝 Nội dung', groupEn: '📝 Content' },
+    para_spacing: { group: '📝 Nội dung', groupEn: '📝 Content' },
+    capitalization: { group: '📝 Nội dung', groupEn: '📝 Content' },
+    chu_ky: { group: '✍️ Chữ ký', groupEn: '✍️ Signature' },
+    chuc_vu_ky: { group: '✍️ Chữ ký', groupEn: '✍️ Signature' },
+    ho_ten_ky: { group: '✍️ Chữ ký', groupEn: '✍️ Signature' },
+    ky_dau_label: { group: '✍️ Chữ ký', groupEn: '✍️ Signature' },
+    noi_nhan: { group: '📬 Nơi nhận', groupEn: '📬 Recipients' },
+    gach_ngang: { group: '📋 Khác', groupEn: '📋 Other' },
+    page_number: { group: '📋 Khác', groupEn: '📋 Other' },
+    do_khan: { group: '📋 Khác', groupEn: '📋 Other' },
+    do_mat: { group: '📋 Khác', groupEn: '📋 Other' },
+};
+
 export interface CheckResult {
     score: number;
     total: number;
     results: RuleResult[];
 }
+
+export const RULE_GROUPS = [
+    { id: 'page', name: '📐 Khổ giấy & Lề', nameEn: '📐 Page & Margins', ref: 'Điều 8' },
+    { id: 'font', name: '🔤 Phông chữ & Cỡ chữ', nameEn: '🔤 Font & Size', ref: 'Điều 8' },
+    { id: 'header', name: '🏛️ Tiêu đề văn bản', nameEn: '🏛️ Document Header', ref: 'Điều 9' },
+    { id: 'body', name: '📝 Nội dung', nameEn: '📝 Content', ref: 'Điều 10-11' },
+    { id: 'signature', name: '✍️ Chữ ký', nameEn: '✍️ Signature', ref: 'Điều 12' },
+    { id: 'recipient', name: '📬 Nơi nhận', nameEn: '📬 Recipients', ref: 'Điều 13' },
+    { id: 'other', name: '📋 Khác', nameEn: '📋 Other', ref: '' },
+] as const;
+
 
 /* ── Helpers ── */
 function getXml(zip: PizZip, path: string): string {
@@ -1019,6 +1060,13 @@ export async function checkND30(buffer: ArrayBuffer): Promise<CheckResult> {
                 ? `${dieuParas.length > 0 ? `${dieuParas.length} "Điều" properly bold` : 'No "Điều" found'}${khoanParas.length > 0 ? `, ${khoanParas.length} clauses` : ''} ✓`
                 : issuesEn.join('; '),
         });
+    }
+
+    // ── Auto-populate group fields ──
+    for (const r of results) {
+        const gm = RULE_GROUP_MAP[r.id];
+        if (gm) { r.group = gm.group; r.groupEn = gm.groupEn; }
+        else { r.group = '📋 Khác'; r.groupEn = '📋 Other'; }
     }
 
     // ── Calculate score ──

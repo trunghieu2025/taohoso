@@ -139,6 +139,12 @@ export function buildPreview(buffer: ArrayBuffer, checkResult?: CheckResult): Pr
             if (/^(QUYẾT ĐỊNH|THÔNG BÁO|BÁO CÁO|NGHỊ QUYẾT)/i.test(t) && failedRules.has('trich_yeu')) issues.push('trich_yeu');
             if (/Nơi nhận/i.test(t) && failedRules.has('noi_nhan')) issues.push('noi_nhan');
             if (/^(TM\.|KT\.|TL\.|TUQ\.)|BỘ TRƯỞNG|GIÁM ĐỐC|CHỦ TỊCH|CỤC TRƯỞNG/.test(t) && failedRules.has('chu_ky')) issues.push('chu_ky');
+            // Signer position/name/note
+            if (/GIÁM ĐỐC|PHÓ GIÁM ĐỐC|CHỦ TỊCH|TRƯỞNG PHÒNG|CỤC TRƯỞNG|VỤ TRƯỞNG|BỘ TRƯỞNG/.test(t) && failedRules.has('chuc_vu_ky')) issues.push('chuc_vu_ky');
+            if (/\(Ký|ghi rõ họ tên|đóng dấu/.test(t) && failedRules.has('ky_dau_label')) issues.push('ky_dau_label');
+            // Urgency / Confidentiality marks
+            if (/^(HỎA TỐC|THƯỢNG KHẨN|KHẨN)$/.test(t) && failedRules.has('do_khan')) issues.push('do_khan');
+            if (/^(MẬT|TUYỆT MẬT|TỐI MẬT)$/.test(t) && failedRules.has('do_mat')) issues.push('do_mat');
             // Body content size issues
             if (t.length > 30 && failedRules.has('noi_dung') && !issues.length) issues.push('noi_dung');
 
