@@ -27,6 +27,7 @@ const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 const GuidePage = lazy(() => import('./pages/GuidePage'));
 const InvitationForm = lazy(() => import('./pages/InvitationForm'));
+const ND30Checker = lazy(() => import('./pages/ND30Checker'));
 
 
 function LoadingSpinner() {
@@ -80,6 +81,7 @@ export default function App() {
           <Route path="/huong-dan" element={<GuidePage />} />
           <Route path="/huong-dan/:section" element={<GuidePage />} />
           <Route path="/tim-kiem" element={<SearchPage />} />
+          <Route path="/kiem-tra-nd30" element={<ND30Checker />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
         </Suspense>

@@ -88,6 +88,12 @@ export default function Home() {
               <p>{t('tool_invitation_desc')}</p>
               <span className="card-link">{t('start_now')}</span>
             </Link>
+            <Link to="/kiem-tra-nd30" className="tool-card">
+              <div className="card-icon">📋</div>
+              <h3>{t('tool_nd30')}</h3>
+              <p>{t('tool_nd30_desc')}</p>
+              <span className="card-link">{t('start_now')}</span>
+            </Link>
           </div>
         </div>
       </section>

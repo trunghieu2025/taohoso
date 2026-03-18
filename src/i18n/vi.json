@@ -115,5 +115,7 @@
     "v27_batch_desc": "Upload JSON/Excel → xuất nhiều file ZIP cùng lúc",
     "cta_try_now": "Thử ngay",
     "cta_title": "Bắt đầu tạo hồ sơ ngay",
-    "cta_desc": "Miễn phí, nhanh chóng và bảo mật. Xử lý hoàn toàn trên máy tính."
+    "cta_desc": "Miễn phí, nhanh chóng và bảo mật. Xử lý hoàn toàn trên máy tính.",
+    "tool_nd30": "Kiểm tra NĐ30",
+    "tool_nd30_desc": "Upload file Word → tự động kiểm tra 15 quy tắc thể thức theo Nghị định 30/2020/NĐ-CP. Kết quả chi tiết ✅/❌ cho từng hạng mục."
 }

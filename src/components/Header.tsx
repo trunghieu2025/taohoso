@@ -84,6 +84,9 @@ export default function Header() {
               <Link to="/so-sanh-file" onClick={() => setMobileOpen(false)}>
                 ⚖️ {lang === 'vi' ? 'So sánh file' : 'Compare Files'}
               </Link>
+              <Link to="/kiem-tra-nd30" onClick={() => setMobileOpen(false)}>
+                📋 {lang === 'vi' ? 'Kiểm tra NĐ30' : 'ND30 Checker'}
+              </Link>
               <div style={{ borderTop: '1px solid #e2e8f0', margin: '0.25rem 0' }} />
               <Link to="/cai-dat" onClick={() => setMobileOpen(false)}>
                 {t('footer_security')}

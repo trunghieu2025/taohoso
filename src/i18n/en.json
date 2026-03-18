@@ -115,5 +115,7 @@
     "v27_batch_desc": "Upload JSON/Excel → export multiple files as ZIP",
     "cta_try_now": "Try Now",
     "cta_title": "Start Creating Documents Now",
-    "cta_desc": "Free, fast, and secure. Processed entirely on your computer."
+    "cta_desc": "Free, fast, and secure. Processed entirely on your computer.",
+    "tool_nd30": "ND30 Checker",
+    "tool_nd30_desc": "Upload a Word file → automatically check 15 formatting rules per Vietnam Decree 30/2020/NĐ-CP. Detailed ✅/❌ results for each rule."
 }
