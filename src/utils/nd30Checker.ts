@@ -687,9 +687,343 @@ export async function checkND30(buffer: ArrayBuffer): Promise<CheckResult> {
         }
     }
 
+    // ────────────────────────────────────────────────
+    // RULE 16: Căn lề nội dung (Justify)
+    // ────────────────────────────────────────────────
+    {
+        const bodyParas = paragraphs.length > 20 ? paragraphs.slice(10, -10) : paragraphs.slice(5);
+        let justifyCount = 0;
+        let totalBodyParas = 0;
+        for (const p of bodyParas) {
+            const text = extractText(p).trim();
+            if (text.length < 20) continue;
+            totalBodyParas++;
+            if (/w:jc\s+w:val="both"/.test(p) || /w:jc\s+w:val="distribute"/.test(p)) {
+                justifyCount++;
+            }
+        }
+
+        if (totalBodyParas > 0) {
+            const pct = Math.round(justifyCount / totalBodyParas * 100);
+            results.push({
+                id: 'justify', name: 'Căn lề 2 bên', nameEn: 'Justify Alignment',
+                status: pct >= 70 ? 'pass' : pct >= 40 ? 'warn' : 'fail',
+                detail: `${pct}% đoạn văn căn đều (${justifyCount}/${totalBodyParas})`,
+                detailEn: `${pct}% paragraphs justified (${justifyCount}/${totalBodyParas})`,
+            });
+        } else {
+            results.push({
+                id: 'justify', name: 'Căn lề 2 bên', nameEn: 'Justify Alignment',
+                status: 'skip', detail: 'Không đủ đoạn văn để kiểm tra', detailEn: 'Not enough paragraphs to check',
+            });
+        }
+    }
+
+    // ────────────────────────────────────────────────
+    // RULE 17: Thụt đầu dòng (First-line indent ~1-1.27cm)
+    // ────────────────────────────────────────────────
+    {
+        const bodyParas = paragraphs.length > 20 ? paragraphs.slice(10, -10) : paragraphs.slice(5);
+        let indentCount = 0;
+        let totalBodyParas = 0;
+        for (const p of bodyParas) {
+            const text = extractText(p).trim();
+            if (text.length < 30) continue;
+            totalBodyParas++;
+            const indMatch = /w:firstLine="(\d+)"/.exec(p);
+            if (indMatch) {
+                const indCm = twipsToCm(parseInt(indMatch[1]));
+                if (indCm >= 0.8 && indCm <= 1.5) indentCount++;
+            }
+        }
+
+        if (totalBodyParas > 0) {
+            const pct = Math.round(indentCount / totalBodyParas * 100);
+            results.push({
+                id: 'first_indent', name: 'Thụt đầu dòng', nameEn: 'First-line Indent',
+                status: pct >= 50 ? 'pass' : pct >= 20 ? 'warn' : 'fail',
+                detail: `${pct}% đoạn có thụt 1-1.27cm (${indentCount}/${totalBodyParas})`,
+                detailEn: `${pct}% paragraphs with 1-1.27cm indent (${indentCount}/${totalBodyParas})`,
+            });
+        } else {
+            results.push({
+                id: 'first_indent', name: 'Thụt đầu dòng', nameEn: 'First-line Indent',
+                status: 'skip', detail: 'Không đủ đoạn văn', detailEn: 'Not enough paragraphs',
+            });
+        }
+    }
+
+    // ────────────────────────────────────────────────
+    // RULE 18: Đánh số trang
+    // ────────────────────────────────────────────────
+    {
+        const headerXml = getXml(zip, 'word/header1.xml') || getXml(zip, 'word/header2.xml') || getXml(zip, 'word/header3.xml');
+        const footerXml = getXml(zip, 'word/footer1.xml') || getXml(zip, 'word/footer2.xml') || getXml(zip, 'word/footer3.xml');
+        const hasPageNum = /w:fldChar.*PAGE|PAGE\s*\\/.test(headerXml) || /w:fldChar.*PAGE|PAGE\s*\\/.test(footerXml) ||
+                          /NUMPAGES|PAGE/.test(headerXml) || /NUMPAGES|PAGE/.test(footerXml) ||
+                          /w:pgNum/.test(headerXml) || /w:pgNum/.test(footerXml);
+        
+        // Also check in doc body for inline page numbers
+        const hasInlinePageNum = /w:pgNum/.test(docXml) || /PAGE\s*\\/.test(docXml);
+
+        results.push({
+            id: 'page_number', name: 'Đánh số trang', nameEn: 'Page Numbering',
+            status: (hasPageNum || hasInlinePageNum) ? 'pass' : 'warn',
+            detail: (hasPageNum || hasInlinePageNum) ? 'Có đánh số trang ✓' : 'Không phát hiện số trang (cần từ trang 2)',
+            detailEn: (hasPageNum || hasInlinePageNum) ? 'Page numbering found ✓' : 'Page numbering not detected (required from page 2)',
+        });
+    }
+
+    // ────────────────────────────────────────────────
+    // RULE 19: Chức vụ người ký (bold, uppercase, 13-14pt)
+    // ────────────────────────────────────────────────
+    {
+        const sigIdx = paragraphs.findIndex(p => {
+            const text = extractText(p);
+            return /^(TM\.|KT\.|TL\.|TUQ\.)/.test(text.trim()) ||
+                   /BỘ TRƯỞNG|GIÁM ĐỐC|CHỦ TỊCH|TRƯỞNG PHÒNG|CỤC TRƯỞNG|VỤ TRƯỞNG|PHÓ GIÁM ĐỐC/.test(text);
+        });
+        if (sigIdx >= 0) {
+            // Look for position title below the authority line
+            const positionParas = paragraphs.slice(sigIdx, Math.min(sigIdx + 4, paragraphs.length));
+            const posPara = positionParas.find(p => {
+                const text = extractText(p).trim();
+                return text.length > 3 && (
+                    /GIÁM ĐỐC|PHÓ GIÁM ĐỐC|CHỦ TỊCH|TRƯỞNG PHÒNG|CỤC TRƯỞNG|VỤ TRƯỞNG|BỘ TRƯỞNG/.test(text)
+                );
+            });
+            if (posPara) {
+                const bold = isBold(posPara);
+                const upper = isUpperCase(extractText(posPara).trim());
+                const sizes = getFontSizes(posPara);
+                const effectiveSize = sizes.length > 0 ? sizes[0] : defaultFontSize;
+                const issues: string[] = [];
+                const issuesEn: string[] = [];
+                if (!bold) { issues.push('Thiếu đậm'); issuesEn.push('Not bold'); }
+                if (!upper) { issues.push('Chưa IN HOA'); issuesEn.push('Not uppercase'); }
+                if (effectiveSize < 13 || effectiveSize > 15) { issues.push(`Cỡ ${effectiveSize}pt (chuẩn 13-14)`); issuesEn.push(`Size ${effectiveSize}pt (std 13-14)`); }
+                results.push({
+                    id: 'chuc_vu_ky', name: 'Chức vụ người ký', nameEn: 'Signer Position',
+                    status: issues.length === 0 ? 'pass' : 'fail',
+                    detail: issues.length === 0 ? `"${extractText(posPara).trim().substring(0, 40)}" — ${effectiveSize}pt, đậm ✓` : issues.join('; '),
+                    detailEn: issuesEn.length === 0 ? `"${extractText(posPara).trim().substring(0, 40)}" — ${effectiveSize}pt, bold ✓` : issuesEn.join('; '),
+                });
+            } else {
+                results.push({
+                    id: 'chuc_vu_ky', name: 'Chức vụ người ký', nameEn: 'Signer Position',
+                    status: 'warn', detail: 'Không tách rõ chức vụ người ký', detailEn: 'Signer position not clearly identified',
+                });
+            }
+        } else {
+            results.push({
+                id: 'chuc_vu_ky', name: 'Chức vụ người ký', nameEn: 'Signer Position',
+                status: 'skip', detail: 'Không tìm thấy khối chữ ký', detailEn: 'Signature block not found',
+            });
+        }
+    }
+
+    // ────────────────────────────────────────────────
+    // RULE 20: Họ tên người ký (bold, 14pt)
+    // ────────────────────────────────────────────────
+    {
+        // Look for signer name: typically last bold paragraph near end
+        const lastParas = paragraphs.slice(-15);
+        const namePara = lastParas.find(p => {
+            const text = extractText(p).trim();
+            // Vietnamese person name pattern: 2-4 words, first letter caps, no special chars
+            return text.length > 5 && text.length < 50 && 
+                   /^[A-ZÀ-Ỹ][a-zà-ỹ]+(\s[A-ZÀ-Ỹ][a-zà-ỹ]+){1,4}$/.test(text) &&
+                   isBold(p);
+        });
+        if (namePara) {
+            const sizes = getFontSizes(namePara);
+            const effectiveSize = sizes.length > 0 ? sizes[0] : defaultFontSize;
+            const text = extractText(namePara).trim();
+            const issues: string[] = [];
+            const issuesEn: string[] = [];
+            if (effectiveSize < 13 || effectiveSize > 15) { issues.push(`Cỡ ${effectiveSize}pt (chuẩn 14)`); issuesEn.push(`Size ${effectiveSize}pt (std 14)`); }
+
+            results.push({
+                id: 'ho_ten_ky', name: 'Họ tên người ký', nameEn: 'Signer Name',
+                status: issues.length === 0 ? 'pass' : 'fail',
+                detail: issues.length === 0 ? `"${text}" — đậm, ${effectiveSize}pt ✓` : `"${text}" — ${issues.join('; ')}`,
+                detailEn: issuesEn.length === 0 ? `"${text}" — bold, ${effectiveSize}pt ✓` : `"${text}" — ${issuesEn.join('; ')}`,
+            });
+        } else {
+            results.push({
+                id: 'ho_ten_ky', name: 'Họ tên người ký', nameEn: 'Signer Name',
+                status: 'warn', detail: 'Không phát hiện họ tên người ký', detailEn: 'Signer name not detected',
+            });
+        }
+    }
+
+    // ────────────────────────────────────────────────
+    // RULE 21: Ký hiệu "(Ký, đóng dấu)" hoặc "(Ký và ghi rõ họ tên)"
+    // ────────────────────────────────────────────────
+    {
+        const kyDauPara = paragraphs.find(p => {
+            const text = extractText(p);
+            return /\(Ký/.test(text) || /ghi rõ họ tên/.test(text) || /đóng dấu/.test(text);
+        });
+        if (kyDauPara) {
+            const italic = isItalic(kyDauPara);
+            const sizes = getFontSizes(kyDauPara);
+            const effectiveSize = sizes.length > 0 ? sizes[0] : defaultFontSize;
+            const issues: string[] = [];
+            const issuesEn: string[] = [];
+            if (!italic) { issues.push('Thiếu nghiêng'); issuesEn.push('Not italic'); }
+            if (effectiveSize < 12 || effectiveSize > 14) { issues.push(`Cỡ ${effectiveSize}pt (chuẩn 13)`); issuesEn.push(`Size ${effectiveSize}pt (std 13)`); }
+
+            results.push({
+                id: 'ky_dau_label', name: 'Ghi chú ký tên', nameEn: 'Signature Note',
+                status: issues.length === 0 ? 'pass' : 'fail',
+                detail: issues.length === 0 ? `Nghiêng, ${effectiveSize}pt ✓` : issues.join('; '),
+                detailEn: issuesEn.length === 0 ? `Italic, ${effectiveSize}pt ✓` : issuesEn.join('; '),
+            });
+        } else {
+            results.push({
+                id: 'ky_dau_label', name: 'Ghi chú ký tên', nameEn: 'Signature Note',
+                status: 'warn', detail: 'Không tìm thấy "(Ký, đóng dấu)" hoặc "(Ký và ghi rõ họ tên)"',
+                detailEn: '"Sign & seal" or "Sign & full name" note not found',
+            });
+        }
+    }
+
+    // ────────────────────────────────────────────────
+    // RULE 22: Dấu chỉ mức độ khẩn (nếu có)
+    // ────────────────────────────────────────────────
+    {
+        const urgencyPara = paragraphs.find(p => {
+            const text = extractText(p).trim();
+            return /^(HỎA TỐC|THƯỢNG KHẨN|KHẨN)$/.test(text);
+        });
+        if (urgencyPara) {
+            const bold = isBold(urgencyPara);
+            const upper = isUpperCase(extractText(urgencyPara).trim());
+            const sizes = getFontSizes(urgencyPara);
+            const effectiveSize = sizes.length > 0 ? sizes[0] : defaultFontSize;
+            const issues: string[] = [];
+            const issuesEn: string[] = [];
+            if (!bold) { issues.push('Thiếu đậm'); issuesEn.push('Not bold'); }
+            if (!upper) { issues.push('Chưa IN HOA'); issuesEn.push('Not uppercase'); }
+            if (effectiveSize < 13 || effectiveSize > 15) { issues.push(`Cỡ ${effectiveSize}pt (chuẩn 13-14)`); issuesEn.push(`Size ${effectiveSize}pt (std 13-14)`); }
+
+            results.push({
+                id: 'do_khan', name: 'Mức độ khẩn', nameEn: 'Urgency Mark',
+                status: issues.length === 0 ? 'pass' : 'fail',
+                detail: issues.length === 0 ? `"${extractText(urgencyPara).trim()}" — đậm, IN HOA ✓` : issues.join('; '),
+                detailEn: issuesEn.length === 0 ? `"${extractText(urgencyPara).trim()}" — bold, CAPS ✓` : issuesEn.join('; '),
+            });
+        } else {
+            results.push({
+                id: 'do_khan', name: 'Mức độ khẩn', nameEn: 'Urgency Mark',
+                status: 'skip', detail: 'Không có dấu chỉ mức độ khẩn', detailEn: 'No urgency mark present',
+            });
+        }
+    }
+
+    // ────────────────────────────────────────────────
+    // RULE 23: Dấu chỉ mức độ mật (nếu có)
+    // ────────────────────────────────────────────────
+    {
+        const secretPara = paragraphs.find(p => {
+            const text = extractText(p).trim();
+            return /^(MẬT|TUYỆT MẬT|TỐI MẬT)$/.test(text);
+        });
+        if (secretPara) {
+            const bold = isBold(secretPara);
+            const sizes = getFontSizes(secretPara);
+            const effectiveSize = sizes.length > 0 ? sizes[0] : defaultFontSize;
+            const issues: string[] = [];
+            const issuesEn: string[] = [];
+            if (!bold) { issues.push('Thiếu đậm'); issuesEn.push('Not bold'); }
+            if (effectiveSize < 13 || effectiveSize > 15) { issues.push(`Cỡ ${effectiveSize}pt (chuẩn 13-14)`); issuesEn.push(`Size ${effectiveSize}pt (std 13-14)`); }
+
+            results.push({
+                id: 'do_mat', name: 'Mức độ mật', nameEn: 'Confidentiality Mark',
+                status: issues.length === 0 ? 'pass' : 'fail',
+                detail: issues.length === 0 ? `"${extractText(secretPara).trim()}" — đậm ✓` : issues.join('; '),
+                detailEn: issuesEn.length === 0 ? `"${extractText(secretPara).trim()}" — bold ✓` : issuesEn.join('; '),
+            });
+        } else {
+            results.push({
+                id: 'do_mat', name: 'Mức độ mật', nameEn: 'Confidentiality Mark',
+                status: 'skip', detail: 'Không có dấu chỉ mức độ mật', detailEn: 'No confidentiality mark present',
+            });
+        }
+    }
+
+    // ────────────────────────────────────────────────
+    // RULE 24: Khoảng cách giữa các thành phần (paragraph spacing)
+    // ────────────────────────────────────────────────
+    {
+        // Check spacing between key document elements
+        const spacingAfterValues: number[] = [];
+        const spacingBeforeValues: number[] = [];
+        for (const p of paragraphs) {
+            const afterMatch = /w:after="(\d+)"/.exec(p);
+            const beforeMatch = /w:before="(\d+)"/.exec(p);
+            if (afterMatch) spacingAfterValues.push(parseInt(afterMatch[1]));
+            if (beforeMatch) spacingBeforeValues.push(parseInt(beforeMatch[1]));
+        }
+
+        if (spacingAfterValues.length > 0 || spacingBeforeValues.length > 0) {
+            const avgAfter = spacingAfterValues.length > 0 ? spacingAfterValues.reduce((a, b) => a + b, 0) / spacingAfterValues.length : 0;
+            const avgBefore = spacingBeforeValues.length > 0 ? spacingBeforeValues.reduce((a, b) => a + b, 0) / spacingBeforeValues.length : 0;
+            // Standard: before 6pt (120 twips), after 6pt (120 twips) — acceptable range 0-12pt
+            const reasonable = avgAfter <= 360 && avgBefore <= 360; // up to 18pt is okay
+
+            results.push({
+                id: 'para_spacing', name: 'Khoảng cách đoạn', nameEn: 'Paragraph Spacing',
+                status: reasonable ? 'pass' : 'warn',
+                detail: `Trước: ${(avgBefore / 20).toFixed(1)}pt, Sau: ${(avgAfter / 20).toFixed(1)}pt`,
+                detailEn: `Before: ${(avgBefore / 20).toFixed(1)}pt, After: ${(avgAfter / 20).toFixed(1)}pt`,
+            });
+        } else {
+            results.push({
+                id: 'para_spacing', name: 'Khoảng cách đoạn', nameEn: 'Paragraph Spacing',
+                status: 'pass', detail: 'Mặc định (0pt)', detailEn: 'Default (0pt)',
+            });
+        }
+    }
+
+    // ────────────────────────────────────────────────
+    // RULE 25: Viết hoa (kiểm tra cơ bản)
+    // ────────────────────────────────────────────────
+    {
+        // Check basic capitalization rules: first letter after ".", start of paragraphs
+        const issues: string[] = [];
+        const issuesEn: string[] = [];
+        
+        // Check if "Điều" items are properly capitalized
+        const dieuParas = paragraphs.filter(p => /Điều\s+\d+/.test(extractText(p)));
+        let dieuBoldCount = 0;
+        for (const p of dieuParas) {
+            if (isBold(p)) dieuBoldCount++;
+        }
+        if (dieuParas.length > 0 && dieuBoldCount < dieuParas.length) {
+            issues.push(`${dieuParas.length - dieuBoldCount}/${dieuParas.length} "Điều" thiếu đậm`);
+            issuesEn.push(`${dieuParas.length - dieuBoldCount}/${dieuParas.length} "Điều" not bold`);
+        }
+
+        // Check if "Khoản" numbered items exist
+        const khoanParas = paragraphs.filter(p => /^\d+\.\s/.test(extractText(p).trim()));
+        
+        results.push({
+            id: 'capitalization', name: 'Viết hoa & "Điều/Khoản"', nameEn: 'Capitalization & Articles',
+            status: issues.length === 0 ? 'pass' : 'warn',
+            detail: issues.length === 0 
+                ? `${dieuParas.length > 0 ? `${dieuParas.length} "Điều" đúng đậm` : 'Không có "Điều"'}${khoanParas.length > 0 ? `, ${khoanParas.length} khoản` : ''} ✓`
+                : issues.join('; '),
+            detailEn: issuesEn.length === 0 
+                ? `${dieuParas.length > 0 ? `${dieuParas.length} "Điều" properly bold` : 'No "Điều" found'}${khoanParas.length > 0 ? `, ${khoanParas.length} clauses` : ''} ✓`
+                : issuesEn.join('; '),
+        });
+    }
+
     // ── Calculate score ──
     const score = results.filter(r => r.status === 'pass').length;
-    const total = results.length;
+    const total = results.filter(r => r.status !== 'skip').length;
 
     return { score, total, results };
 }

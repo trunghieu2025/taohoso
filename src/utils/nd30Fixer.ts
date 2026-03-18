@@ -268,6 +268,136 @@ export async function fixND30(buffer: ArrayBuffer, checkResult: CheckResult): Pr
         }
     }
 
+    // ── FIX 10: Số/ký hiệu — size 13pt ──
+    if (failedRules.has('so_ky_hieu')) {
+        const soRe = /(<w:p[\s>][\s\S]*?)(Số[\s:]*\d+)([\s\S]*?<\/w:p>)/;
+        const soMatch = soRe.exec(docXml);
+        if (soMatch) {
+            const paraXml = soMatch[0];
+            let fixed = paraXml;
+            fixed = fixed.replace(/<w:sz\s+w:val="\d+"/g, `<w:sz w:val="${ptToHalfPt(13)}"`);
+            fixed = fixed.replace(/<w:szCs\s+w:val="\d+"/g, `<w:szCs w:val="${ptToHalfPt(13)}"`);
+            if (fixed !== paraXml) {
+                docXml = docXml.replace(paraXml, fixed);
+                changes.push({
+                    rule: 'Số/ký hiệu', ruleEn: 'Document Number',
+                    before: 'Sai cỡ chữ / Wrong size',
+                    after: '13pt',
+                });
+            }
+        }
+    }
+
+    // ── FIX 11: Trích yếu — bold + size 13-14pt ──
+    if (failedRules.has('trich_yeu')) {
+        const tyRe = /(<w:p[\s>][\s\S]*?)(V\/v|Về việc|QUYẾT ĐỊNH|THÔNG BÁO|BÁO CÁO|KẾ HOẠCH)([\s\S]*?<\/w:p>)/i;
+        const tyMatch = tyRe.exec(docXml);
+        if (tyMatch) {
+            const paraXml = tyMatch[0];
+            let fixed = paraXml;
+            fixed = fixed.replace(/<w:rPr>([\s\S]*?)<\/w:rPr>/g, (match, inner) => {
+                let newInner = inner;
+                if (!/w:b[\s/>]/.test(inner)) newInner = '<w:b/>' + newInner;
+                newInner = newInner.replace(/<w:sz\s+w:val="\d+"/, `<w:sz w:val="${ptToHalfPt(14)}"`);
+                newInner = newInner.replace(/<w:szCs\s+w:val="\d+"/, `<w:szCs w:val="${ptToHalfPt(14)}"`);
+                return `<w:rPr>${newInner}</w:rPr>`;
+            });
+            if (fixed !== paraXml) {
+                docXml = docXml.replace(paraXml, fixed);
+                changes.push({
+                    rule: 'Trích yếu', ruleEn: 'Summary/Title',
+                    before: 'Thiếu đậm hoặc sai cỡ / Missing bold or wrong size',
+                    after: 'Đậm, 14pt / Bold, 14pt',
+                });
+            }
+        }
+    }
+
+    // ── FIX 12: Giãn dòng — set to 1.5 (360 twips) ──
+    if (failedRules.has('line_spacing')) {
+        let fixCount = 0;
+        docXml = docXml.replace(/<w:spacing([^>]*)w:line="(\d+)"/g, (match, attrs, val) => {
+            const lineVal = parseInt(val);
+            if (lineVal < 220) {
+                fixCount++;
+                return `<w:spacing${attrs}w:line="360"`;
+            }
+            return match;
+        });
+        if (fixCount > 0) {
+            changes.push({
+                rule: 'Giãn dòng', ruleEn: 'Line Spacing',
+                before: `${fixCount} chỗ giãn dòng quá hẹp / ${fixCount} instances too narrow`,
+                after: '1.5 lines (360 twips)',
+            });
+        }
+    }
+
+    // ── FIX 13: Justify alignment — set body paragraphs to both ──
+    if (failedRules.has('justify')) {
+        let fixCount = 0;
+        // Add justify to paragraphs that have left alignment or no alignment
+        docXml = docXml.replace(/<w:jc\s+w:val="left"/g, () => {
+            fixCount++;
+            return '<w:jc w:val="both"';
+        });
+        if (fixCount > 0) {
+            changes.push({
+                rule: 'Căn lề 2 bên', ruleEn: 'Justify Alignment',
+                before: `${fixCount} đoạn căn trái / ${fixCount} left-aligned paragraphs`,
+                after: 'Căn đều 2 bên / Justified',
+            });
+        }
+    }
+
+    // ── FIX 14: First-line indent — set to 1.27cm (720 twips) ──
+    if (failedRules.has('first_indent')) {
+        // This is harder to auto-fix without breaking existing layout
+        // Only add indent where pPr exists but no firstLine
+        let fixCount = 0;
+        docXml = docXml.replace(/<w:pPr>([\s\S]*?)<\/w:pPr>/g, (match, inner) => {
+            // Don't add indent to centered, right-aligned, or already-indented paragraphs
+            if (/w:jc\s+w:val="center"/.test(inner) || /w:jc\s+w:val="right"/.test(inner)) return match;
+            if (/w:firstLine/.test(inner)) return match;
+            if (/w:ind/.test(inner)) {
+                // Has ind but no firstLine — add firstLine
+                const newInner = inner.replace(/<w:ind([^/]*)\/?>/, '<w:ind$1 w:firstLine="720"/>');
+                if (newInner !== inner) { fixCount++; return `<w:pPr>${newInner}</w:pPr>`; }
+            }
+            return match;
+        });
+        if (fixCount > 0) {
+            changes.push({
+                rule: 'Thụt đầu dòng', ruleEn: 'First-line Indent',
+                before: `${fixCount} đoạn thiếu thụt / ${fixCount} paragraphs missing indent`,
+                after: '1.27cm (720 twips)',
+            });
+        }
+    }
+
+    // ── FIX 15: Ghi chú ký tên — set italic ──
+    if (failedRules.has('ky_dau_label')) {
+        const kyRe = /(<w:p[\s>][\s\S]*?)(\(Ký|ghi rõ họ tên|đóng dấu)([\s\S]*?<\/w:p>)/;
+        const kyMatch = kyRe.exec(docXml);
+        if (kyMatch) {
+            const paraXml = kyMatch[0];
+            let fixed = paraXml;
+            fixed = fixed.replace(/<w:rPr>([\s\S]*?)<\/w:rPr>/g, (match, inner) => {
+                let newInner = inner;
+                if (!/w:i[\s/>]/.test(inner)) newInner = '<w:i/>' + newInner;
+                return `<w:rPr>${newInner}</w:rPr>`;
+            });
+            if (fixed !== paraXml) {
+                docXml = docXml.replace(paraXml, fixed);
+                changes.push({
+                    rule: 'Ghi chú ký tên', ruleEn: 'Signature Note',
+                    before: 'Thiếu nghiêng / Not italic',
+                    after: 'Nghiêng / Italic',
+                });
+            }
+        }
+    }
+
     // ── Save modified XML back ──
     zip.file('word/document.xml', docXml);
     if (stylesXml) zip.file('word/styles.xml', stylesXml);
