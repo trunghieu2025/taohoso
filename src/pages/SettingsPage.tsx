@@ -6,8 +6,11 @@ import { isDesktop } from '../utils/desktopFileHelper';
 import { listSessions } from '../utils/templateStorage';
 import { listProjects } from '../utils/projectStorage';
 import { listContractors } from '../utils/contractorStorage';
+import { usePageT } from '../i18n/pageTranslations';
 
 export default function SettingsPage() {
+    const p = usePageT();
+    const isVi = p('home') === 'Trang chủ';
     const [apiKey, setApiKeyState] = useState('');
     const [saved, setSaved] = useState(false);
     const [showKey, setShowKey] = useState(false);
@@ -168,8 +171,8 @@ export default function SettingsPage() {
         <>
             <div className="page-header">
                 <div className="container">
-                    <h1>🔒 Bảo mật, lưu trữ</h1>
-                    <p>Quản lý bảo mật và sao lưu dữ liệu</p>
+                    <h1>🔒 {isVi ? 'Bảo mật, lưu trữ' : 'Security & Storage'}</h1>
+                    <p>{isVi ? 'Quản lý bảo mật và sao lưu dữ liệu' : 'Manage security and data backup'}</p>
                 </div>
             </div>
 
@@ -331,7 +334,7 @@ export default function SettingsPage() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
                             <span style={{ fontSize: '1.5rem' }}>💾</span>
                             <div>
-                                <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Sao lưu & Khôi phục dữ liệu</h3>
+                                <h3 style={{ margin: 0, fontSize: '1.1rem' }}>{isVi ? 'Sao lưu & Khôi phục dữ liệu' : 'Backup & Restore Data'}</h3>
                                 <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748b' }}>
                                     Export/Import toàn bộ hồ sơ, dự án, nhà thầu
                                 </p>
@@ -339,10 +342,10 @@ export default function SettingsPage() {
                         </div>
                         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                             <button className="btn btn-primary btn-sm" onClick={handleExportBackup} disabled={backupBusy}>
-                                📤 Sao lưu (Export)
+                                📤 {p('backup')} (Export)
                             </button>
                             <button className="btn btn-sm btn-secondary" onClick={handleImportBackup} disabled={backupBusy}>
-                                📥 Khôi phục (Import)
+                                📥 {p('restore')} (Import)
                             </button>
                         </div>
                         <div style={{ marginTop: '0.75rem', padding: '0.5rem', background: '#f0f9ff', borderRadius: 6, fontSize: '0.78rem', color: '#0c4a6e' }}>

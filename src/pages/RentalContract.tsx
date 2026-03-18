@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, ChangeEvent } from 'react';
 import { generateContractPDF } from '../utils/pdfGenerator';
 import { FormInput, FormTextArea, FormSelect } from '../components/FormField';
 import ContractPreview from './rental-contract/ContractPreview';
+import { usePageT } from '../i18n/pageTranslations';
 import {
   TEMPLATES,
   STEP_LABELS,
@@ -15,6 +16,8 @@ type FormChangeEvent = ChangeEvent<
 >;
 
 export default function RentalContract() {
+  const p = usePageT();
+  const isVi = p('home') === 'Trang chủ';
   const [step, setStep] = useState(0);
   const [data, setData] = useState<ContractData>(() => {
     try {
@@ -89,10 +92,9 @@ export default function RentalContract() {
     <>
       <div className="page-header">
         <div className="container">
-          <h1>Tạo hợp đồng thuê nhà</h1>
+          <h1>{p('rental_title')}</h1>
           <p>
-            Điền thông tin theo từng bước, xem trước và xuất file PDF chuyên
-            nghiệp
+            {isVi ? 'Điền thông tin theo từng bước, xem trước và xuất file PDF chuyên nghiệp' : 'Fill in step-by-step, preview and export professional PDF'}
           </p>
         </div>
       </div>
@@ -607,15 +609,15 @@ export default function RentalContract() {
                     disabled={step === 0}
                     style={{ opacity: step === 0 ? 0.4 : 1 }}
                   >
-                    ← Quay lại
+                    ← {p('back')}
                   </button>
                   {step < 4 ? (
                     <button className="btn btn-primary" onClick={next}>
-                      Tiếp theo →
+                      {isVi ? 'Tiếp theo' : 'Next'} →
                     </button>
                   ) : (
                     <button className="btn btn-primary" onClick={exportPDF}>
-                      📥 Xuất file PDF
+                      📥 {p('export_pdf')}
                     </button>
                   )}
                 </div>
@@ -625,13 +627,13 @@ export default function RentalContract() {
             {/* LIVE PREVIEW */}
             <div className="contract-preview">
               <div className="contract-preview-header">
-                <span>📄 Xem trước hợp đồng</span>
+                <span>📄 {p('preview')}</span>
                 <button
                   className="btn btn-sm btn-primary"
                   onClick={exportPDF}
                   style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}
                 >
-                  📥 Xuất PDF
+                  📥 {p('export_pdf')}
                 </button>
               </div>
               <div className="contract-preview-body">

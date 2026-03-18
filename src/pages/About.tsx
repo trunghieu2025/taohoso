@@ -1,83 +1,68 @@
 import { Link } from 'react-router-dom';
+import { usePageT } from '../i18n/pageTranslations';
 
 export default function About() {
+    const p = usePageT();
+    const isVi = p('home') === 'Trang chủ';
+
     return (
         <>
             <div className="page-header">
                 <div className="container">
-                    <h1>Giới thiệu về Tạo Hồ Sơ</h1>
-                    <p>Làm thủ tục hành chính dễ dàng hơn cho mọi người</p>
+                    <h1>{isVi ? 'Giới thiệu về Tạo Hồ Sơ' : 'About DocMaker'}</h1>
+                    <p>{isVi ? 'Làm thủ tục hành chính dễ dàng hơn cho mọi người' : 'Making document creation easier for everyone'}</p>
                 </div>
             </div>
 
             <div className="about-content container">
                 <p>
-                    <strong>Tạo Hồ Sơ</strong> là nền tảng công cụ miễn phí giúp người dân Việt Nam tạo các
-                    loại hồ sơ hành chính phổ biến một cách nhanh chóng, chính xác và bảo mật.
+                    <strong>DocMaker</strong> {isVi
+                        ? 'là nền tảng công cụ miễn phí giúp tạo các loại hồ sơ hành chính phổ biến một cách nhanh chóng, chính xác và bảo mật.'
+                        : 'is a free platform for creating common administrative documents quickly, accurately, and securely.'}
                 </p>
 
-                <h2>🎯 Sứ mệnh</h2>
-                <p>
-                    Chúng tôi tin rằng việc làm thủ tục hành chính nên được đơn giản hóa tối đa.
-                    Mọi người đều có quyền tiếp cận các công cụ hỗ trợ miễn phí để tạo hồ sơ
-                    đúng chuẩn mà không cần phải tốn thời gian hay chi phí.
-                </p>
+                <h2>🎯 {p('about_mission')}</h2>
+                <p>{p('about_mission_desc')}</p>
 
-                <h2>🔒 Bảo mật</h2>
-                <p>
-                    Tất cả dữ liệu của bạn được xử lý <strong>100% trên máy tính</strong>.
-                    Chúng tôi không thu thập, không lưu trữ và không gửi bất kỳ thông tin cá nhân nào
-                    lên máy chủ. Dữ liệu của bạn chỉ tồn tại trên thiết bị của bạn.
-                </p>
+                <h2>🔒 {p('about_security')}</h2>
+                <p>{p('about_security_desc')}</p>
 
                 <div className="about-features">
                     <div className="card">
                         <div className="card-icon">💰</div>
-                        <div className="card-title">Hoàn toàn miễn phí</div>
-                        <div className="card-desc">Không ẩn phí, không giới hạn số lần sử dụng</div>
+                        <div className="card-title">{isVi ? 'Hoàn toàn miễn phí' : 'Completely Free'}</div>
+                        <div className="card-desc">{isVi ? 'Không ẩn phí, không giới hạn số lần sử dụng' : 'No hidden fees, no usage limits'}</div>
                     </div>
                     <div className="card">
                         <div className="card-icon">🔐</div>
-                        <div className="card-title">Bảo mật tuyệt đối</div>
-                        <div className="card-desc">Xử lý trên máy tính, không gửi dữ liệu lên server</div>
+                        <div className="card-title">{isVi ? 'Bảo mật tuyệt đối' : 'Absolute Security'}</div>
+                        <div className="card-desc">{isVi ? 'Xử lý trên máy tính, không gửi dữ liệu lên server' : 'Processed locally, no data sent to servers'}</div>
                     </div>
                     <div className="card">
                         <div className="card-icon">⚡</div>
-                        <div className="card-title">Nhanh chóng</div>
-                        <div className="card-desc">Tạo hồ sơ chỉ trong 5 phút với form thông minh</div>
+                        <div className="card-title">{isVi ? 'Nhanh chóng' : 'Fast'}</div>
+                        <div className="card-desc">{isVi ? 'Tạo hồ sơ chỉ trong 5 phút với form thông minh' : 'Create documents in just 5 minutes with smart forms'}</div>
                     </div>
                     <div className="card">
                         <div className="card-icon">💻</div>
-                        <div className="card-title">Hoạt động offline</div>
-                        <div className="card-desc">Không cần internet, chạy hoàn toàn trên máy tính</div>
+                        <div className="card-title">{isVi ? 'Hoạt động offline' : 'Works Offline'}</div>
+                        <div className="card-desc">{isVi ? 'Không cần internet, chạy hoàn toàn trên máy tính' : 'No internet required, runs entirely on your computer'}</div>
                     </div>
                 </div>
 
-                <h2>📌 Các công cụ</h2>
-                <p>Hiện tại, Tạo Hồ Sơ cung cấp các công cụ và hướng dẫn sau:</p>
+                <h2>📌 {isVi ? 'Các công cụ' : 'Tools'}</h2>
                 <ul>
-                    <li><Link to="/hop-dong-thue-nha"><strong>Tạo hợp đồng thuê nhà</strong></Link> — 4 mẫu hợp đồng: nhà nguyên căn, phòng trọ, văn phòng, mặt bằng kinh doanh</li>
-                    <li><Link to="/dien-form-ct01"><strong>Điền tờ khai CT01</strong></Link> — Tờ khai thay đổi thông tin cư trú online</li>
-                    <li><Link to="/hoa-don-ban-hang"><strong>Hoá đơn bán hàng</strong></Link> — Tạo hoá đơn chuyên nghiệp, xuất PDF</li>
-                    <li><Link to="/goi-mau"><strong>Gói mẫu nhiều file</strong></Link> — Upload nhiều Word → điền 1 lần → xuất ZIP</li>
-                    <li><Link to="/quan-ly-du-an"><strong>Quản lý dự án</strong></Link> — Theo dõi tiến độ, gắn nhãn, so sánh phiên</li>
-                    <li><Link to="/thu-vien-mau"><strong>Thư viện mẫu</strong></Link> — Bộ mẫu hồ sơ sẵn cho giám sát, xây lắp, QLDA</li>
-
+                    <li><Link to="/hop-dong-thue-nha"><strong>{p('rental_title')}</strong></Link></li>
+                    <li><Link to="/dien-form-ct01"><strong>{p('ct01_title')}</strong></Link></li>
+                    <li><Link to="/hoa-don-ban-hang"><strong>{p('invoice_title')}</strong></Link></li>
+                    <li><Link to="/ho-so-sua-chua"><strong>{p('military_title')}</strong></Link></li>
+                    <li><Link to="/goi-mau"><strong>{p('bundle_title')}</strong></Link></li>
+                    <li><Link to="/kiem-tra-nd30"><strong>{isVi ? 'Kiểm tra NĐ30' : 'ND30 Checker'}</strong></Link></li>
                 </ul>
 
-                <h2>🆕 Tính năng nổi bật</h2>
-                <ul>
-                    <li><strong>💾 Lưu trữ an toàn</strong> — Dữ liệu lưu 100% trên máy tính, không qua internet</li>
-                    <li><strong>🧮 Công thức tính</strong> — Tự tạo công thức cho trường dữ liệu (% thuế, chiết khấu)</li>
-                    <li><strong>👁️ Xem trước Word</strong> — Preview file Word đã điền ngay trước khi tải</li>
-                    <li><strong>🔒 Bảo mật PIN</strong> — Đặt PIN bảo vệ dữ liệu khi mở ứng dụng</li>
-                    <li><strong>🎯 Hướng dẫn tương tác</strong> — Tour 4 bước cho người mới sử dụng</li>
-                    <li><strong>📦 Xuất hàng loạt</strong> — Upload JSON/Excel → xuất nhiều bộ hồ sơ trong 1 file ZIP</li>
-                </ul>
-
-                <h2>📞 Liên hệ</h2>
+                <h2>📞 {isVi ? 'Liên hệ' : 'Contact'}</h2>
                 <p>
-                    Nếu bạn có thắc mắc hoặc góp ý, vui lòng liên hệ qua email:
+                    {isVi ? 'Nếu bạn có thắc mắc hoặc góp ý, vui lòng liên hệ qua email:' : 'For questions or feedback, contact us via email:'}
                     <a href="mailto:dangtrunghieu.dthvhc@gmail.com"> dangtrunghieu.dthvhc@gmail.com</a>
                 </p>
             </div>

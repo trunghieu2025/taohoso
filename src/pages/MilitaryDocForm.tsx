@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef, ChangeEvent } from 'react';
 import { showToast } from '../components/Toast';
+import { usePageT } from '../i18n/pageTranslations';
 import { useNavigate } from 'react-router-dom';
 import { FormInput } from '../components/FormField';
 import ScanReviewModal from '../components/ScanReviewModal';
@@ -327,6 +328,7 @@ type FormChangeEvent = ChangeEvent<HTMLInputElement | HTMLTextAreaElement>;
 
 export default function MilitaryDocForm() {
     const navigate = useNavigate();
+    const p = usePageT();
     const [data, setData] = useState<Record<string, string>>({ NĂM: '2026' });
     const [loading, setLoading] = useState(false);
     const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -1351,8 +1353,8 @@ export default function MilitaryDocForm() {
         <>
             <div className="page-header">
                 <div className="container">
-                    <h1>Tự động hóa hồ sơ</h1>
-                    <p>Nhập thông tin một lần — xuất file Word / Excel đầy đủ mẫu biểu</p>
+                    <h1>{p('military_title')}</h1>
+                    <p>{p('military_desc')}</p>
                 </div>
             </div>
 
@@ -1370,7 +1372,7 @@ export default function MilitaryDocForm() {
                                 }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
                                         <div>
-                                            <div style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: 2 }}>Đang dùng mẫu:</div>
+                                            <div style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: 2 }}>{p('using_template')}</div>
                                             <div style={{ fontWeight: 600 }}>📄 {templateName}</div>
                                             {templateTags.length > 0 && (
                                                 <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: 2 }}>
@@ -1444,7 +1446,7 @@ export default function MilitaryDocForm() {
                                 }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
                                         <div>
-                                            <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#166534' }}>💾 Quản lý dữ liệu</div>
+                                            <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#166534' }}>💾 {p('data_mgmt')}</div>
                                             {lastSaved && (
                                                 <div style={{ fontSize: '0.75rem', color: '#16a34a', marginTop: 2 }}>
                                                     ✅ Đã lưu tự động lúc {new Date(lastSaved).toLocaleTimeString('vi')}
@@ -1453,18 +1455,18 @@ export default function MilitaryDocForm() {
                                         </div>
                                         <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
                                             <button className="btn btn-sm" onClick={handleExportJSON} title="Tải file JSON về máy để sao lưu">
-                                                💾 Sao lưu
+                                                💾 {p('backup')}
                                             </button>
                                             <input ref={jsonInputRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleImportJSON} />
                                             <button className="btn btn-sm" onClick={() => jsonInputRef.current?.click()} title="Khôi phục dữ liệu từ file JSON">
-                                                📂 Khôi phục
+                                                📂 {p('restore')}
                                             </button>
                                             <input ref={excelDataInputRef} type="file" accept=".xlsx,.xls" style={{ display: 'none' }} onChange={handleImportExcelData} />
                                             <button className="btn btn-sm" onClick={() => excelDataInputRef.current?.click()} title="Nhập dữ liệu từ file Excel (hàng 1 = tiêu đề, hàng 2 = dữ liệu)">
-                                                📊 Nhập từ Excel
+                                                📊 {p('import_excel')}
                                             </button>
                                             <button className="btn btn-sm" onClick={() => setShowSessions(!showSessions)} title="Xem danh sách phiên đã lưu">
-                                                📑 Mẫu đã lưu ({savedSessions.length})
+                                                📑 {p('saved_templates_count')} ({savedSessions.length})
                                             </button>
                                         </div>
                                     </div>
@@ -1547,9 +1549,9 @@ export default function MilitaryDocForm() {
                                             color: 'var(--primary, #4f46e5)',
                                             display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer',
                                         }} onClick={() => setShowEstimate(!showEstimate)}>
-                                            <span>📐 Dự toán chi tiết</span>
+                                            <span>📐 {p('estimate_detail')}</span>
                                             <span style={{ fontSize: '0.8rem', color: '#94a3b8', marginLeft: 'auto' }}>
-                                                {showEstimate ? '▲ Thu gọn' : '▼ Mở rộng'}
+                                                {showEstimate ? `▲ ${p('collapse')}` : `▼ ${p('expand')}`}
                                             </span>
                                         </div>
                                         {showEstimate && (
@@ -1619,7 +1621,7 @@ export default function MilitaryDocForm() {
                                             📋 Nhân bản
                                         </button>
                                         <button className="btn btn-secondary" onClick={() => setShowBatchExport(true)} disabled={!templateBuffer}>
-                                            📦 Xuất hàng loạt
+                                            📦 {p('batch_export')}
                                         </button>
                                     </div>
                                     <button className="btn btn-primary" onClick={handleExport} disabled={loading || !templateBuffer}>
@@ -1627,7 +1629,7 @@ export default function MilitaryDocForm() {
                                     </button>
                                     <button className="btn btn-secondary" onClick={handleExportPDF} disabled={loading || !previewReady}
                                         style={{ fontSize: '0.85rem' }}>
-                                        📄 Xuất PDF
+                                        📄 {p('export_pdf')}
                                     </button>
                                     {fileType === 'word' && templateBuffer && (
                                         <button className="btn btn-secondary" onClick={() => {
@@ -1635,7 +1637,7 @@ export default function MilitaryDocForm() {
                                             setPreviewBuffer(filled);
                                             setPreviewDocName(templateName);
                                         }} style={{ fontSize: '0.85rem', background: '#f0fdf4', borderColor: '#86efac', color: '#166534' }}>
-                                            👁️ Xem trước Word
+                                            👁️ {p('preview')} Word
                                         </button>
                                     )}
                                     <button className="btn btn-secondary" onClick={handleSaveToProject}
@@ -1672,7 +1674,7 @@ export default function MilitaryDocForm() {
                         {/* RIGHT: LIVE PREVIEW */}
                         <div className="contract-preview">
                             <div className="contract-preview-header">
-                                <span>📄 Xem trước {previewLoading && '⏳'}</span>
+                                <span>📄 {p('preview')} {previewLoading && '⏳'}</span>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                                     <button onClick={zoomOut} className="btn btn-sm" style={{ padding: '0.2rem 0.5rem', fontSize: '0.85rem', minWidth: 28 }} title="Thu nhỏ">−</button>
                                     <span style={{ fontSize: '0.75rem', minWidth: 36, textAlign: 'center', color: '#64748b', userSelect: 'none', cursor: 'pointer' }} onClick={zoomFit}>{zoom}%</span>
@@ -1683,7 +1685,7 @@ export default function MilitaryDocForm() {
                                         disabled={loading || !templateBuffer}
                                         style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', marginLeft: '0.25rem' }}
                                     >
-                                        {loading ? '⏳' : '📥 Xuất'}
+                                        {loading ? '⏳' : `📥 ${p('export')}`}
                                     </button>
                                 </div>
                             </div>
