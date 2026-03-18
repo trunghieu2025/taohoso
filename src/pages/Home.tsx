@@ -1,28 +1,27 @@
 import { Link } from 'react-router-dom';
+import { useT } from '../i18n/i18n';
 
 export default function Home() {
+  const t = useT();
   return (
     <>
       {/* HERO */}
       <section className="hero">
         <div className="container">
           <div className="hero-content">
-            <div className="hero-badge">✨ Miễn phí & bảo mật 100%</div>
+            <div className="hero-badge">{t('hero_badge')}</div>
             <h1>
-              Làm thủ tục hành chính
+              {t('hero_title_1')}
               <br />
-              <span>dễ dàng hơn bao giờ hết</span>
+              <span>{t('hero_title_2')}</span>
             </h1>
-            <p>
-              Tạo hợp đồng thuê nhà, điền tờ khai CT01, tự động hóa hồ sơ.
-              Tất cả miễn phí, xử lý 100% trên máy tính, bảo mật tuyệt đối.
-            </p>
+            <p>{t('hero_desc')}</p>
             <div className="hero-actions">
               <Link to="/hop-dong-thue-nha" className="btn btn-primary btn-lg">
-                📄 Tạo hợp đồng thuê nhà
+                {t('hero_btn_contract')}
               </Link>
               <Link to="/dien-form-ct01" className="btn btn-outline btn-lg">
-                📝 Điền form CT01
+                {t('hero_btn_ct01')}
               </Link>
             </div>
           </div>
@@ -34,17 +33,15 @@ export default function Home() {
         <div className="stats">
           <div className="stat-card animate-in">
             <div className="stat-value">100%</div>
-            <div className="stat-label">Miễn phí, không ẩn phí</div>
+            <div className="stat-label">{t('stat_free')}</div>
           </div>
           <div className="stat-card animate-in delay-100">
             <div className="stat-value">🔒</div>
-            <div className="stat-label">
-              Xử lý trên máy tính, bảo mật tuyệt đối
-            </div>
+            <div className="stat-label">{t('stat_secure')}</div>
           </div>
           <div className="stat-card animate-in delay-200">
             <div className="stat-value">⚡</div>
-            <div className="stat-label">Tạo hồ sơ chỉ trong 5 phút</div>
+            <div className="stat-label">{t('stat_fast')}</div>
           </div>
         </div>
       </section>
@@ -52,66 +49,44 @@ export default function Home() {
       {/* TOOLS */}
       <section className="section">
         <div className="container">
-          <h2 className="section-title">Công cụ tạo hồ sơ</h2>
-          <p className="section-subtitle">
-            Chọn loại hồ sơ bạn cần tạo. Điền thông tin, xem trước và xuất file
-            PDF chuyên nghiệp.
-          </p>
+          <h2 className="section-title">{t('section_tools')}</h2>
+          <p className="section-subtitle">{t('section_tools_desc')}</p>
           <div className="tools-grid">
             <Link to="/hop-dong-thue-nha" className="tool-card">
               <div className="card-icon">📄</div>
-              <h3>Hợp đồng thuê nhà</h3>
-              <p>
-                Tạo hợp đồng thuê nhà chuyên nghiệp với 4 mẫu: nhà nguyên căn,
-                phòng trọ, văn phòng, mặt bằng kinh doanh. Xuất PDF chuẩn pháp
-                lý.
-              </p>
-              <span className="card-link">Tạo ngay →</span>
+              <h3>{t('tool_contract')}</h3>
+              <p>{t('tool_contract_desc')}</p>
+              <span className="card-link">{t('start_now')}</span>
             </Link>
             <Link to="/dien-form-ct01" className="tool-card">
               <div className="card-icon">📝</div>
-              <h3>Điền tờ khai CT01</h3>
-              <p>
-                Điền tờ khai thay đổi thông tin cư trú CT01 online. Hỗ trợ đăng
-                ký tạm trú và thường trú. Xuất PDF đúng mẫu quy định.
-              </p>
-              <span className="card-link">Điền ngay →</span>
+              <h3>{t('tool_ct01')}</h3>
+              <p>{t('tool_ct01_desc')}</p>
+              <span className="card-link">{t('fill_now')}</span>
             </Link>
             <Link to="/hoa-don-ban-hang" className="tool-card">
               <div className="card-icon">🧾</div>
-              <h3>Hoá đơn bán hàng</h3>
-              <p>
-                Tạo hoá đơn bán hàng chuyên nghiệp. Nhập thông tin công ty,
-                khách hàng, danh sách hàng hoá và xuất PDF in hoặc lưu trữ.
-              </p>
-              <span className="card-link">Tạo ngay →</span>
+              <h3>{t('tool_invoice')}</h3>
+              <p>{t('tool_invoice_desc')}</p>
+              <span className="card-link">{t('start_now')}</span>
             </Link>
             <Link to="/ho-so-sua-chua" className="tool-card">
               <div className="card-icon">🏗️</div>
-              <h3>Tự động hóa hồ sơ</h3>
-              <p>
-                Tạo bộ hồ sơ sửa chữa quân đội đầy đủ 6 mẫu biểu. Nhập thông
-                tin một lần, xuất file Word giữ nguyên 100% format.
-              </p>
-              <span className="card-link">Tạo ngay →</span>
+              <h3>{t('tool_military')}</h3>
+              <p>{t('tool_military_desc')}</p>
+              <span className="card-link">{t('start_now')}</span>
             </Link>
             <Link to="/goi-mau" className="tool-card">
               <div className="card-icon">📦</div>
-              <h3>Gói mẫu nhiều file</h3>
-              <p>
-                Upload nhiều file Word → điền 1 lần → xuất tất cả. Hỗ trợ
-                so sánh phiên, nhóm trường tự động, gợi ý thông minh.
-              </p>
-              <span className="card-link">Bắt đầu →</span>
+              <h3>{t('tool_bundle')}</h3>
+              <p>{t('tool_bundle_desc')}</p>
+              <span className="card-link">{t('start_now')}</span>
             </Link>
             <Link to="/giay-moi" className="tool-card">
               <div className="card-icon">📨</div>
-              <h3>Giấy mời & Danh sách</h3>
-              <p>
-                Tạo giấy mời, văn bản có danh sách đại biểu, phân công nhiệm
-                vụ. Thêm/bớt người linh động, xuất Word/PDF.
-              </p>
-              <span className="card-link">Tạo ngay →</span>
+              <h3>{t('tool_invitation')}</h3>
+              <p>{t('tool_invitation_desc')}</p>
+              <span className="card-link">{t('start_now')}</span>
             </Link>
           </div>
         </div>

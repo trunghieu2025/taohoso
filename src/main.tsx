@@ -61,14 +61,17 @@ if (!isDesktop && 'serviceWorker' in navigator) {
     }
   })
 }
+import { LanguageProvider } from './i18n/i18n.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ToastProvider>
-      <PinLock>
-        <App />
-      </PinLock>
-    </ToastProvider>
+    <LanguageProvider>
+      <ToastProvider>
+        <PinLock>
+          <App />
+        </PinLock>
+      </ToastProvider>
+    </LanguageProvider>
   </StrictMode>,
 )
 
