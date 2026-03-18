@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { showToast } from '../components/Toast';
 import { useNavigate } from 'react-router-dom';
+import { useLanguage } from '../i18n/i18n';
 import {
     listContractors, saveContractor, deleteContractor, type Contractor,
 } from '../utils/contractorStorage';
@@ -13,6 +14,8 @@ export default function ContractorDirectory() {
     const [showForm, setShowForm] = useState(false);
     const [editItem, setEditItem] = useState<Contractor | null>(null);
     const navigate = useNavigate();
+    const { lang } = useLanguage();
+    const isVi = lang === 'vi';
 
     const [form, setForm] = useState({
         name: '', representative: '', position: '', phone: '',
@@ -38,7 +41,7 @@ export default function ContractorDirectory() {
     };
 
     const handleSave = async () => {
-        if (!form.name.trim()) { showToast('Vui lòng nhập tên nhà thầu'); return; }
+        if (!form.name.trim()) { showToast(isVi ? 'Vui lòng nhập tên nhà thầu' : 'Please enter contractor name'); return; }
         await saveContractor({
             ...form,
             ...(editItem?.id ? { id: editItem.id } : {}),
@@ -59,7 +62,7 @@ export default function ContractorDirectory() {
     };
 
     const handleDelete = async (id: number) => {
-        if (!confirm('Xóa nhà thầu này?')) return;
+        if (!confirm(isVi ? 'Xóa nhà thầu này?' : 'Delete this contractor?')) return;
         await deleteContractor(id);
         await reload();
     };
@@ -80,17 +83,17 @@ export default function ContractorDirectory() {
     return (
         <div className="container" style={{ maxWidth: 1000, padding: '2rem 1rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                <h1 style={{ fontSize: '1.5rem', margin: 0 }}>📋 Danh bạ Nhà thầu</h1>
+                <h1 style={{ fontSize: '1.5rem', margin: 0 }}>📋 {isVi ? 'Danh bạ Nhà thầu' : 'Contractor Directory'}</h1>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button className="btn btn-sm btn-secondary" onClick={() => navigate('/quan-ly-du-an')}>📊 Dự án</button>
+                    <button className="btn btn-sm btn-secondary" onClick={() => navigate('/quan-ly-du-an')}>📊 {isVi ? 'Dự án' : 'Projects'}</button>
                     <button className="btn btn-sm btn-primary" onClick={() => { setEditItem(null); setForm({ name: '', representative: '', position: '', phone: '', taxCode: '', bankAccount: '', bank: '' }); setShowForm(true); }}>
-                        ➕ Thêm nhà thầu
+                        ➕ {isVi ? 'Thêm nhà thầu' : 'Add Contractor'}
                     </button>
                 </div>
             </div>
 
             {/* Search */}
-            <input type="text" placeholder="🔍 Tìm theo tên, MST, SĐT..."
+            <input type="text" placeholder={isVi ? '🔍 Tìm theo tên, MST, SĐT...' : '🔍 Search by name, tax code, phone...'}
                 value={search} onChange={e => setSearch(e.target.value)}
                 style={{ ...inputStyle, marginBottom: '1rem', maxWidth: 350 }} />
 
@@ -101,41 +104,41 @@ export default function ContractorDirectory() {
                     background: 'linear-gradient(135deg, #eff6ff, #dbeafe)', marginBottom: '1rem',
                 }}>
                     <div style={{ fontWeight: 600, marginBottom: '0.75rem' }}>
-                        {editItem ? '🖊 Sửa nhà thầu' : '➕ Thêm nhà thầu mới'}
+                        {editItem ? (isVi ? '🖊 Sửa nhà thầu' : '🖊 Edit Contractor') : (isVi ? '➕ Thêm nhà thầu mới' : '➕ Add New Contractor')}
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                         <div>
-                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Tên nhà thầu *</div>
+                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{isVi ? 'Tên nhà thầu *' : 'Contractor Name *'}</div>
                             <input style={inputStyle} value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
                         </div>
                         <div>
-                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Đại diện</div>
+                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{isVi ? 'Đại diện' : 'Representative'}</div>
                             <input style={inputStyle} value={form.representative} onChange={e => setForm({ ...form, representative: e.target.value })} />
                         </div>
                         <div>
-                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Chức vụ</div>
+                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{isVi ? 'Chức vụ' : 'Position'}</div>
                             <input style={inputStyle} value={form.position} onChange={e => setForm({ ...form, position: e.target.value })} />
                         </div>
                         <div>
-                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>SĐT</div>
+                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{isVi ? 'SĐT' : 'Phone'}</div>
                             <input style={inputStyle} value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
                         </div>
                         <div>
-                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Mã số thuế</div>
+                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{isVi ? 'Mã số thuế' : 'Tax Code'}</div>
                             <input style={inputStyle} value={form.taxCode} onChange={e => setForm({ ...form, taxCode: e.target.value })} />
                         </div>
                         <div>
-                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Số tài khoản</div>
+                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{isVi ? 'Số tài khoản' : 'Bank Account'}</div>
                             <input style={inputStyle} value={form.bankAccount} onChange={e => setForm({ ...form, bankAccount: e.target.value })} />
                         </div>
                         <div>
-                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Ngân hàng</div>
+                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{isVi ? 'Ngân hàng' : 'Bank'}</div>
                             <input style={inputStyle} value={form.bank} onChange={e => setForm({ ...form, bank: e.target.value })} />
                         </div>
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
-                        <button className="btn btn-sm btn-primary" onClick={handleSave}>💾 Lưu</button>
-                        <button className="btn btn-sm" onClick={() => { setShowForm(false); setEditItem(null); }}>Hủy</button>
+                        <button className="btn btn-sm btn-primary" onClick={handleSave}>💾 {isVi ? 'Lưu' : 'Save'}</button>
+                        <button className="btn btn-sm" onClick={() => { setShowForm(false); setEditItem(null); }}>{isVi ? 'Hủy' : 'Cancel'}</button>
                     </div>
                 </div>
             )}
@@ -144,20 +147,20 @@ export default function ContractorDirectory() {
             {filtered.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8', background: '#f8fafc', borderRadius: 12, border: '2px dashed #e2e8f0' }}>
                     <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📋</div>
-                    <div>Chưa có nhà thầu nào</div>
+                    <div>{isVi ? 'Chưa có nhà thầu nào' : 'No contractors yet'}</div>
                 </div>
             ) : (
                 <div style={{ overflowX: 'auto' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                         <thead>
                             <tr style={{ background: '#f1f5f9', textAlign: 'left' }}>
-                                <th style={thStyle}>Tên nhà thầu</th>
-                                <th style={thStyle}>Đại diện</th>
-                                <th style={thStyle}>SĐT</th>
-                                <th style={thStyle}>MST</th>
-                                <th style={thStyle}>Ngân hàng</th>
-                                <th style={thStyle}>Dự án</th>
-                                <th style={{ ...thStyle, textAlign: 'center' }}>Hành động</th>
+                                <th style={thStyle}>{isVi ? 'Tên nhà thầu' : 'Contractor'}</th>
+                                <th style={thStyle}>{isVi ? 'Đại diện' : 'Representative'}</th>
+                                <th style={thStyle}>{isVi ? 'SĐT' : 'Phone'}</th>
+                                <th style={thStyle}>{isVi ? 'MST' : 'Tax Code'}</th>
+                                <th style={thStyle}>{isVi ? 'Ngân hàng' : 'Bank'}</th>
+                                <th style={thStyle}>{isVi ? 'Dự án' : 'Projects'}</th>
+                                <th style={{ ...thStyle, textAlign: 'center' }}>{isVi ? 'Hành động' : 'Actions'}</th>
                             </tr>
                         </thead>
                         <tbody>

@@ -2,6 +2,7 @@ import { useState, ChangeEvent, useCallback } from 'react';
 import type { ScanResult } from '../utils/militaryDocGenerator';
 import { FIELD_CATEGORY_INFO } from '../utils/militaryDocGenerator';
 import type { FieldCategory } from '../utils/militaryDocGenerator';
+import { usePageT } from '../i18n/pageTranslations';
 
 interface Props {
     results: ScanResult[];
@@ -85,6 +86,7 @@ function deleteScanTemplate(name: string) {
 }
 
 export default function ScanReviewModal({ results, onConfirm, onCancel, fileBuffers }: Props) {
+    const p = usePageT();
     const [items, setItems] = useState<ScanResult[]>(() => {
         const history = loadFieldHistory();
         return results.map((r) => {
@@ -306,7 +308,7 @@ export default function ScanReviewModal({ results, onConfirm, onCancel, fileBuff
                     onChange={(e: ChangeEvent<HTMLInputElement>) => updateLabel(realIdx, e.target.value)}
                     disabled={!item.selected}
                     style={inputStyle}
-                    placeholder="Nhãn hiển thị"
+                    placeholder={p('display_label')}
                 />
             </td>
             <td style={{ ...tdStyle, fontSize: '0.7rem', color: '#94a3b8', maxWidth: 180 }}>
@@ -325,10 +327,10 @@ export default function ScanReviewModal({ results, onConfirm, onCancel, fileBuff
                 <div style={headerStyle}>
                     <div>
                         <h2 style={{ margin: 0, fontSize: '1.15rem' }}>
-                            🔍 Kết quả quét — {items.length} giá trị trùng lặp
+                            🔍 {p('scan_result')} — {items.length} {p('duplicate_values')}
                         </h2>
                         <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '0.85rem' }}>
-                            Chọn các giá trị cần chuyển thành trường nhập liệu. Click vào dòng để xem preview.
+                            {p('choose_values')}. {p('click_row_preview')}.
                         </p>
                     </div>
                     <button onClick={onCancel} style={closeBtnStyle}>✕</button>
@@ -336,46 +338,46 @@ export default function ScanReviewModal({ results, onConfirm, onCancel, fileBuff
 
                 {/* Toolbar */}
                 <div style={toolbarStyle}>
-                    <button className="btn btn-sm" onClick={selectAll}>☑ Chọn tất cả</button>
-                    <button className="btn btn-sm" onClick={deselectAll}>☐ Bỏ tất cả</button>
+                    <button className="btn btn-sm" onClick={selectAll}>☑ {p('select_all')}</button>
+                    <button className="btn btn-sm" onClick={deselectAll}>☐ {p('deselect_all')}</button>
                     <div style={{ display: 'flex', gap: '0.25rem', marginLeft: '0.5rem' }}>
                         <button className="btn btn-sm" onClick={() => setFilter('all')}
-                            style={{ background: filter === 'all' ? '#dbeafe' : undefined, fontSize: '0.75rem' }}>Tất cả ({items.length})</button>
+                            style={{ background: filter === 'all' ? '#dbeafe' : undefined, fontSize: '0.75rem' }}>{p('all')} ({items.length})</button>
                         <button className="btn btn-sm" onClick={() => setFilter('data')}
-                            style={{ background: filter === 'data' ? '#d1fae5' : undefined, fontSize: '0.75rem' }}>📋 Dữ liệu ({items.filter(i => i.category === 'data').length})</button>
+                            style={{ background: filter === 'data' ? '#d1fae5' : undefined, fontSize: '0.75rem' }}>📋 {p('data')} ({items.filter(i => i.category === 'data').length})</button>
                         <button className="btn btn-sm" onClick={() => setFilter('boilerplate')}
-                            style={{ background: filter === 'boilerplate' ? '#fef3c7' : undefined, fontSize: '0.75rem' }}>📄 VB cố định ({items.filter(i => i.category === 'boilerplate').length})</button>
+                            style={{ background: filter === 'boilerplate' ? '#fef3c7' : undefined, fontSize: '0.75rem' }}>📄 {p('boilerplate')} ({items.filter(i => i.category === 'boilerplate').length})</button>
                     </div>
                     {items.some(i => (i.crossFileCount || 0) > 1) && (
                         <label style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginLeft: '0.5rem', fontSize: '0.75rem', cursor: 'pointer', color: '#6d28d9', fontWeight: 600 }}>
                             <input type="checkbox" checked={crossFileOnly} onChange={e => setCrossFileOnly(e.target.checked)} />
-                            🔗 Chỉ xuyên file ({items.filter(i => (i.crossFileCount || 0) > 1).length})
+                            🔗 {p('cross_file')} ({items.filter(i => (i.crossFileCount || 0) > 1).length})
                         </label>
                     )}
                     <label style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginLeft: '0.5rem', fontSize: '0.75rem', cursor: 'pointer', color: '#0369a1', fontWeight: 600 }}>
                         <input type="checkbox" checked={groupByRole} onChange={e => setGroupByRole(e.target.checked)} />
-                        👥 Nhóm theo vai trò
+                        👥 {p('group_by_role')}
                     </label>
                     <span style={{ marginLeft: 'auto', fontSize: '0.85rem', color: '#64748b' }}>
-                        Đã chọn: <strong>{selectedCount}</strong> / {items.length}
+                        {p('selected')}: <strong>{selectedCount}</strong> / {items.length}
                     </span>
                 </div>
 
                 {/* Action bar: save template, load template, export */}
                 <div style={{ display: 'flex', gap: '0.5rem', padding: '0.4rem 1.5rem', borderBottom: '1px solid #f1f5f9', background: '#fefce8', alignItems: 'center', flexWrap: 'wrap' }}>
                     <button className="btn btn-sm" onClick={() => setShowSaveTemplate(!showSaveTemplate)}
-                        style={{ fontSize: '0.75rem', background: '#dbeafe' }}>💾 Lưu template</button>
+                        style={{ fontSize: '0.75rem', background: '#dbeafe' }}>💾 {p('save_template')}</button>
                     <button className="btn btn-sm" onClick={() => setShowLoadTemplate(!showLoadTemplate)}
-                        style={{ fontSize: '0.75rem', background: '#d1fae5' }}>📂 Tải template ({savedTemplates.length})</button>
+                        style={{ fontSize: '0.75rem', background: '#d1fae5' }}>📂 {p('load_template')} ({savedTemplates.length})</button>
                     <button className="btn btn-sm" onClick={handleExportExcel}
-                        style={{ fontSize: '0.75rem', background: '#fde68a' }}>📊 Xuất Excel</button>
+                        style={{ fontSize: '0.75rem', background: '#fde68a' }}>📊 {p('export_excel')}</button>
 
                     {showSaveTemplate && (
                         <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center' }}>
                             <input type="text" value={templateName} onChange={e => setTemplateName(e.target.value)}
-                                placeholder="Tên template..." style={{ ...inputStyle, width: 150, fontSize: '0.75rem' }} />
+                                placeholder={`${p('template_name')}...`} style={{ ...inputStyle, width: 150, fontSize: '0.75rem' }} />
                             <button className="btn btn-sm" onClick={handleSaveTemplate}
-                                style={{ fontSize: '0.7rem', background: '#10b981', color: '#fff' }}>✓ Lưu</button>
+                                style={{ fontSize: '0.7rem', background: '#10b981', color: '#fff' }}>✓ {p('save_btn')}</button>
                         </div>
                     )}
 
@@ -413,11 +415,11 @@ export default function ScanReviewModal({ results, onConfirm, onCancel, fileBuff
                             <tr>
                                 <th style={{ ...thStyle, width: 30 }}>↕</th>
                                 <th style={{ ...thStyle, width: 40 }}>☑</th>
-                                <th style={thStyle}>Giá trị trong file</th>
-                                <th style={{ ...thStyle, width: 60, textAlign: 'center' }}>Lần</th>
-                                <th style={thStyle}>Tên trường (tag)</th>
-                                <th style={thStyle}>Nhãn hiển thị</th>
-                                <th style={{ ...thStyle, width: 150 }}>Vị trí</th>
+                                <th style={thStyle}>{p('value_in_file')}</th>
+                                <th style={{ ...thStyle, width: 60, textAlign: 'center' }}>{p('count')}</th>
+                                <th style={thStyle}>{p('field_name_tag')}</th>
+                                <th style={thStyle}>{p('display_label')}</th>
+                                <th style={{ ...thStyle, width: 150 }}>{p('position')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -434,9 +436,9 @@ export default function ScanReviewModal({ results, onConfirm, onCancel, fileBuff
                                                     <span>{role} ({group.items.length})</span>
                                                     <div style={{ display: 'flex', gap: '0.3rem' }}>
                                                         <button className="btn btn-sm" onClick={() => toggleGroup(role, true)}
-                                                            style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem' }}>☑ Chọn</button>
+                                                            style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem' }}>☑ {p('select_btn')}</button>
                                                         <button className="btn btn-sm" onClick={() => toggleGroup(role, false)}
-                                                            style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem' }}>☐ Bỏ</button>
+                                                            style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem' }}>☐ {p('skip_btn')}</button>
                                                     </div>
                                                 </div>
                                             </td>
@@ -479,14 +481,14 @@ export default function ScanReviewModal({ results, onConfirm, onCancel, fileBuff
                 {/* Footer */}
                 <div style={footerStyle}>
                     <button className="btn btn-secondary" onClick={onCancel}>
-                        Hủy
+                        {p('cancel')}
                     </button>
                     <button
                         className="btn btn-primary"
                         onClick={handleConfirm}
                         disabled={selectedCount === 0}
                     >
-                        ✅ Xác nhận ({selectedCount} trường)
+                        ✅ {p('confirm')} ({selectedCount} {p('fields')})
                     </button>
                 </div>
             </div>

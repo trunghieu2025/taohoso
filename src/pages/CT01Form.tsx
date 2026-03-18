@@ -2,6 +2,7 @@ import { useState, useCallback, ChangeEvent } from 'react';
 import { generateCT01PDF } from '../utils/pdfGenerator';
 import { FormInput, FormSelect } from '../components/FormField';
 import { CT01Data } from '../types';
+import { useLanguage } from '../i18n/i18n';
 
 const initialData: CT01Data = {
   fullName: '',
@@ -26,6 +27,8 @@ export default function CT01Form() {
   const [data, setData] = useState<CT01Data>(initialData);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const { lang } = useLanguage();
+  const isVi = lang === 'vi';
 
   const handleChange = useCallback((e: FormChangeEvent) => {
     const { name, value } = e.target;
@@ -67,12 +70,12 @@ export default function CT01Form() {
 
   const validate = () => {
     const e: Record<string, string> = {};
-    if (!data.fullName) e.fullName = 'Vui lòng nhập họ tên';
-    if (!data.idNumber) e.idNumber = 'Vui lòng nhập số CCCD';
+    if (!data.fullName) e.fullName = isVi ? 'Vui lòng nhập họ tên' : 'Please enter full name';
+    if (!data.idNumber) e.idNumber = isVi ? 'Vui lòng nhập số CCCD' : 'Please enter ID number';
     if (!data.currentAddress)
-      e.currentAddress = 'Vui lòng nhập nơi cư trú hiện tại';
-    if (!data.newAddress) e.newAddress = 'Vui lòng nhập nơi cư trú mới';
-    if (!data.district) e.district = 'Vui lòng nhập tên cơ quan công an';
+      e.currentAddress = isVi ? 'Vui lòng nhập nơi cư trú hiện tại' : 'Please enter current address';
+    if (!data.newAddress) e.newAddress = isVi ? 'Vui lòng nhập nơi cư trú mới' : 'Please enter new address';
+    if (!data.district) e.district = isVi ? 'Vui lòng nhập tên cơ quan công an' : 'Please enter police office name';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -91,65 +94,68 @@ export default function CT01Form() {
     <>
       <div className="page-header">
         <div className="container">
-          <h1>Điền tờ khai CT01</h1>
-          <p>Tờ khai thay đổi thông tin cư trú theo Thông tư 55/2021/TT-BCA</p>
+          <h1>{isVi ? 'Điền tờ khai CT01' : 'Fill CT01 Form'}</h1>
+          <p>{isVi ? 'Tờ khai thay đổi thông tin cư trú theo Thông tư 55/2021/TT-BCA' : 'Residence change declaration form per Circular 55/2021/TT-BCA'}</p>
         </div>
       </div>
 
       <section className="section">
         <div className="container" style={{ maxWidth: '800px' }}>
           <div className="info-box">
-            💡 <strong>Mẫu CT01</strong> dùng để đăng ký tạm trú, thường trú
-            hoặc thay đổi thông tin cư trú. Điền thông tin bên dưới và xuất PDF
-            để nộp tại cơ quan công an hoặc qua Cổng dịch vụ công quốc gia.
+            💡 <strong>{isVi ? 'Mẫu CT01' : 'CT01 Form'}</strong> {isVi
+              ? 'dùng để đăng ký tạm trú, thường trú hoặc thay đổi thông tin cư trú. Điền thông tin bên dưới và xuất PDF để nộp tại cơ quan công an hoặc qua Cổng dịch vụ công quốc gia.'
+              : 'is used for temporary/permanent residence registration or residence info change. Fill in the details below and export PDF to submit to the police office or through the National Public Service Portal.'}
           </div>
 
           <div className="wizard-content" style={{ marginTop: '1.5rem' }}>
-            <h3 style={{ marginBottom: '0.5rem' }}>Kính gửi</h3>
+            <h3 style={{ marginBottom: '0.5rem' }}>{isVi ? 'Kính gửi' : 'To'}</h3>
             <FormInput
-              label="Công an (Quận/Huyện/TP)"
+              label={isVi ? 'Công an (Quận/Huyện/TP)' : 'Police Office (District/City)'}
               name="district"
               value={data.district}
               onChange={handleChange}
               required
-              placeholder="Quận 1, TP. Hồ Chí Minh"
+              placeholder={isVi ? 'Quận 1, TP. Hồ Chí Minh' : 'District 1, Ho Chi Minh City'}
               error={errors.district}
             />
 
             <h3 style={{ marginTop: '1.5rem', marginBottom: '1rem' }}>
-              Thông tin người kê khai
+              {isVi ? 'Thông tin người kê khai' : 'Declarant Information'}
             </h3>
             <FormInput
-              label="Họ và tên"
+              label={isVi ? 'Họ và tên' : 'Full Name'}
               name="fullName"
               value={data.fullName}
               onChange={handleChange}
               required
-              placeholder="Nguyễn Văn A"
+              placeholder={isVi ? 'Nguyễn Văn A' : 'John Doe'}
               error={errors.fullName}
             />
             <div className="form-row">
               <FormInput
-                label="Ngày sinh"
+                label={isVi ? 'Ngày sinh' : 'Date of Birth'}
                 name="dob"
                 value={data.dob}
                 onChange={handleChange}
                 type="date"
               />
               <FormSelect
-                label="Giới tính"
+                label={isVi ? 'Giới tính' : 'Gender'}
                 name="gender"
                 value={data.gender}
                 onChange={handleChange}
-                options={[
+                options={isVi ? [
                   { value: 'Nam', label: 'Nam' },
                   { value: 'Nữ', label: 'Nữ' },
+                ] : [
+                  { value: 'Nam', label: 'Male' },
+                  { value: 'Nữ', label: 'Female' },
                 ]}
               />
             </div>
             <div className="form-row">
               <FormInput
-                label="Số CCCD/CMND"
+                label={isVi ? 'Số CCCD/CMND' : 'ID Number'}
                 name="idNumber"
                 value={data.idNumber}
                 onChange={handleChange}
@@ -158,16 +164,16 @@ export default function CT01Form() {
                 error={errors.idNumber}
               />
               <FormInput
-                label="Quốc tịch"
+                label={isVi ? 'Quốc tịch' : 'Nationality'}
                 name="nationality"
                 value={data.nationality}
                 onChange={handleChange}
-                placeholder="Việt Nam"
+                placeholder={isVi ? 'Việt Nam' : 'Vietnamese'}
               />
             </div>
             <div className="form-row">
               <FormInput
-                label="Số điện thoại"
+                label={isVi ? 'Số điện thoại' : 'Phone Number'}
                 name="phone"
                 value={data.phone}
                 onChange={handleChange}
@@ -184,64 +190,69 @@ export default function CT01Form() {
             </div>
 
             <h3 style={{ marginTop: '1.5rem', marginBottom: '1rem' }}>
-              Thông tin cư trú
+              {isVi ? 'Thông tin cư trú' : 'Residence Information'}
             </h3>
             <FormInput
-              label="Nơi cư trú hiện tại"
+              label={isVi ? 'Nơi cư trú hiện tại' : 'Current Address'}
               name="currentAddress"
               value={data.currentAddress}
               onChange={handleChange}
               required
-              placeholder="Số 1, Đường ABC, Phường XYZ, Quận 1, TP.HCM"
+              placeholder={isVi ? 'Số 1, Đường ABC, Phường XYZ, Quận 1, TP.HCM' : '123 Main Street, District 1'}
               error={errors.currentAddress}
             />
             <FormInput
-              label="Nơi đăng ký cư trú mới"
+              label={isVi ? 'Nơi đăng ký cư trú mới' : 'New Residence Address'}
               name="newAddress"
               value={data.newAddress}
               onChange={handleChange}
               required
-              placeholder="Số 2, Đường DEF, Phường UVW, Quận 3, TP.HCM"
+              placeholder={isVi ? 'Số 2, Đường DEF, Phường UVW, Quận 3, TP.HCM' : '456 Oak Avenue, District 3'}
               error={errors.newAddress}
             />
             <div className="form-row">
               <FormInput
-                label="Ngày bắt đầu cư trú mới"
+                label={isVi ? 'Ngày bắt đầu cư trú mới' : 'New Residence Start Date'}
                 name="moveDate"
                 value={data.moveDate}
                 onChange={handleChange}
                 type="date"
               />
               <FormInput
-                label="Quan hệ với chủ hộ"
+                label={isVi ? 'Quan hệ với chủ hộ' : 'Relationship to Household Head'}
                 name="relationship"
                 value={data.relationship}
                 onChange={handleChange}
-                placeholder="Bản thân / Con / Vợ / Chồng..."
+                placeholder={isVi ? 'Bản thân / Con / Vợ / Chồng...' : 'Self / Child / Spouse...'}
               />
             </div>
             <FormSelect
-              label="Lý do thay đổi"
+              label={isVi ? 'Lý do thay đổi' : 'Reason for Change'}
               name="reason"
               value={data.reason}
               onChange={handleChange}
-              options={[
+              options={isVi ? [
                 { value: 'Thay đổi nơi cư trú', label: 'Thay đổi nơi cư trú' },
                 { value: 'Đăng ký tạm trú', label: 'Đăng ký tạm trú' },
                 { value: 'Đăng ký thường trú', label: 'Đăng ký thường trú' },
                 { value: 'Tách hộ', label: 'Tách hộ' },
                 { value: 'Nhập hộ', label: 'Nhập hộ' },
-                {
-                  value: 'Điều chỉnh thông tin cư trú',
-                  label: 'Điều chỉnh thông tin cư trú',
-                },
+                { value: 'Điều chỉnh thông tin cư trú', label: 'Điều chỉnh thông tin cư trú' },
                 { value: 'Xóa đăng ký tạm trú', label: 'Xóa đăng ký tạm trú' },
+              ] : [
+                { value: 'Thay đổi nơi cư trú', label: 'Change of residence' },
+                { value: 'Đăng ký tạm trú', label: 'Temporary residence registration' },
+                { value: 'Đăng ký thường trú', label: 'Permanent residence registration' },
+                { value: 'Tách hộ', label: 'Household separation' },
+                { value: 'Nhập hộ', label: 'Household merge' },
+                { value: 'Điều chỉnh thông tin cư trú', label: 'Residence info adjustment' },
+                { value: 'Xóa đăng ký tạm trú', label: 'Remove temporary registration' },
               ]}
             />
 
             {/* Additional people */}
             <h3 style={{ marginTop: '1.5rem', marginBottom: '0.5rem' }}>
-              Người cùng đăng ký
+              {isVi ? 'Người cùng đăng ký' : 'Co-registrants'}
               <span
                 style={{
                   fontWeight: 400,
@@ -250,7 +261,7 @@ export default function CT01Form() {
                   marginLeft: '0.5rem',
                 }}
               >
-                (không bắt buộc)
+                ({isVi ? 'không bắt buộc' : 'optional'})
               </span>
             </h3>
             {data.additionalPeople.map((person, idx) => (
@@ -276,22 +287,22 @@ export default function CT01Form() {
                     cursor: 'pointer',
                   }}
                   onClick={() => removePerson(idx)}
-                  title="Xóa"
+                  title={isVi ? 'Xóa' : 'Remove'}
                 >
                   ✕
                 </button>
                 <div className="form-group">
-                  <label className="form-label">Họ tên</label>
+                  <label className="form-label">{isVi ? 'Họ tên' : 'Full Name'}</label>
                   <input
                     className="form-input"
                     value={person.name}
                     onChange={(e) => updatePerson(idx, 'name', e.target.value)}
-                    placeholder="Họ tên"
+                    placeholder={isVi ? 'Họ tên' : 'Full name'}
                   />
                 </div>
                 <div className="form-row">
                   <div className="form-group">
-                    <label className="form-label">Số CCCD</label>
+                    <label className="form-label">{isVi ? 'Số CCCD' : 'ID Number'}</label>
                     <input
                       className="form-input"
                       value={person.idNumber}
@@ -302,14 +313,14 @@ export default function CT01Form() {
                     />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Quan hệ với chủ hộ</label>
+                    <label className="form-label">{isVi ? 'Quan hệ với chủ hộ' : 'Relationship'}</label>
                     <input
                       className="form-input"
                       value={person.relationship}
                       onChange={(e) =>
                         updatePerson(idx, 'relationship', e.target.value)
                       }
-                      placeholder="Con / Vợ / Chồng..."
+                      placeholder={isVi ? 'Con / Vợ / Chồng...' : 'Child / Spouse...'}
                     />
                   </div>
                 </div>
@@ -320,24 +331,24 @@ export default function CT01Form() {
               onClick={addPerson}
               style={{ marginBottom: '1rem' }}
             >
-              + Thêm người
+              + {isVi ? 'Thêm người' : 'Add person'}
             </button>
 
             {/* Actions */}
             <div className="wizard-actions">
               {showClearConfirm ? (
                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.9rem', color: 'var(--danger)' }}>Xóa tất cả?</span>
-                  <button className="btn btn-sm" onClick={() => setShowClearConfirm(false)}>Hủy</button>
-                  <button className="btn btn-sm btn-danger" onClick={confirmClear}>Xóa</button>
+                  <span style={{ fontSize: '0.9rem', color: 'var(--danger)' }}>{isVi ? 'Xóa tất cả?' : 'Clear all?'}</span>
+                  <button className="btn btn-sm" onClick={() => setShowClearConfirm(false)}>{isVi ? 'Hủy' : 'Cancel'}</button>
+                  <button className="btn btn-sm btn-danger" onClick={confirmClear}>{isVi ? 'Xóa' : 'Delete'}</button>
                 </div>
               ) : (
                 <button className="btn btn-secondary" onClick={handleClear}>
-                  🗑️ Xóa tất cả
+                  🗑️ {isVi ? 'Xóa tất cả' : 'Clear all'}
                 </button>
               )}
               <button className="btn btn-primary" onClick={handleExport}>
-                📥 Xuất PDF tờ khai CT01
+                📥 {isVi ? 'Xuất PDF tờ khai CT01' : 'Export CT01 PDF'}
               </button>
             </div>
           </div>

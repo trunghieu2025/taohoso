@@ -36,6 +36,7 @@ import TableEditor from '../components/TableEditor';
 import FieldSelectorModal from '../components/FieldSelectorModal';
 import { numberToVietnamese } from '../utils/numberToVietnamese';
 import { useNavigate } from 'react-router-dom';
+import { usePageT } from '../i18n/pageTranslations';
 import { logHistory } from './Dashboard';
 import { saveProject, createProjectFromFormData } from '../utils/projectStorage';
 
@@ -196,6 +197,7 @@ function isMoneyField(tag: string): boolean {
 
 export default function BundleForm() {
     const navigate = useNavigate();
+    const p = usePageT();
     /* ── State ── */
     const [files, setFiles] = useState<BundleFile[]>([]);
     const [allTags, setAllTags] = useState<string[]>([]);
@@ -1066,13 +1068,13 @@ export default function BundleForm() {
             {/* ── Header ── */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                 <div>
-                    <h1 style={{ fontSize: '1.3rem', fontWeight: 700, margin: 0, color: '#1e293b' }}>📦 Gói mẫu nhiều file</h1>
+                    <h1 style={{ fontSize: '1.3rem', fontWeight: 700, margin: 0, color: '#1e293b' }}>📦 {p('bundle_title')}</h1>
                     <p style={{ color: '#64748b', fontSize: '0.8rem', margin: 0 }}>
-                        Upload nhiều file Word/Excel → điền 1 lần → xuất tất cả
+                        {p('bundle_desc')}
                     </p>
                 </div>
                 <button className="btn btn-sm" onClick={() => navigate('/huong-dan/goi-mau')} style={{ ...btnSm, background: '#dbeafe', color: '#1d4ed8' }}>
-                    ❓ Hướng dẫn
+                    ❓ {p('guide')}
                 </button>
             </div>
 
@@ -1111,10 +1113,10 @@ export default function BundleForm() {
                 >
                     <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>{dragOver ? '📥' : '📁'}</div>
                     <h2 style={{ fontSize: '1.2rem', marginBottom: '0.5rem', color: '#0369a1' }}>
-                        {dragOver ? 'Thả file vào đây!' : 'Chọn file .docx / .xlsx'}
+                        {dragOver ? (p('home') === 'Trang chủ' ? 'Thả file vào đây!' : 'Drop files here!') : (p('home') === 'Trang chủ' ? 'Chọn file .docx / .xlsx' : 'Select .docx / .xlsx files')}
                     </h2>
                     <p style={{ color: '#64748b', marginBottom: '1rem', fontSize: '0.85rem' }}>
-                        Kéo thả file/thư mục vào đây, hoặc bấm nút bên dưới.
+                        {p('home') === 'Trang chủ' ? 'Kéo thả file/thư mục vào đây, hoặc bấm nút bên dưới.' : 'Drag and drop files/folders here, or click buttons below.'}
                     </p>
 
                     <input ref={fileInputRef} type="file" accept=".docx,.xlsx,.xls" multiple style={{ display: 'none' }} onChange={handleUpload} />
@@ -1123,13 +1125,13 @@ export default function BundleForm() {
 
                     <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
                         <button className="btn btn-primary" onClick={() => fileInputRef.current?.click()} disabled={scanning}
-                            style={{ fontSize: '1rem', padding: '0.6rem 1.5rem' }}>📄 Thêm file lẻ</button>
+                            style={{ fontSize: '1rem', padding: '0.6rem 1.5rem' }}>📄 {p('home') === 'Trang chủ' ? 'Thêm file lẻ' : 'Add files'}</button>
                         <button className="btn btn-primary" onClick={() => folderInputRef.current?.click()} disabled={scanning}
-                            style={{ fontSize: '1rem', padding: '0.6rem 1.5rem', background: '#7c3aed' }}>📁 Thêm thư mục</button>
+                            style={{ fontSize: '1rem', padding: '0.6rem 1.5rem', background: '#7c3aed' }}>📁 {p('home') === 'Trang chủ' ? 'Thêm thư mục' : 'Add folder'}</button>
                         {stagedFiles.length >= 1 && (
                             <button className="btn btn-primary" onClick={handleStartScan} disabled={scanning}
                                 style={{ fontSize: '1rem', padding: '0.6rem 1.5rem', background: '#10b981' }}>
-                                {scanning ? '⏳ Đang quét...' : `🔍 Quét & tạo form (${stagedFiles.length} file)`}
+                                {scanning ? (p('home') === 'Trang chủ' ? '⏳ Đang quét...' : '⏳ Scanning...') : (p('home') === 'Trang chủ' ? `🔍 Quét & tạo form (${stagedFiles.length} file)` : `🔍 Scan & create form (${stagedFiles.length} files)`)}
                             </button>
                         )}
                     </div>
@@ -1137,12 +1139,12 @@ export default function BundleForm() {
                     <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap', marginTop: '0.5rem' }}>
                         <button className="btn btn-sm" onClick={handleImportData}
                             style={{ fontSize: '0.8rem', background: '#dbeafe', color: '#1d4ed8' }}>
-                            📥 Nhập dữ liệu (JSON)
+                            📥 {p('home') === 'Trang chủ' ? 'Nhập dữ liệu (JSON)' : 'Import Data (JSON)'}
                         </button>
                         {allTags.length > 0 && (
                             <button className="btn btn-sm" onClick={handleExportData}
                                 style={{ fontSize: '0.8rem', background: '#d1fae5', color: '#059669' }}>
-                                📤 Xuất dữ liệu (JSON)
+                                📤 {p('home') === 'Trang chủ' ? 'Xuất dữ liệu (JSON)' : 'Export Data (JSON)'}
                             </button>
                         )}
                     </div>
@@ -1150,7 +1152,7 @@ export default function BundleForm() {
                     {/* Presets */}
                     {presets.length > 0 && (
                         <div style={{ marginTop: '1rem', textAlign: 'left', background: '#fff', borderRadius: 8, padding: '0.5rem', border: '1px solid #e0f2fe' }}>
-                            <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#0369a1', marginBottom: '0.3rem' }}>📦 Bộ mẫu đã lưu</div>
+                            <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#0369a1', marginBottom: '0.3rem' }}>📦 {p('home') === 'Trang chủ' ? 'Bộ mẫu đã lưu' : 'Saved presets'}</div>
                             {presets.map(p => (
                                 <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem', padding: '0.15rem 0' }}>
                                     <span style={{ flex: 1, color: '#334155' }}>📄 {p.name} ({p.fileNames.length} file)</span>
@@ -1163,7 +1165,7 @@ export default function BundleForm() {
                         <div style={{ marginTop: '0.5rem' }}>
                             <button className="btn btn-sm" onClick={handleSavePreset}
                                 style={{ fontSize: '0.8rem', padding: '0.25rem 0.75rem', background: '#fef3c7', color: '#92400e' }}>
-                                💾 Lưu bộ file mẫu
+                                💾 {p('home') === 'Trang chủ' ? 'Lưu bộ file mẫu' : 'Save file preset'}
                             </button>
                         </div>
                     )}
@@ -1171,7 +1173,7 @@ export default function BundleForm() {
                     {stagedFiles.length > 0 && (
                         <div style={{ marginTop: '1.5rem', textAlign: 'left', background: '#fff', borderRadius: 8, padding: '0.75rem', border: '1px solid #bae6fd' }}>
                             <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem', color: '#0369a1' }}>
-                                📑 Đã chọn {stagedFiles.length} file:
+                                📑 {p('home') === 'Trang chủ' ? 'Đã chọn' : 'Selected'} {stagedFiles.length} file:
                             </div>
                             {stagedFiles.map((f, i) => (
                                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.3rem 0.5rem', fontSize: '0.85rem', borderRadius: 4, background: i % 2 === 0 ? '#f0f9ff' : 'transparent' }}>
@@ -1184,7 +1186,7 @@ export default function BundleForm() {
                             ))}
                         </div>
                     )}
-                    <div style={{ marginTop: '1rem', fontSize: '0.8rem', color: '#94a3b8' }}>💡 Bấm "Thêm file" nhiều lần để chọn từ các thư mục khác nhau</div>
+                    <div style={{ marginTop: '1rem', fontSize: '0.8rem', color: '#94a3b8' }}>💡 {p('home') === 'Trang chủ' ? 'Bấm "Thêm file" nhiều lần để chọn từ các thư mục khác nhau' : 'Click "Add files" multiple times to select from different folders'}</div>
                 </div>
             )}
 

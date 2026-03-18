@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { FieldCategory } from '../utils/militaryDocGenerator';
 import { FIELD_CATEGORY_INFO } from '../utils/militaryDocGenerator';
+import { useLanguage } from '../i18n/i18n';
 
 /* ── Template definitions ── */
 export interface TemplateField {
@@ -148,6 +149,8 @@ export default function TemplateMarketplace() {
     const navigate = useNavigate();
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const selectedTemplate = TEMPLATE_SETS.find(t => t.id === selectedId);
+    const { lang } = useLanguage();
+    const isVi = lang === 'vi';
 
     const handleUseTemplate = (template: TemplateSet) => {
         // Save selected template to localStorage so BundleForm can pick it up
@@ -170,11 +173,12 @@ export default function TemplateMarketplace() {
     return (
         <div className="container" style={{ paddingTop: '2rem', paddingBottom: '3rem' }}>
             <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.3rem' }}>
-                📚 Thư viện mẫu hồ sơ
+                📚 {isVi ? 'Thư viện mẫu hồ sơ' : 'Document Template Library'}
             </h1>
             <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-                Chọn bộ mẫu sẵn → hệ thống tự tạo form với các trường đã định nghĩa.<br />
-                Bạn chỉ cần upload file Word & điền dữ liệu.
+                {isVi
+                    ? <>Chọn bộ mẫu sẵn → hệ thống tự tạo form với các trường đã định nghĩa.<br />Bạn chỉ cần upload file Word &amp; điền dữ liệu.</>
+                    : <>Select a template set → system auto-creates form with predefined fields.<br />Just upload Word files &amp; fill in data.</>}
             </p>
 
             {/* Template cards grid */}
@@ -201,8 +205,8 @@ export default function TemplateMarketplace() {
                             {t.description}
                         </p>
                         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
-                            <span style={badgeStyle('#dbeafe', '#1d4ed8')}>{t.fields.length} trường</span>
-                            <span style={badgeStyle('#fce7f3', '#be185d')}>{t.files.length} file mẫu</span>
+                            <span style={badgeStyle('#dbeafe', '#1d4ed8')}>{t.fields.length} {isVi ? 'trường' : 'fields'}</span>
+                            <span style={badgeStyle('#fce7f3', '#be185d')}>{t.files.length} {isVi ? 'file mẫu' : 'templates'}</span>
                         </div>
                         {selectedId === t.id && (
                             <button
@@ -210,7 +214,7 @@ export default function TemplateMarketplace() {
                                 onClick={(e) => { e.stopPropagation(); handleUseTemplate(t); }}
                                 style={{ width: '100%', marginTop: '0.5rem', fontSize: '0.9rem' }}
                             >
-                                🚀 Sử dụng bộ mẫu này
+                                🚀 {isVi ? 'Sử dụng bộ mẫu này' : 'Use This Template'}
                             </button>
                         )}
                     </div>
@@ -224,13 +228,13 @@ export default function TemplateMarketplace() {
                     padding: '1.25rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
                 }}>
                     <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.5rem' }}>
-                        {selectedTemplate.icon} {selectedTemplate.name} — Chi tiết trường
+                        {selectedTemplate.icon} {selectedTemplate.name} — {isVi ? 'Chi tiết trường' : 'Field Details'}
                     </h3>
 
                     {/* File list */}
                     <div style={{ marginBottom: '1rem' }}>
                         <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#64748b', marginBottom: '0.3rem' }}>
-                            📁 File mẫu bao gồm:
+                            📁 {isVi ? 'File mẫu bao gồm:' : 'Template files included:'}
                         </div>
                         <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
                             {selectedTemplate.files.map((f, i) => (
@@ -278,7 +282,7 @@ export default function TemplateMarketplace() {
                             onClick={() => handleUseTemplate(selectedTemplate)}
                             style={{ fontSize: '1rem', padding: '0.6rem 2rem' }}
                         >
-                            🚀 Sử dụng bộ mẫu "{selectedTemplate.name}"
+                            🚀 {isVi ? `Sử dụng bộ mẫu "${selectedTemplate.name}"` : `Use "${selectedTemplate.name}" Template`}
                         </button>
                     </div>
                 </div>

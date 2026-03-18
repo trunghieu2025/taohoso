@@ -3,6 +3,7 @@ import { showToast } from '../components/Toast';
 import { Link, useNavigate } from 'react-router-dom';
 import { listProjects, deleteProject, cloneProject, type Project, PREDEFINED_TAGS } from '../utils/projectStorage';
 import { checkDeadlines, requestNotificationPermission, saveDeadlineReminder } from '../utils/deadlineNotifications';
+import { useLanguage } from '../i18n/i18n';
 
 const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }> = {
     new: { label: '⚪ Mới', color: '#64748b', bg: '#f1f5f9' },
@@ -27,6 +28,8 @@ export default function ProjectList() {
     const [filterTag, setFilterTag] = useState('all');
     const [urgentCount, setUrgentCount] = useState(0);
     const navigate = useNavigate();
+    const { lang } = useLanguage();
+    const isVi = lang === 'vi';
 
     useEffect(() => {
         listProjects().then(all => {
@@ -50,7 +53,7 @@ export default function ProjectList() {
     const reload = async () => setProjects(await listProjects());
 
     const handleDelete = async (id: number) => {
-        if (!confirm('Xóa dự án này?')) return;
+        if (!confirm(isVi ? 'Xóa dự án này?' : 'Delete this project?')) return;
         await deleteProject(id);
         await reload();
     };
@@ -97,21 +100,21 @@ export default function ProjectList() {
     return (
         <div className="container" style={{ maxWidth: 1100, padding: '2rem 1rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                <h1 style={{ fontSize: '1.5rem', margin: 0 }}>📊 Quản lý Dự án</h1>
+                <h1 style={{ fontSize: '1.5rem', margin: 0 }}>📊 {isVi ? 'Quản lý Dự án' : 'Project Management'}</h1>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                     {urgentCount > 0 && (
                         <span style={{ background: '#fef2f2', color: '#dc2626', padding: '0.3rem 0.6rem', borderRadius: 12, fontSize: '0.75rem', fontWeight: 700 }}>
-                            🔔 {urgentCount} dự án sắp hết hạn
+                            🔔 {urgentCount} {isVi ? 'dự án sắp hết hạn' : 'projects near deadline'}
                         </span>
                     )}
                     <button className="btn btn-sm" onClick={async () => {
                         const ok = await requestNotificationPermission();
-                        alert(ok ? '✅ Đã bật nhắc nhở! Bạn sẽ nhận thông báo khi dự án sắp hết hạn.' : '❌ Trình duyệt không cho phép thông báo.');
+                        alert(ok ? (isVi ? '✅ Đã bật nhắc nhở! Bạn sẽ nhận thông báo khi dự án sắp hết hạn.' : '✅ Reminders enabled! You\'ll be notified when projects are near deadline.') : (isVi ? '❌ Trình duyệt không cho phép thông báo.' : '❌ Browser does not allow notifications.'));
                     }} style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem', background: '#dbeafe', color: '#1d4ed8' }}>
-                        🔔 Bật nhắc nhở
+                        🔔 {isVi ? 'Bật nhắc nhở' : 'Enable Reminders'}
                     </button>
-                    <Link to="/danh-ba-nha-thau" className="btn btn-sm btn-secondary">📋 Nhà thầu</Link>
-                    <Link to="/ho-so-sua-chua" className="btn btn-sm btn-primary">➕ Tạo hồ sơ mới</Link>
+                    <Link to="/danh-ba-nha-thau" className="btn btn-sm btn-secondary">📋 {isVi ? 'Nhà thầu' : 'Contractors'}</Link>
+                    <Link to="/ho-so-sua-chua" className="btn btn-sm btn-primary">➕ {isVi ? 'Tạo hồ sơ mới' : 'New Document'}</Link>
                 </div>
             </div>
 
@@ -119,46 +122,46 @@ export default function ProjectList() {
             <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
                 <div style={{ ...cardStyle, background: 'linear-gradient(135deg, #eff6ff, #dbeafe)', border: '1px solid #93c5fd' }}>
                     <div style={{ fontSize: '1.8rem', fontWeight: 700, color: '#2563eb' }}>{projects.length}</div>
-                    <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Tổng dự án</div>
+                    <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{isVi ? 'Tổng dự án' : 'Total Projects'}</div>
                 </div>
                 <div style={{ ...cardStyle, background: 'linear-gradient(135deg, #f0fdf4, #dcfce7)', border: '1px solid #86efac' }}>
                     <div style={{ fontSize: '1.8rem', fontWeight: 700, color: '#059669' }}>{formatMoney(totalAmount.toString())}</div>
-                    <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Tổng giá trị</div>
+                    <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{isVi ? 'Tổng giá trị' : 'Total Value'}</div>
                 </div>
                 <div style={{ ...cardStyle, background: 'linear-gradient(135deg, #fffbeb, #fef3c7)', border: '1px solid #fcd34d' }}>
                     <div style={{ fontSize: '1.8rem', fontWeight: 700, color: '#d97706' }}>{inProgress}</div>
-                    <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Đang thực hiện</div>
+                    <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{isVi ? 'Đang thực hiện' : 'In Progress'}</div>
                 </div>
                 <div style={{ ...cardStyle, background: 'linear-gradient(135deg, #f0fdf4, #d1fae5)', border: '1px solid #6ee7b7' }}>
                     <div style={{ fontSize: '1.8rem', fontWeight: 700, color: '#059669' }}>{completed}</div>
-                    <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Hoàn thành</div>
+                    <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{isVi ? 'Hoàn thành' : 'Completed'}</div>
                 </div>
             </div>
 
             {/* Search & filter */}
             <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
                 <input
-                    type="text" placeholder="🔍 Tìm theo tên, nhà thầu, địa điểm..."
+                    type="text" placeholder={isVi ? '🔍 Tìm theo tên, nhà thầu, địa điểm...' : '🔍 Search by name, contractor, location...'}
                     value={search} onChange={e => setSearch(e.target.value)}
                     style={{ flex: '1 1 250px', padding: '0.5rem 0.75rem', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: '0.85rem' }}
                 />
                 <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
                     style={{ padding: '0.5rem', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: '0.85rem' }}>
-                    <option value="all">Tất cả trạng thái</option>
-                    <option value="new">⚪ Mới</option>
-                    <option value="in_progress">🟡 Đang làm</option>
-                    <option value="completed">🟢 Hoàn thành</option>
+                    <option value="all">{isVi ? 'Tất cả trạng thái' : 'All statuses'}</option>
+                    <option value="new">{isVi ? '⚪ Mới' : '⚪ New'}</option>
+                    <option value="in_progress">{isVi ? '🟡 Đang làm' : '🟡 In Progress'}</option>
+                    <option value="completed">{isVi ? '🟢 Hoàn thành' : '🟢 Completed'}</option>
                 </select>
                 {years.length > 0 && (
                     <select value={filterYear} onChange={e => setFilterYear(e.target.value)}
                         style={{ padding: '0.5rem', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: '0.85rem' }}>
-                        <option value="all">Tất cả năm</option>
+                        <option value="all">{isVi ? 'Tất cả năm' : 'All years'}</option>
                         {years.map(y => <option key={y} value={y}>{y}</option>)}
                     </select>
                 )}
                 <select value={filterTag} onChange={e => setFilterTag(e.target.value)}
                     style={{ padding: '0.5rem', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: '0.85rem' }}>
-                    <option value="all">Tất cả nhãn</option>
+                    <option value="all">{isVi ? 'Tất cả nhãn' : 'All tags'}</option>
                     {PREDEFINED_TAGS.map(t => <option key={t.name} value={t.name}>{t.name}</option>)}
                 </select>
             </div>
@@ -172,13 +175,15 @@ export default function ProjectList() {
                     {projects.length === 0 ? (
                         <>
                             <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📂</div>
-                            <div>Chưa có dự án nào</div>
+                            <div>{isVi ? 'Chưa có dự án nào' : 'No projects yet'}</div>
                             <div style={{ fontSize: '0.85rem', marginTop: '0.5rem' }}>
-                                Tạo hồ sơ từ <Link to="/ho-so-sua-chua">Tự động hóa</Link> hoặc <Link to="/goi-mau">Gói mẫu</Link> rồi bấm "Lưu vào dự án"
+                                {isVi
+                                    ? <>Tạo hồ sơ từ <Link to="/ho-so-sua-chua">Tự động hóa</Link> hoặc <Link to="/goi-mau">Gói mẫu</Link> rồi bấm "Lưu vào dự án"</>
+                                    : <>Create documents from <Link to="/ho-so-sua-chua">Automation</Link> or <Link to="/goi-mau">Bundle</Link> then click "Save to project"</>}
                             </div>
                         </>
                     ) : (
-                        <div>Không tìm thấy dự án phù hợp</div>
+                        <div>{isVi ? 'Không tìm thấy dự án phù hợp' : 'No matching projects found'}</div>
                     )}
                 </div>
             ) : (
@@ -186,13 +191,13 @@ export default function ProjectList() {
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                         <thead>
                             <tr style={{ background: '#f1f5f9', textAlign: 'left' }}>
-                                <th style={thStyle}>Tên công trình</th>
-                                <th style={thStyle}>Nhà thầu</th>
-                                <th style={thStyle}>Giá trị</th>
+                                <th style={thStyle}>{isVi ? 'Tên công trình' : 'Project Name'}</th>
+                                <th style={thStyle}>{isVi ? 'Nhà thầu' : 'Contractor'}</th>
+                                <th style={thStyle}>{isVi ? 'Giá trị' : 'Value'}</th>
                                 <th style={thStyle}>Checklist</th>
-                                <th style={thStyle}>Trạng thái</th>
-                                <th style={thStyle}>Hạn nộp</th>
-                                <th style={{ ...thStyle, textAlign: 'center' }}>Hành động</th>
+                                <th style={thStyle}>{isVi ? 'Trạng thái' : 'Status'}</th>
+                                <th style={thStyle}>{isVi ? 'Hạn nộp' : 'Deadline'}</th>
+                                <th style={{ ...thStyle, textAlign: 'center' }}>{isVi ? 'Hành động' : 'Actions'}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -240,16 +245,16 @@ export default function ProjectList() {
                                                 const icon = diff < 0 ? '🔴' : diff <= 3 ? '🟡' : '';
                                                 return (
                                                     <span style={{ color, fontWeight: diff <= 3 ? 700 : 400, fontSize: '0.8rem' }}>
-                                                        {icon} {dl.toLocaleDateString('vi-VN')}
-                                                        {diff < 0 && <div style={{ fontSize: '0.7rem' }}>Quá hạn {-diff} ngày</div>}
-                                                        {diff >= 0 && diff <= 3 && <div style={{ fontSize: '0.7rem' }}>Còn {diff} ngày</div>}
+                                                        {icon} {dl.toLocaleDateString(isVi ? 'vi-VN' : 'en-US')}
+                                                        {diff < 0 && <div style={{ fontSize: '0.7rem' }}>{isVi ? `Quá hạn ${-diff} ngày` : `Overdue ${-diff} days`}</div>}
+                                                        {diff >= 0 && diff <= 3 && <div style={{ fontSize: '0.7rem' }}>{isVi ? `Còn ${diff} ngày` : `${diff} days left`}</div>}
                                                     </span>
                                                 );
                                             })()}
                                         </td>
                                         <td style={{ ...tdStyle, textAlign: 'center' }}>
                                             <button className="btn btn-sm" onClick={(e) => { e.stopPropagation(); handleClone(p.id!); }}
-                                                title="Nhân bản" style={{ fontSize: '0.7rem', padding: '0.15rem 0.4rem', color: '#2563eb', marginRight: 4 }}>📋</button>
+                                                title={isVi ? 'Nhân bản' : 'Clone'} style={{ fontSize: '0.7rem', padding: '0.15rem 0.4rem', color: '#2563eb', marginRight: 4 }}>📋</button>
                                             <button className="btn btn-sm" onClick={(e) => { e.stopPropagation(); handleDelete(p.id!); }}
                                                 style={{ fontSize: '0.7rem', padding: '0.15rem 0.4rem', color: '#ef4444' }}>🗑️</button>
                                         </td>

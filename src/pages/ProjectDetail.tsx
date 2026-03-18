@@ -6,6 +6,7 @@ import {
     type Project, type Milestone, PREDEFINED_TAGS, CHECKLIST_TEMPLATES,
 } from '../utils/projectStorage';
 import ProjectSearch from '../components/ProjectSearch';
+import { useLanguage } from '../i18n/i18n';
 
 const STATUS_OPTIONS = [
     { value: 'new', label: '⚪ Mới' },
@@ -22,6 +23,8 @@ export default function ProjectDetail() {
     const [saving, setSaving] = useState(false);
     const [showFormData, setShowFormData] = useState(false);
     const [showHistory, setShowHistory] = useState(false);
+    const { lang } = useLanguage();
+    const isVi = lang === 'vi';
 
     useEffect(() => {
         if (id) loadProject(parseInt(id)).then(setProject);
@@ -31,7 +34,7 @@ export default function ProjectDetail() {
         setSaving(true);
         try {
             // Auto-snapshot history (max 10)
-            const historyEntry = { date: new Date().toISOString(), changes: `Cập nhật: ${updated.name}` };
+            const historyEntry = { date: new Date().toISOString(), changes: `${isVi ? 'Cập nhật' : 'Updated'}: ${updated.name}` };
             const history = [...(updated.history || []), historyEntry].slice(-10);
             await saveProject({ ...updated, id: updated.id, history });
             setProject({ ...updated, history });
@@ -42,8 +45,8 @@ export default function ProjectDetail() {
     if (!project) return (
         <div className="container" style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>
             <div style={{ fontSize: '2rem' }}>📂</div>
-            <div>Không tìm thấy dự án</div>
-            <Link to="/quan-ly-du-an" style={{ marginTop: '1rem', display: 'inline-block' }}>← Quay lại</Link>
+            <div>{isVi ? 'Không tìm thấy dự án' : 'Project not found'}</div>
+            <Link to="/quan-ly-du-an" style={{ marginTop: '1rem', display: 'inline-block' }}>{isVi ? '← Quay lại' : '← Go back'}</Link>
         </div>
     );
 
@@ -68,7 +71,7 @@ export default function ProjectDetail() {
     };
 
     const addChecklistItem = () => {
-        const label = prompt('Tên mục hồ sơ:');
+        const label = prompt(isVi ? 'Tên mục hồ sơ:' : 'Checklist item name:');
         if (!label) return;
         const updated = {
             ...project,
@@ -96,7 +99,7 @@ export default function ProjectDetail() {
     };
 
     const addMilestone = () => {
-        const label = prompt('Tên mốc tiến độ:');
+        const label = prompt(isVi ? 'Tên mốc tiến độ:' : 'Milestone name:');
         if (!label) return;
         const updated = {
             ...project,
@@ -113,7 +116,7 @@ export default function ProjectDetail() {
     };
 
     const addCustomField = () => {
-        const label = prompt('Tên trường (VD: Số HĐ, Bảo hành...):');
+        const label = prompt(isVi ? 'Tên trường (VD: Số HĐ, Bảo hành...):' : 'Field name (e.g. Contract #, Warranty...):');
         if (!label) return;
         const updated = {
             ...project,
@@ -157,15 +160,15 @@ export default function ProjectDetail() {
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <Link to="/quan-ly-du-an" style={{ color: '#64748b', textDecoration: 'none', fontSize: '0.85rem' }}>← Quản lý DA</Link>
+                    <Link to="/quan-ly-du-an" style={{ color: '#64748b', textDecoration: 'none', fontSize: '0.85rem' }}>{isVi ? '← Quản lý DA' : '← Projects'}</Link>
                     <h1 style={{ fontSize: '1.3rem', margin: 0 }}>{project.name}</h1>
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                    {saving && <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>💾 Đang lưu...</span>}
+                    {saving && <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>💾 {isVi ? 'Đang lưu...' : 'Saving...'}</span>}
                     <button className="btn btn-sm" onClick={() => setShowHistory(!showHistory)}
-                        style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem' }}>🕐 Lịch sử</button>
+                        style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem' }}>🕐 {isVi ? 'Lịch sử' : 'History'}</button>
                     <button className="btn btn-sm" onClick={() => setEditing(!editing)}>
-                        {editing ? '✅ Xong' : '🖊 Sửa'}
+                        {editing ? (isVi ? '✅ Xong' : '✅ Done') : (isVi ? '🖊 Sửa' : '🖊 Edit')}
                     </button>
                 </div>
             </div>
@@ -176,10 +179,10 @@ export default function ProjectDetail() {
             {/* History panel */}
             {showHistory && (project.history || []).length > 0 && (
                 <div style={{ ...sectionStyle, background: '#fefce8', borderColor: '#fde047', marginBottom: '1rem' }}>
-                    <div style={sectionTitle}>🕐 Lịch sử chỉnh sửa ({(project.history || []).length})</div>
+                    <div style={sectionTitle}>🕐 {isVi ? 'Lịch sử chỉnh sửa' : 'Edit History'} ({(project.history || []).length})</div>
                     {(project.history || []).slice().reverse().map((h, i) => (
                         <div key={i} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', padding: '0.25rem 0', borderBottom: '1px solid #fef9c3', fontSize: '0.8rem' }}>
-                            <span style={{ color: '#64748b', minWidth: 120 }}>{new Date(h.date).toLocaleString('vi-VN')}</span>
+                            <span style={{ color: '#64748b', minWidth: 120 }}>{new Date(h.date).toLocaleString(isVi ? 'vi-VN' : 'en-US')}</span>
                             <span style={{ flex: 1, color: '#1e293b' }}>{h.changes}</span>
                         </div>
                     ))}
@@ -210,42 +213,42 @@ export default function ProjectDetail() {
                 <div>
                     {/* General info */}
                     <div style={sectionStyle}>
-                        <div style={sectionTitle}>📋 Thông tin chung</div>
+                        <div style={sectionTitle}>📋 {isVi ? 'Thông tin chung' : 'General Information'}</div>
                         {editing ? (
                             <>
                                 <div style={fieldRow}>
                                     <div style={{ flex: 1 }}>
-                                        <div style={fieldLabel}>Tên công trình</div>
+                                        <div style={fieldLabel}>{isVi ? 'Tên công trình' : 'Project Name'}</div>
                                         <input style={inputStyle} value={project.name} onChange={e => updateField('name', e.target.value)} />
                                     </div>
                                 </div>
                                 <div style={fieldRow}>
                                     <div style={{ flex: 1 }}>
-                                        <div style={fieldLabel}>Năm</div>
+                                        <div style={fieldLabel}>{isVi ? 'Năm' : 'Year'}</div>
                                         <input style={inputStyle} value={project.year} onChange={e => updateField('year', e.target.value)} />
                                     </div>
                                     <div style={{ flex: 1 }}>
-                                        <div style={fieldLabel}>Địa điểm</div>
+                                        <div style={fieldLabel}>{isVi ? 'Địa điểm' : 'Location'}</div>
                                         <input style={inputStyle} value={project.location} onChange={e => updateField('location', e.target.value)} />
                                     </div>
                                 </div>
                                 <div style={fieldRow}>
                                     <div style={{ flex: 1 }}>
-                                        <div style={fieldLabel}>Giá trị</div>
+                                        <div style={fieldLabel}>{isVi ? 'Giá trị' : 'Value'}</div>
                                         <input style={inputStyle} value={project.totalAmount} onChange={e => updateField('totalAmount', e.target.value)} />
                                     </div>
                                     <div style={{ flex: 1 }}>
-                                        <div style={fieldLabel}>Nguồn KP</div>
+                                        <div style={fieldLabel}>{isVi ? 'Nguồn KP' : 'Funding Source'}</div>
                                         <input style={inputStyle} value={project.fundingSource} onChange={e => updateField('fundingSource', e.target.value)} />
                                     </div>
                                 </div>
                                 <div style={fieldRow}>
                                     <div style={{ flex: 1 }}>
-                                        <div style={fieldLabel}>Nhà thầu</div>
+                                        <div style={fieldLabel}>{isVi ? 'Nhà thầu' : 'Contractor'}</div>
                                         <input style={inputStyle} value={project.contractorName} onChange={e => updateField('contractorName', e.target.value)} />
                                     </div>
                                     <div style={{ flex: 1 }}>
-                                        <div style={fieldLabel}>Trạng thái</div>
+                                        <div style={fieldLabel}>{isVi ? 'Trạng thái' : 'Status'}</div>
                                         <select style={inputStyle} value={project.status} onChange={e => updateField('status', e.target.value)}>
                                             {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                                         </select>
@@ -255,16 +258,16 @@ export default function ProjectDetail() {
                         ) : (
                             <>
                                 <div style={fieldRow}>
-                                    <div style={{ flex: 1 }}><div style={fieldLabel}>Năm</div><div style={fieldValue}>{project.year}</div></div>
-                                    <div style={{ flex: 1 }}><div style={fieldLabel}>Địa điểm</div><div style={fieldValue}>{project.location || '—'}</div></div>
+                                    <div style={{ flex: 1 }}><div style={fieldLabel}>{isVi ? 'Năm' : 'Year'}</div><div style={fieldValue}>{project.year}</div></div>
+                                    <div style={{ flex: 1 }}><div style={fieldLabel}>{isVi ? 'Địa điểm' : 'Location'}</div><div style={fieldValue}>{project.location || '—'}</div></div>
                                 </div>
                                 <div style={fieldRow}>
-                                    <div style={{ flex: 1 }}><div style={fieldLabel}>Giá trị</div><div style={fieldValue}>{project.totalAmount || '—'}</div></div>
-                                    <div style={{ flex: 1 }}><div style={fieldLabel}>Nguồn KP</div><div style={fieldValue}>{project.fundingSource || '—'}</div></div>
+                                    <div style={{ flex: 1 }}><div style={fieldLabel}>{isVi ? 'Giá trị' : 'Value'}</div><div style={fieldValue}>{project.totalAmount || '—'}</div></div>
+                                    <div style={{ flex: 1 }}><div style={fieldLabel}>{isVi ? 'Nguồn KP' : 'Funding Source'}</div><div style={fieldValue}>{project.fundingSource || '—'}</div></div>
                                 </div>
                                 <div style={fieldRow}>
-                                    <div style={{ flex: 1 }}><div style={fieldLabel}>Nhà thầu</div><div style={fieldValue}>{project.contractorName || '—'}</div></div>
-                                    <div style={{ flex: 1 }}><div style={fieldLabel}>Trạng thái</div>
+                                    <div style={{ flex: 1 }}><div style={fieldLabel}>{isVi ? 'Nhà thầu' : 'Contractor'}</div><div style={fieldValue}>{project.contractorName || '—'}</div></div>
+                                    <div style={{ flex: 1 }}><div style={fieldLabel}>{isVi ? 'Trạng thái' : 'Status'}</div>
                                         <span style={{
                                             padding: '0.15rem 0.5rem', borderRadius: 12, fontSize: '0.8rem',
                                             background: STATUS_OPTIONS.find(o => o.value === project.status)?.value === 'completed' ? '#d1fae5' : STATUS_OPTIONS.find(o => o.value === project.status)?.value === 'in_progress' ? '#fef3c7' : '#f1f5f9',
@@ -287,17 +290,17 @@ export default function ProjectDetail() {
                             return {};
                         })()),
                     }}>
-                        <div style={sectionTitle}>⏰ Hạn nộp hồ sơ</div>
+                        <div style={sectionTitle}>⏰ {isVi ? 'Hạn nộp hồ sơ' : 'Document Deadline'}</div>
                         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
                             <div style={{ flex: '0 0 auto' }}>
-                                <div style={fieldLabel}>Nhãn</div>
+                                <div style={fieldLabel}>{isVi ? 'Nhãn' : 'Label'}</div>
                                 <input style={{ ...inputStyle, width: 180 }}
                                     value={project.deadlineLabel || ''}
                                     onChange={e => updateField('deadlineLabel', e.target.value)}
-                                    placeholder="VD: Hạn nộp hồ sơ" />
+                                    placeholder={isVi ? 'VD: Hạn nộp hồ sơ' : 'e.g. Document deadline'} />
                             </div>
                             <div style={{ flex: '0 0 auto' }}>
-                                <div style={fieldLabel}>Ngày hạn</div>
+                                <div style={fieldLabel}>{isVi ? 'Ngày hạn' : 'Due Date'}</div>
                                 <input type="date" style={{ ...inputStyle, width: 160 }}
                                     value={project.deadline || ''}
                                     onChange={e => updateField('deadline', e.target.value)} />
@@ -306,23 +309,23 @@ export default function ProjectDetail() {
                                 const diff = Math.ceil((new Date(project.deadline).getTime() - Date.now()) / 86400000);
                                 if (diff < 0) return (
                                     <div style={{ padding: '0.3rem 0.75rem', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 8, color: '#dc2626', fontWeight: 700, fontSize: '0.85rem' }}>
-                                        🔴 Quá hạn {-diff} ngày!
+                                        🔴 {isVi ? `Quá hạn ${-diff} ngày!` : `Overdue ${-diff} days!`}
                                     </div>
                                 );
                                 if (diff <= 3) return (
                                     <div style={{ padding: '0.3rem 0.75rem', background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 8, color: '#d97706', fontWeight: 600, fontSize: '0.85rem' }}>
-                                        🟡 Còn {diff} ngày
+                                        🟡 {isVi ? `Còn ${diff} ngày` : `${diff} days left`}
                                     </div>
                                 );
                                 return (
                                     <div style={{ padding: '0.3rem 0.75rem', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 8, color: '#059669', fontSize: '0.85rem' }}>
-                                        ✅ Còn {diff} ngày
+                                        ✅ {isVi ? `Còn ${diff} ngày` : `${diff} days left`}
                                     </div>
                                 );
                             })()}
                             {project.deadline && (
                                 <button onClick={() => { updateField('deadline', ''); updateField('deadlineLabel', ''); }}
-                                    style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '0.8rem' }}>✕ Xóa</button>
+                                    style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '0.8rem' }}>✕ {isVi ? 'Xóa' : 'Remove'}</button>
                             )}
                         </div>
                     </div>
@@ -331,7 +334,7 @@ export default function ProjectDetail() {
                     {project.formData && Object.keys(project.formData).length > 0 && (
                         <div style={{ ...sectionStyle, background: 'linear-gradient(135deg, #eff6ff, #fff)', borderColor: '#93c5fd' }}>
                             <div style={sectionTitle}>
-                                <span>📄 Thông tin hợp đồng ({(project.selectedFields || Object.keys(project.formData)).filter(k => project.formData![k]?.trim()).length} trường)</span>
+                                <span>📄 {isVi ? 'Thông tin hợp đồng' : 'Contract Info'} ({(project.selectedFields || Object.keys(project.formData)).filter(k => project.formData![k]?.trim()).length} {isVi ? 'trường' : 'fields'})</span>
                                 <div style={{ display: 'flex', gap: '0.3rem' }}>
                                     <button className="btn btn-sm" onClick={() => {
                                         // Toggle field management
@@ -354,13 +357,13 @@ export default function ProjectDetail() {
                                                 }
                                                 updateField('selectedFields', [...currentSelected]);
                                             } else {
-                                                showToast('Không tìm thấy trường: ' + key);
+                                                showToast(isVi ? 'Không tìm thấy trường: ' + key : 'Field not found: ' + key);
                                             }
                                         }
                                     }} style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem' }}>⚙️</button>
                                     <button className="btn btn-sm" onClick={() => setShowFormData(!showFormData)}
                                         style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem' }}>
-                                        {showFormData ? '▲ Thu gọn' : '▼ Mở rộng'}
+                                        {showFormData ? (isVi ? '▲ Thu gọn' : '▲ Collapse') : (isVi ? '▼ Mở rộng' : '▼ Expand')}
                                     </button>
                                 </div>
                             </div>
@@ -387,18 +390,18 @@ export default function ProjectDetail() {
                     {/* Custom fields */}
                     <div style={sectionStyle}>
                         <div style={sectionTitle}>
-                            📝 Trường tùy chỉnh
-                            <button className="btn btn-sm" onClick={addCustomField} style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem' }}>➕ Thêm</button>
+                            📝 {isVi ? 'Trường tùy chỉnh' : 'Custom Fields'}
+                            <button className="btn btn-sm" onClick={addCustomField} style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem' }}>➕ {isVi ? 'Thêm' : 'Add'}</button>
                         </div>
                         {(project.customFields || []).length === 0 ? (
-                            <div style={{ color: '#94a3b8', fontSize: '0.8rem' }}>Chưa có trường nào. Bấm "Thêm" để thêm.</div>
+                            <div style={{ color: '#94a3b8', fontSize: '0.8rem' }}>{isVi ? 'Chưa có trường nào. Bấm "Thêm" để thêm.' : 'No fields yet. Click "Add" to add.'}</div>
                         ) : (
                             (project.customFields || []).map((cf, idx) => (
                                 <div key={idx} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.35rem', alignItems: 'center' }}>
                                     <div style={{ flex: '0 0 120px', fontSize: '0.8rem', color: '#64748b', fontWeight: 500 }}>{cf.label}:</div>
                                     <input style={{ ...inputStyle, flex: 1 }} value={cf.value}
                                         onChange={e => updateCustomField(idx, e.target.value)}
-                                        placeholder={`Nhập ${cf.label}`} />
+                                        placeholder={isVi ? `Nhập ${cf.label}` : `Enter ${cf.label}`} />
                                     <button onClick={() => removeCustomField(idx)}
                                         style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.8rem' }}>✕</button>
                                 </div>
@@ -408,10 +411,10 @@ export default function ProjectDetail() {
 
                     {/* Notes */}
                     <div style={sectionStyle}>
-                        <div style={sectionTitle}>💬 Ghi chú</div>
+                        <div style={sectionTitle}>💬 {isVi ? 'Ghi chú' : 'Notes'}</div>
                         <textarea
                             value={project.notes || ''} onChange={e => updateField('notes', e.target.value)}
-                            placeholder="Nhập ghi chú cho dự án..."
+                            placeholder={isVi ? 'Nhập ghi chú cho dự án...' : 'Enter project notes...'}
                             style={{ ...inputStyle, minHeight: 80, resize: 'vertical' }}
                         />
                     </div>
@@ -422,7 +425,7 @@ export default function ProjectDetail() {
                     {/* Checklist */}
                     <div style={{ ...sectionStyle, background: 'linear-gradient(135deg, #f0fdf4, #fff)' }}>
                         <div style={sectionTitle}>
-                            <span>✅ Checklist hồ sơ ({checkDone}/{checkTotal})</span>
+                            <span>✅ {isVi ? 'Checklist hồ sơ' : 'Document Checklist'} ({checkDone}/{checkTotal})</span>
                             <div style={{ display: 'flex', gap: '0.3rem' }}>
                                 <select onChange={e => {
                                     const tpl = CHECKLIST_TEMPLATES[e.target.value];
@@ -433,10 +436,10 @@ export default function ProjectDetail() {
                                     }
                                     e.target.value = '';
                                 }} style={{ fontSize: '0.65rem', padding: '0.1rem 0.3rem', borderRadius: 4, border: '1px solid #e2e8f0', color: '#64748b' }}>
-                                    <option value="">📋 Mẫu...</option>
+                                    <option value="">📋 {isVi ? 'Mẫu...' : 'Templates...'}</option>
                                     {Object.keys(CHECKLIST_TEMPLATES).map(k => <option key={k} value={k}>{k}</option>)}
                                 </select>
-                                <button className="btn btn-sm" onClick={addChecklistItem} style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem' }}>➕ Thêm</button>
+                                <button className="btn btn-sm" onClick={addChecklistItem} style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem' }}>➕ {isVi ? 'Thêm' : 'Add'}</button>
                             </div>
                         </div>
                         {/* Progress bar */}
@@ -461,7 +464,7 @@ export default function ProjectDetail() {
                                 }}>{item.label}</span>
                                 {item.doneDate && (
                                     <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
-                                        {new Date(item.doneDate).toLocaleDateString('vi-VN')}
+                                        {new Date(item.doneDate).toLocaleDateString(isVi ? 'vi-VN' : 'en-US')}
                                     </span>
                                 )}
                                 <button onClick={() => removeChecklistItem(item.id)}
@@ -474,7 +477,7 @@ export default function ProjectDetail() {
                     <div style={sectionStyle}>
                         <div style={sectionTitle}>
                             <span>📅 Timeline</span>
-                            <button className="btn btn-sm" onClick={addMilestone} style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem' }}>➕ Thêm</button>
+                            <button className="btn btn-sm" onClick={addMilestone} style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem' }}>➕ {isVi ? 'Thêm' : 'Add'}</button>
                         </div>
                         {/* Gantt chart */}
                         {(() => {
@@ -499,7 +502,7 @@ export default function ProjectDetail() {
                                                             background: 'linear-gradient(90deg, #3b82f6, #059669)',
                                                         }} />
                                                     </div>
-                                                    <span style={{ fontSize: '0.6rem', color: '#94a3b8', minWidth: 55 }}>{new Date(m.date).toLocaleDateString('vi-VN')}</span>
+                                                    <span style={{ fontSize: '0.6rem', color: '#94a3b8', minWidth: 55 }}>{new Date(m.date).toLocaleDateString(isVi ? 'vi-VN' : 'en-US')}</span>
                                                 </div>
                                             );
                                         })}

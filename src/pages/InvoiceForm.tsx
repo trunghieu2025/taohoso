@@ -1,6 +1,7 @@
 import { useState, ChangeEvent, useRef } from 'react';
 import { FormInput, FormTextArea } from '../components/FormField';
 import { InvoiceData, CustomColumn } from '../types';
+import { useLanguage } from '../i18n/i18n';
 import {
   INITIAL_INVOICE_DATA,
   emptySummaryRow,
@@ -31,6 +32,8 @@ export default function InvoiceForm() {
   const [logoDataUrl, setLogoDataUrl] = useState<string>('');
   const logoInputRef = useRef<HTMLInputElement>(null);
   const [scaleMode, setScaleMode] = useState<ScaleMode>('default');
+  const { lang } = useLanguage();
+  const isVi = lang === 'vi';
 
   // Custom column dialog state
   const [showAddColumn, setShowAddColumn] = useState(false);
@@ -164,8 +167,8 @@ export default function InvoiceForm() {
     <>
       <div className="page-header">
         <div className="container">
-          <h1>Hoá Đơn Bán Hàng</h1>
-          <p>Tạo hoá đơn bán hàng, xuất PDF in hoặc lưu trữ</p>
+          <h1>{isVi ? 'Hoá Đơn Bán Hàng' : 'Sales Invoice'}</h1>
+          <p>{isVi ? 'Tạo hoá đơn bán hàng, xuất PDF in hoặc lưu trữ' : 'Create sales invoices, export PDF for printing or archiving'}</p>
         </div>
       </div>
 
@@ -174,7 +177,7 @@ export default function InvoiceForm() {
           <div className="wizard">
             {/* Company info */}
             <div className="wizard-content">
-              <h3 style={{ marginBottom: '1rem' }}>Thông tin công ty</h3>
+              <h3 style={{ marginBottom: '1rem' }}>{isVi ? 'Thông tin công ty' : 'Company Information'}</h3>
               <div
                 style={{
                   display: 'flex',
@@ -263,7 +266,7 @@ export default function InvoiceForm() {
                             marginTop: '4px',
                           }}
                         >
-                          Tải logo
+                          {isVi ? 'Tải logo' : 'Upload logo'}
                         </span>
                       </>
                     )}
@@ -274,13 +277,13 @@ export default function InvoiceForm() {
                 <div style={{ flex: 1 }}>
                   <div className="form-row">
                     <FormInput
-                      label="Tên công ty"
+                      label={isVi ? 'Tên công ty' : 'Company Name'}
                       name="companyName"
                       value={data.companyName}
                       onChange={handleStr}
                     />
                     <FormInput
-                      label="Địa chỉ"
+                      label={isVi ? 'Địa chỉ' : 'Address'}
                       name="companyAddress"
                       value={data.companyAddress}
                       onChange={handleStr}
@@ -288,13 +291,13 @@ export default function InvoiceForm() {
                   </div>
                   <div className="form-row">
                     <FormInput
-                      label="Số điện thoại"
+                      label={isVi ? 'Số điện thoại' : 'Phone'}
                       name="companyPhone"
                       value={data.companyPhone}
                       onChange={handleStr}
                     />
                     <FormInput
-                      label="Số tài khoản"
+                      label={isVi ? 'Số tài khoản' : 'Bank Account'}
                       name="companyBank"
                       value={data.companyBank}
                       onChange={handleStr}
@@ -306,25 +309,25 @@ export default function InvoiceForm() {
 
             {/* Customer info */}
             <div className="wizard-content" style={{ marginTop: '1.5rem' }}>
-              <h3 style={{ marginBottom: '1rem' }}>Thông tin khách hàng</h3>
+              <h3 style={{ marginBottom: '1rem' }}>{isVi ? 'Thông tin khách hàng' : 'Customer Information'}</h3>
               <div className="form-row">
                 <FormInput
-                  label="Tên khách hàng"
+                  label={isVi ? 'Tên khách hàng' : 'Customer Name'}
                   name="customerName"
                   value={data.customerName}
                   onChange={handleStr}
-                  placeholder="Anh / Chị..."
+                  placeholder={isVi ? 'Anh / Chị...' : 'Mr. / Ms...'}
                 />
                 <FormInput
-                  label="Địa chỉ"
+                  label={isVi ? 'Địa chỉ' : 'Address'}
                   name="customerAddress"
                   value={data.customerAddress}
                   onChange={handleStr}
-                  placeholder="Địa chỉ giao hàng"
+                  placeholder={isVi ? 'Địa chỉ giao hàng' : 'Shipping address'}
                 />
               </div>
               <FormInput
-                label="Số điện thoại"
+                label={isVi ? 'Số điện thoại' : 'Phone'}
                 name="customerPhone"
                 value={data.customerPhone}
                 onChange={handleStr}
@@ -335,14 +338,14 @@ export default function InvoiceForm() {
             {/* Item table */}
             <div className="wizard-content" style={{ marginTop: '1.5rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                <h3 style={{ margin: 0 }}>Danh sách hàng hoá</h3>
+                <h3 style={{ margin: 0 }}>{isVi ? 'Danh sách hàng hoá' : 'Product List'}</h3>
                 <button
                   className="btn btn-outline btn-sm"
                   onClick={() => setShowAddColumn(true)}
-                  title="Thêm cột tuỳ chỉnh"
+                  title={isVi ? 'Thêm cột tuỳ chỉnh' : 'Add custom column'}
                   style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
                 >
-                  <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>+</span> Thêm cột
+                  <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>+</span> {isVi ? 'Thêm cột' : 'Add column'}
                 </button>
               </div>
               <div style={{ overflowX: 'auto' }}>
@@ -360,15 +363,11 @@ export default function InvoiceForm() {
                         borderBottom: '2px solid var(--border)',
                       }}
                     >
-                      {[
-                        'Ngày',
-                        'Tên hàng hoá',
-                        'ĐVT',
-                        'Quy Cách',
-                        'SL',
-                        'Đơn giá',
-                        'Thành tiền',
-                      ].map((h) => (
+                      {(isVi ? [
+                        'Ngày', 'Tên hàng hoá', 'ĐVT', 'Quy Cách', 'SL', 'Đơn giá', 'Thành tiền',
+                      ] : [
+                        'Date', 'Product', 'Unit', 'Spec', 'Qty', 'Price', 'Total',
+                      ]).map((h) => (
                         <th
                           key={h}
                           style={{
@@ -459,7 +458,7 @@ export default function InvoiceForm() {
             >
               {/* Fixed: Thành tiền */}
               <div style={summaryRowStyle}>
-                <span style={summaryLabelStyle}>Thành tiền</span>
+                <span style={summaryLabelStyle}>{isVi ? 'Thành tiền' : 'Subtotal'}</span>
                 <span style={summaryValueStyle}>{fmt(subtotal)} ₫</span>
               </div>
 
@@ -531,7 +530,7 @@ export default function InvoiceForm() {
                     }))
                   }
                 >
-                  + Thêm dòng
+                  + {isVi ? 'Thêm dòng' : 'Add row'}
                 </button>
               </div>
 
@@ -545,7 +544,7 @@ export default function InvoiceForm() {
                 }}
               >
                 <span style={{ ...summaryLabelStyle, fontSize: '1.05rem' }}>
-                  Còn lại
+                  {isVi ? 'Còn lại' : 'Remaining'}
                 </span>
                 <span
                   style={{
@@ -565,11 +564,11 @@ export default function InvoiceForm() {
             {/* Note */}
             <div className="wizard-content" style={{ marginTop: '1rem' }}>
               <FormTextArea
-                label="Ghi chú"
+                label={isVi ? 'Ghi chú' : 'Notes'}
                 name="note"
                 value={data.note}
                 onChange={handleStr}
-                placeholder="Ghi chú thêm..."
+                placeholder={isVi ? 'Ghi chú thêm...' : 'Additional notes...'}
                 rows={2}
               />
             </div>
@@ -590,13 +589,13 @@ export default function InvoiceForm() {
                       color: 'var(--danger, #e53e3e)',
                     }}
                   >
-                    Xóa tất cả?
+                    {isVi ? 'Xóa tất cả?' : 'Clear all?'}
                   </span>
                   <button
                     className="btn btn-sm"
                     onClick={() => setShowClearConfirm(false)}
                   >
-                    Hủy
+                    {isVi ? 'Hủy' : 'Cancel'}
                   </button>
                   <button
                     className="btn btn-sm btn-danger"
@@ -605,7 +604,7 @@ export default function InvoiceForm() {
                       setShowClearConfirm(false);
                     }}
                   >
-                    Xóa
+                    {isVi ? 'Xóa' : 'Delete'}
                   </button>
                 </div>
               ) : (
@@ -613,14 +612,14 @@ export default function InvoiceForm() {
                   className="btn btn-secondary"
                   onClick={() => setShowClearConfirm(true)}
                 >
-                  🗑️ Xóa tất cả
+                  🗑️ {isVi ? 'Xóa tất cả' : 'Clear all'}
                 </button>
               )}
               <button
                 className="btn btn-outline"
                 onClick={() => setShowPreview(true)}
               >
-                👁️ Xem trước
+                👁️ {isVi ? 'Xem trước' : 'Preview'}
               </button>
 
               {/* Scale mode dropdown */}
@@ -638,10 +637,10 @@ export default function InvoiceForm() {
                   }}
                   title="Tuỳ chọn kích thước khi in"
                 >
-                  <option value="default">Mặc định</option>
-                  <option value="fit-page">Vừa 1 trang</option>
-                  <option value="fit-width">Vừa chiều rộng</option>
-                  <option value="fit-height">Vừa chiều cao</option>
+                  <option value="default">{isVi ? 'Mặc định' : 'Default'}</option>
+                  <option value="fit-page">{isVi ? 'Vừa 1 trang' : 'Fit page'}</option>
+                  <option value="fit-width">{isVi ? 'Vừa chiều rộng' : 'Fit width'}</option>
+                  <option value="fit-height">{isVi ? 'Vừa chiều cao' : 'Fit height'}</option>
                 </select>
                 <button
                   className="btn btn-primary"
@@ -649,7 +648,7 @@ export default function InvoiceForm() {
                     generateInvoicePDF(data, { subtotal, remaining }, logoDataUrl, scaleMode)
                   }
                 >
-                  📥 Xuất PDF
+                  📥 {isVi ? 'Xuất PDF' : 'Export PDF'}
                 </button>
               </div>
             </div>
@@ -695,14 +694,14 @@ export default function InvoiceForm() {
       {showAddColumn && (
         <div style={dialogOverlay} onClick={() => setShowAddColumn(false)}>
           <div style={dialogBox} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginBottom: '1rem', fontSize: '1.1rem' }}>Thêm cột tuỳ chỉnh</h3>
+            <h3 style={{ marginBottom: '1rem', fontSize: '1.1rem' }}>{isVi ? 'Thêm cột tuỳ chỉnh' : 'Add Custom Column'}</h3>
 
             <div style={{ marginBottom: '0.75rem' }}>
-              <label className="form-label" style={{ display: 'block', marginBottom: '4px', fontWeight: 600, fontSize: '0.85rem' }}>Tên cột</label>
+              <label className="form-label" style={{ display: 'block', marginBottom: '4px', fontWeight: 600, fontSize: '0.85rem' }}>{isVi ? 'Tên cột' : 'Column Name'}</label>
               <input
                 value={newColTitle}
                 onChange={(e) => setNewColTitle(e.target.value)}
-                placeholder="VD: Chiết khấu, Màu sắc..."
+                placeholder={isVi ? 'VD: Chiết khấu, Màu sắc...' : 'e.g. Discount, Color...'}
                 autoFocus
                 style={{
                   width: '100%',
@@ -715,26 +714,26 @@ export default function InvoiceForm() {
             </div>
 
             <div style={{ marginBottom: '0.75rem' }}>
-              <label className="form-label" style={{ display: 'block', marginBottom: '4px', fontWeight: 600, fontSize: '0.85rem' }}>Loại cột</label>
+              <label className="form-label" style={{ display: 'block', marginBottom: '4px', fontWeight: 600, fontSize: '0.85rem' }}>{isVi ? 'Loại cột' : 'Column Type'}</label>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button
                   className={`btn btn-sm ${newColType === 'text' ? 'btn-primary' : 'btn-outline'}`}
                   onClick={() => setNewColType('text')}
                 >
-                  📝 Nhập tay
+                  📝 {isVi ? 'Nhập tay' : 'Manual'}
                 </button>
                 <button
                   className={`btn btn-sm ${newColType === 'formula' ? 'btn-primary' : 'btn-outline'}`}
                   onClick={() => setNewColType('formula')}
                 >
-                  ƒx Công thức
+                  ƒx {isVi ? 'Công thức' : 'Formula'}
                 </button>
               </div>
             </div>
 
             {newColType === 'formula' && (
               <div style={{ marginBottom: '0.75rem' }}>
-                <label className="form-label" style={{ display: 'block', marginBottom: '4px', fontWeight: 600, fontSize: '0.85rem' }}>Công thức</label>
+                <label className="form-label" style={{ display: 'block', marginBottom: '4px', fontWeight: 600, fontSize: '0.85rem' }}>{isVi ? 'Công thức' : 'Formula'}</label>
                 <input
                   value={newColFormula}
                   onChange={(e) => setNewColFormula(e.target.value)}
@@ -757,7 +756,7 @@ export default function InvoiceForm() {
                   color: 'var(--text-secondary, #555)',
                   lineHeight: 1.5,
                 }}>
-                  <strong>Biến có sẵn:</strong> <code>SL</code>, <code>Đơn giá</code>, <code>Thành tiền</code>
+                  <strong>{isVi ? 'Biến có sẵn:' : 'Available variables:'}</strong> <code>SL</code>, <code>{isVi ? 'Đơn giá' : 'Price'}</code>, <code>{isVi ? 'Thành tiền' : 'Total'}</code>
                   {data.customColumns.length > 0 && (
                     <>
                       <br />
@@ -772,13 +771,13 @@ export default function InvoiceForm() {
             )}
 
             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '1rem' }}>
-              <button className="btn btn-sm btn-secondary" onClick={() => setShowAddColumn(false)}>Hủy</button>
+              <button className="btn btn-sm btn-secondary" onClick={() => setShowAddColumn(false)}>{isVi ? 'Hủy' : 'Cancel'}</button>
               <button
                 className="btn btn-sm btn-primary"
                 onClick={addCustomColumn}
                 disabled={!newColTitle.trim()}
               >
-                ✓ Thêm cột
+                ✓ {isVi ? 'Thêm cột' : 'Add column'}
               </button>
             </div>
           </div>

@@ -335,7 +335,7 @@ export default function MilitaryDocForm() {
 
     // Template state
     const [templateBuffer, setTemplateBuffer] = useState<ArrayBuffer | null>(null);
-    const [templateName, setTemplateName] = useState('Mẫu mặc định (Nhà tập thể)');
+    const [templateName, setTemplateName] = useState(p('default_template'));
     const [templateTags, setTemplateTags] = useState<string[]>([]);
     const [isCustomTemplate, setIsCustomTemplate] = useState(false);
     const [customLabels, setCustomLabels] = useState<Record<string, string>>({});
@@ -852,7 +852,7 @@ export default function MilitaryDocForm() {
             if (!res.ok) return;
             const buf = await res.arrayBuffer();
             setTemplateBuffer(buf);
-            setTemplateName('Mẫu mặc định (Nhà tập thể)');
+            setTemplateName(p('default_template'));
             setTemplateTags(extractTags(buf));
             setIsCustomTemplate(false);
             setFileType('word');
@@ -887,7 +887,7 @@ export default function MilitaryDocForm() {
             setCurrentSessionId(id);
             setAutoSaveId(id);
             setSavedSessions(await listSessions());
-            showToast('Đã nhân bản hồ sơ!', 'success');
+            showToast(p('cloned'), 'success');
         } catch { /* ignore */ }
     };
 
@@ -954,10 +954,10 @@ export default function MilitaryDocForm() {
     // Contractor management
     const handleSaveContractor = async () => {
         const c = formDataToContractor(data);
-        if (!c.name) { showToast('Vui lòng nhập tên nhà thầu trước', 'warning'); return; }
+        if (!c.name) { showToast(p('home') === 'Trang chủ' ? 'Vui lòng nhập tên nhà thầu trước' : 'Please enter contractor name first', 'warning'); return; }
         await saveContractor(c);
         setContractors(await listContractors());
-        showToast('Đã lưu nhà thầu: ' + c.name, 'success');
+        showToast((p('home') === 'Trang chủ' ? 'Đã lưu nhà thầu: ' : 'Saved contractor: ') + c.name, 'success');
     };
 
     const handleSelectContractor = (c: Contractor) => {
@@ -1376,7 +1376,7 @@ export default function MilitaryDocForm() {
                                             <div style={{ fontWeight: 600 }}>📄 {templateName}</div>
                                             {templateTags.length > 0 && (
                                                 <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: 2 }}>
-                                                    {templateTags.length} trường dữ liệu
+                                                    {templateTags.length} {p('fields')}
                                                 </div>
                                             )}
                                         </div>
@@ -1392,7 +1392,7 @@ export default function MilitaryDocForm() {
                                                 className="btn btn-sm btn-secondary"
                                                 onClick={() => fileInputRef.current?.click()}
                                             >
-                                                📤 Tải mẫu khác
+                                                📤 {p('load_other')}
                                             </button>
                                             {TEMPLATE_LIBRARY.length > 1 && (
                                                 <select
@@ -1403,7 +1403,7 @@ export default function MilitaryDocForm() {
                                                     style={{ padding: '0.35rem 0.5rem', borderRadius: 6, border: '1px solid #cbd5e1', fontSize: '0.8rem' }}
                                                     defaultValue=""
                                                 >
-                                                    <option value="" disabled>📂 Chọn mẫu</option>
+                                                    <option value="" disabled>📂 {p('select_btn')}</option>
                                                     {TEMPLATE_LIBRARY.map((t, i) => (
                                                         <option key={i} value={i}>{t.name}</option>
                                                     ))}
@@ -1414,7 +1414,7 @@ export default function MilitaryDocForm() {
                                                     className="btn btn-sm"
                                                     onClick={handleResetTemplate}
                                                 >
-                                                    ↩️ Mẫu mặc định
+                                                    ↩️ {p('default_tpl')}
                                                 </button>
                                             )}
                                             <button
@@ -1422,7 +1422,7 @@ export default function MilitaryDocForm() {
                                                 onClick={() => navigate('/huong-dan/tao-ho-so')}
                                                 style={{ background: '#dbeafe', color: '#1d4ed8' }}
                                             >
-                                                📖 Hướng dẫn
+                                                📖 {p('guide')}
                                             </button>
                                             {rawUploadBuffer && (
                                                 <button
@@ -1475,7 +1475,7 @@ export default function MilitaryDocForm() {
                                         <div style={{ marginTop: '0.5rem', borderTop: '1px solid #bbf7d0', paddingTop: '0.5rem' }}>
                                             <input
                                                 type="text"
-                                                placeholder="🔍 Tìm hồ sơ..."
+                                                placeholder={`🔍 ${p('search_records')}`}
                                                 value={sessionSearch}
                                                 onChange={e => setSessionSearch(e.target.value)}
                                                 style={{
@@ -1521,14 +1521,14 @@ export default function MilitaryDocForm() {
                                     )}
                                     {showSessions && savedSessions.length === 0 && (
                                         <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: '#64748b', fontStyle: 'italic' }}>
-                                            Chưa có phiên nào được lưu
+                                            {p('home') === 'Trang chủ' ? 'Chưa có phiên nào được lưu' : 'No saved sessions yet'}
                                         </div>
                                     )}
                                     {/* Stats */}
                                     <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem', borderTop: '1px solid #bbf7d0', paddingTop: '0.5rem' }}>
-                                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>📑 {savedSessions.length} hồ sơ</div>
-                                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>🏢 {contractors.length} nhà thầu</div>
-                                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>📥 {exportHistory.length} lần xuất</div>
+                                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>📑 {savedSessions.length} {p('records')}</div>
+                                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>🏢 {contractors.length} {p('contractors')}</div>
+                                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>📥 {exportHistory.length} {p('exports')}</div>
                                     </div>
                                 </div>
 
@@ -1603,29 +1603,29 @@ export default function MilitaryDocForm() {
                                     <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                                         {showClearConfirm ? (
                                             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                                                <span style={{ fontSize: '0.9rem', color: 'var(--danger)' }}>Xóa tất cả?</span>
-                                                <button className="btn btn-sm" onClick={() => setShowClearConfirm(false)}>Hủy</button>
-                                                <button className="btn btn-sm btn-danger" onClick={confirmClear}>Xóa</button>
+                                                <span style={{ fontSize: '0.9rem', color: 'var(--danger)' }}>{p('delete_all_q')}</span>
+                                                <button className="btn btn-sm" onClick={() => setShowClearConfirm(false)}>{p('cancel')}</button>
+                                                <button className="btn btn-sm btn-danger" onClick={confirmClear}>{p('delete')}</button>
                                             </div>
                                         ) : (
                                             <button className="btn btn-secondary" onClick={handleClear}>
-                                                🗑️ Xóa tất cả
+                                                🗑️ {p('delete_all')}
                                             </button>
                                         )}
                                         {!isCustomTemplate && (
                                             <button className="btn btn-secondary" onClick={handleFillDemo}>
-                                                📝 Điền mẫu thử
+                                                📝 {p('fill_sample')}
                                             </button>
                                         )}
                                         <button className="btn btn-secondary" onClick={handleClone} disabled={!templateBuffer}>
-                                            📋 Nhân bản
+                                            📋 {p('clone')}
                                         </button>
                                         <button className="btn btn-secondary" onClick={() => setShowBatchExport(true)} disabled={!templateBuffer}>
                                             📦 {p('batch_export')}
                                         </button>
                                     </div>
                                     <button className="btn btn-primary" onClick={handleExport} disabled={loading || !templateBuffer}>
-                                        {loading ? '⏳ Đang xuất...' : `📥 Xuất file ${fileType === 'excel' ? 'Excel (.xlsx)' : 'Word (.docx)'}`}
+                                        {loading ? `⏳ ${p('exporting')}` : `📥 ${p('export_file')} ${fileType === 'excel' ? 'Excel (.xlsx)' : 'Word (.docx)'}`}
                                     </button>
                                     <button className="btn btn-secondary" onClick={handleExportPDF} disabled={loading || !previewReady}
                                         style={{ fontSize: '0.85rem' }}>
@@ -1642,7 +1642,7 @@ export default function MilitaryDocForm() {
                                     )}
                                     <button className="btn btn-secondary" onClick={handleSaveToProject}
                                         style={{ fontSize: '0.85rem', background: '#eff6ff', borderColor: '#93c5fd', color: '#2563eb' }}>
-                                        📊 Lưu vào dự án
+                                        📊 {p('save_project')}
                                     </button>
                                     {hasGoogleApiKey() && !(window as any).electronAPI?.isDesktop && fileType === 'word' && templateBuffer && (
                                         <>
@@ -1650,21 +1650,21 @@ export default function MilitaryDocForm() {
                                                 try {
                                                     const filled = fillTemplate(templateBuffer, data);
                                                     const result = await uploadToDrive(templateName, filled);
-                                                    alert(`✅ Đã upload lên Google Drive!\nFile ID: ${result.id}`);
+                                                    alert(p('home') === 'Trang chủ' ? `✅ Đã upload lên Google Drive!\nFile ID: ${result.id}` : `✅ Uploaded to Google Drive!\nFile ID: ${result.id}`);
                                                     if (result.webViewLink) window.open(result.webViewLink, '_blank');
                                                 } catch (err) { alert('❌ ' + (err as Error).message); }
                                             }} style={{ fontSize: '0.85rem', background: '#fef3c7', borderColor: '#fbbf24', color: '#92400e' }}>
-                                                ☁️ Lưu Drive
+                                                ☁️ Save Drive
                                             </button>
                                             <button className="btn btn-secondary" onClick={() => openSheetsWithData(data)}
                                                 style={{ fontSize: '0.85rem', background: '#dcfce7', borderColor: '#86efac', color: '#166534' }}>
-                                                📊 Xuất Sheets
+                                                📊 {p('export_sheets')}
                                             </button>
                                         </>
                                     )}
                                     {!hasGoogleApiKey() && !(window as any).electronAPI?.isDesktop && (
                                         <a href="/cai-dat" className="btn btn-sm" style={{ fontSize: '0.75rem', color: '#64748b', textDecoration: 'none' }}>
-                                            ☁️ Kết nối Google
+                                            ☁️ Connect Google
                                         </a>
                                     )}
                                 </div>
@@ -1692,7 +1692,7 @@ export default function MilitaryDocForm() {
                             <div className="contract-preview-body" style={{ overflow: 'auto' }}>
                                 {!templateBuffer && (
                                     <p style={{ color: '#94a3b8', textAlign: 'center', padding: '2rem' }}>
-                                        Đang tải mẫu...
+                                        {p('loading_template')}
                                     </p>
                                 )}
                                 <div

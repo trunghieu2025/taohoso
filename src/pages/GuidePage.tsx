@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { useLanguage } from '../i18n/i18n';
 
 export default function GuidePage() {
   const { section } = useParams<{ section?: string }>();
+  const { lang } = useLanguage();
+  const isVi = lang === 'vi';
   const [tab, setTab] = useState<'tao-ho-so' | 'goi-mau'>(
     section === 'goi-mau' ? 'goi-mau' : 'tao-ho-so'
   );
@@ -16,10 +19,10 @@ export default function GuidePage() {
     <div className="container" style={{ padding: '2rem 1.5rem', maxWidth: 900 }}>
       <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
         <h1 style={{ fontSize: '1.8rem', color: '#0f172a', marginBottom: '0.5rem' }}>
-          📖 Hướng dẫn sử dụng
+          📖 {isVi ? 'Hướng dẫn sử dụng' : 'User Guide'}
         </h1>
         <p style={{ color: '#64748b', fontSize: '0.95rem' }}>
-          Hướng dẫn chi tiết từng tính năng của phần mềm Tạo Hồ Sơ
+          {isVi ? 'Hướng dẫn chi tiết từng tính năng của phần mềm Tạo Hồ Sơ' : 'Detailed guide for every feature of DocMaker'}
         </p>
       </div>
 
@@ -38,7 +41,7 @@ export default function GuidePage() {
             transition: 'all 0.2s',
           }}
         >
-          🏗️ Tự động hóa hồ sơ
+          🏗️ {isVi ? 'Tự động hóa hồ sơ' : 'Document Automation'}
         </button>
         <button
           onClick={() => setTab('goi-mau')}
@@ -50,12 +53,12 @@ export default function GuidePage() {
             transition: 'all 0.2s',
           }}
         >
-          📦 Gói mẫu nhiều file
+          📦 {isVi ? 'Gói mẫu nhiều file' : 'Multi-file Bundle'}
         </button>
       </div>
 
       {/* Content */}
-      {tab === 'tao-ho-so' ? <TaoHoSoGuide /> : <GoiMauGuide />}
+      {tab === 'tao-ho-so' ? <TaoHoSoGuide isVi={isVi} /> : <GoiMauGuide isVi={isVi} />}
 
       {/* CTA */}
       <div style={{
@@ -63,13 +66,13 @@ export default function GuidePage() {
         background: 'linear-gradient(135deg, #f0fdf4, #ecfeff)',
         borderRadius: 16, border: '1px solid #d1fae5',
       }}>
-        <h3 style={{ color: '#065f46', marginBottom: '0.75rem' }}>🚀 Bắt đầu ngay!</h3>
+        <h3 style={{ color: '#065f46', marginBottom: '0.75rem' }}>🚀 {isVi ? 'Bắt đầu ngay!' : 'Get Started!'}</h3>
         <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
           <Link to="/ho-so-sua-chua" className="btn btn-primary">
-            🏗️ Tự động hóa hồ sơ
+            🏗️ {isVi ? 'Tự động hóa hồ sơ' : 'Document Automation'}
           </Link>
           <Link to="/goi-mau" className="btn btn-outline">
-            📦 Gói mẫu nhiều file
+            📦 {isVi ? 'Gói mẫu nhiều file' : 'Multi-file Bundle'}
           </Link>
         </div>
       </div>
@@ -101,26 +104,26 @@ function StepList({ steps }: { steps: string[] }) {
   );
 }
 
-function Tip({ children }: { children: React.ReactNode }) {
+function Tip({ children, isVi }: { children: React.ReactNode; isVi: boolean }) {
   return (
     <div style={{
       background: '#eff6ff', borderLeft: '3px solid #3b82f6',
       padding: '0.6rem 0.8rem', margin: '0.5rem 0', fontSize: '0.85rem',
       borderRadius: '0 8px 8px 0',
     }}>
-      💡 <b>Mẹo:</b> {children}
+      💡 <b>{isVi ? 'Mẹo:' : 'Tip:'}</b> {children}
     </div>
   );
 }
 
-function Example({ children }: { children: React.ReactNode }) {
+function Example({ children, isVi }: { children: React.ReactNode; isVi: boolean }) {
   return (
     <div style={{
       background: '#f0fdf4', borderLeft: '3px solid #10b981',
       padding: '0.6rem 0.8rem', margin: '0.5rem 0', fontSize: '0.85rem',
       borderRadius: '0 8px 8px 0',
     }}>
-      📌 <b>Ví dụ:</b> {children}
+      📌 <b>{isVi ? 'Ví dụ:' : 'Example:'}</b> {children}
     </div>
   );
 }
@@ -134,8 +137,8 @@ function FeatureTable({ features }: { features: { icon: string; name: string; de
       <thead>
         <tr style={{ background: '#f0fdf4' }}>
           <th style={thStyle}>#</th>
-          <th style={thStyle}>Tính năng</th>
-          <th style={thStyle}>Mô tả</th>
+          <th style={thStyle}>Feature</th>
+          <th style={thStyle}>Description</th>
         </tr>
       </thead>
       <tbody>
@@ -155,9 +158,9 @@ const thStyle: React.CSSProperties = { padding: '8px 10px', border: '1px solid #
 const tdStyle: React.CSSProperties = { padding: '6px 10px', border: '1px solid #e2e8f0' };
 
 /* ══════════════════════════════════════════════════════════
-   TỰ ĐỘNG HÓA HỒ SƠ
+   DOCUMENT AUTOMATION GUIDE
    ══════════════════════════════════════════════════════════ */
-function TaoHoSoGuide() {
+function TaoHoSoGuide({ isVi }: { isVi: boolean }) {
   return (
     <div>
       <div style={{
@@ -166,16 +169,17 @@ function TaoHoSoGuide() {
         border: '1px solid #d1fae5',
       }}>
         <h3 style={{ color: '#065f46', margin: '0 0 0.5rem', fontSize: '1.05rem' }}>
-          💡 Tính năng này dùng để làm gì?
+          💡 {isVi ? 'Tính năng này dùng để làm gì?' : 'What is this feature for?'}
         </h3>
         <p style={{ color: '#334155', fontSize: '0.9rem', margin: 0, lineHeight: 1.6 }}>
-          Upload <b>1 file Word/Excel mẫu</b> → phần mềm tự quét và tạo form nhập liệu
-          → nhập thông tin <b>1 lần</b> → xuất file hoàn chỉnh. Hỗ trợ bảng dữ liệu,
-          số tiền tự đổi sang chữ, lưu nhà thầu, xuất hàng loạt từ Excel.
+          {isVi
+            ? <>Upload <b>1 file Word/Excel mẫu</b> → phần mềm tự quét và tạo form nhập liệu → nhập thông tin <b>1 lần</b> → xuất file hoàn chỉnh. Hỗ trợ bảng dữ liệu, số tiền tự đổi sang chữ, lưu nhà thầu, xuất hàng loạt từ Excel.</>
+            : <>Upload <b>1 Word/Excel template</b> → auto-scan and create input form → fill once → export completed file. Supports data tables, auto number-to-text conversion, contractor management, batch export from Excel.</>
+          }
         </p>
       </div>
 
-      <FeatureTable features={[
+      <FeatureTable features={isVi ? [
         { icon: '📤', name: 'Tải mẫu', desc: 'Upload Word/Excel → tự quét trường' },
         { icon: '🔍', name: 'Quét bảng', desc: 'Nhận diện bảng → cấu hình cột → nhập liệu' },
         { icon: '📝', name: 'Điền form', desc: 'Nhập dữ liệu → preview realtime' },
@@ -189,129 +193,142 @@ function TaoHoSoGuide() {
         { icon: '📄', name: 'Xuất PDF', desc: 'Tạo PDF khổ A4 từ preview' },
         { icon: '📦', name: 'Xuất hàng loạt', desc: 'N dòng Excel → ZIP chứa N file Word' },
         { icon: '📊', name: 'Import Excel', desc: '1 dòng Excel → điền vào form tự động' },
-        { icon: '🧮', name: 'Công thức tính', desc: 'Tạo công thức cho trường: {A} * {B} / 100' },
+        { icon: '🧮', name: 'Công thức tính', desc: 'Tạo công thức: {A} * {B} / 100' },
+      ] : [
+        { icon: '📤', name: 'Upload Template', desc: 'Upload Word/Excel → auto-scan fields' },
+        { icon: '🔍', name: 'Scan Tables', desc: 'Detect tables → configure columns → enter data' },
+        { icon: '📝', name: 'Fill Form', desc: 'Enter data → real-time preview' },
+        { icon: '💰', name: 'Number → Text', desc: 'Auto-convert numbers to words' },
+        { icon: '🏢', name: 'Contractors', desc: 'Save/select contractor info quickly' },
+        { icon: '💾', name: 'Auto-save', desc: 'Continuous auto-save, never lose data' },
+        { icon: '📋', name: 'Clone', desc: 'Copy record → edit few details' },
+        { icon: '⚠️', name: 'Validation', desc: 'Check required fields before export' },
+        { icon: '📐', name: 'Estimate', desc: 'Table: Qty × Price → auto-fill total' },
+        { icon: '📥', name: 'Export Word', desc: '.docx keeps 100% original format' },
+        { icon: '📄', name: 'Export PDF', desc: 'Create A4 PDF from preview' },
+        { icon: '📦', name: 'Batch Export', desc: 'N Excel rows → ZIP with N Word files' },
+        { icon: '📊', name: 'Import Excel', desc: '1 Excel row → auto-fill form' },
+        { icon: '🧮', name: 'Formulas', desc: 'Create formulas: {A} * {B} / 100' },
       ]} />
 
-      <Section icon="📤" title="Bước 1: Tải mẫu Word/Excel">
+      <Section icon="📤" title={isVi ? 'Bước 1: Tải mẫu Word/Excel' : 'Step 1: Upload Word/Excel Template'}>
         <p style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>
-          Upload file mẫu có chứa <code>{'{TÊN_TRƯỜNG}'}</code> — hệ thống tự tạo form nhập liệu.
+          {isVi
+            ? <>Upload file mẫu có chứa <code>{'{TÊN_TRƯỜNG}'}</code> — hệ thống tự tạo form nhập liệu.</>
+            : <>Upload a template file containing <code>{'{FIELD_NAME}'}</code> — the system auto-creates an input form.</>
+          }
         </p>
-        <StepList steps={[
+        <StepList steps={isVi ? [
           'Bấm <b>📤 Tải mẫu khác</b> hoặc chọn từ thư viện mẫu sẵn',
           'Chọn file <b>.docx</b> hoặc <b>.xlsx</b>',
           'Hệ thống quét tìm <code>{tag}</code> hoặc giá trị lặp lại → hiện modal chọn trường',
           'Tick ✅ trường muốn dùng → bấm <b>Xác nhận</b> → form tự tạo',
+        ] : [
+          'Click <b>📤 Load another</b> or select from template library',
+          'Choose a <b>.docx</b> or <b>.xlsx</b> file',
+          'System scans for <code>{tags}</code> or repeated values → shows field selection modal',
+          'Check ✅ fields to use → click <b>Confirm</b> → form is auto-created',
         ]} />
-        <Example>
-          File Word có <code>{'{CÔNG_TRÌNH}'}</code>, <code>{'{SỐ_TIỀN}'}</code>, <code>{'{NĂM}'}</code> → form hiện 3 ô nhập tương ứng
-        </Example>
-        <Tip>
-          Dùng cú pháp <code>{'{TÊN_TRƯỜNG}'}</code> trong Word để đánh dấu.
-          VD: <code>{'{ĐƠN_VỊ}'}</code>, <code>{'{NGÀY_THÁNG}'}</code>.
-          Hoặc dùng dấu ngoặc vuông <code>[TÊN_TRƯỜNG]</code>.
-        </Tip>
       </Section>
 
-      <Section icon="🔍" title="Bước 2: Quét bảng tự động">
+      <Section icon="🔍" title={isVi ? 'Bước 2: Quét bảng tự động' : 'Step 2: Auto Table Scan'}>
         <p style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>
-          Khi file Word có bảng (bảng khối lượng, dự toán...) → hệ thống nhận diện và cho phép nhập dữ liệu.
+          {isVi
+            ? 'Khi file Word có bảng (bảng khối lượng, dự toán...) → hệ thống nhận diện và cho phép nhập dữ liệu.'
+            : 'When the Word file contains tables (quantity sheets, estimates...) → the system detects and lets you enter data.'
+          }
         </p>
-        <StepList steps={[
+        <StepList steps={isVi ? [
           'Upload Word có bảng → modal <b>⚙️ Cấu hình cột</b> hiện ra',
-          'Với mỗi cột, chọn chế độ:<br/>• <b>✏️ Nhập tay</b> — bạn gõ<br/>• <b>🔢 Tự đánh số</b> — STT tăng dần<br/>• <b>🧮 Tự tính</b> — nhập công thức',
+          'Với mỗi cột, chọn chế độ:<br/>• <b>✏️ Nhập tay</b><br/>• <b>🔢 Tự đánh số</b><br/>• <b>🧮 Tự tính</b>',
           'Bấm <b>✅ Xác nhận</b> → bảng nhập liệu hiện ra',
           'Nhập dữ liệu → xuất file → bảng Word tự điền',
+        ] : [
+          'Upload Word with table → <b>⚙️ Column config</b> modal appears',
+          'For each column, select mode:<br/>• <b>✏️ Manual input</b><br/>• <b>🔢 Auto numbering</b><br/>• <b>🧮 Auto calculate</b>',
+          'Click <b>✅ Confirm</b> → data entry table appears',
+          'Enter data → export → Word table auto-fills',
         ]} />
-        <Example>
-          Bảng 6 cột: TT | Danh mục | ĐVT | KL | ĐG | Thành tiền<br/>
-          → Cấu hình: TT = 🔢 tự đánh | Thành tiền = 🧮 công thức <code>KL × ĐG</code>
-        </Example>
-        <Tip>
-          Nhập <b>nhiều hơn</b> số dòng mẫu → tự thêm dòng.
-          Nhập <b>ít hơn</b> → tự xóa dòng thừa.
-          Font <b>Times New Roman</b> tự động.
-        </Tip>
       </Section>
 
-      <Section icon="📝" title="Bước 3: Điền form & Preview">
-        <StepList steps={[
+      <Section icon="📝" title={isVi ? 'Bước 3: Điền form & Preview' : 'Step 3: Fill Form & Preview'}>
+        <StepList steps={isVi ? [
           'Nhập dữ liệu vào từng ô trên form bên trái',
           'Preview bên phải tự cập nhật khi bạn gõ',
           'Giãn/thu preview bằng nút <b>+ / −</b> zoom',
+        ] : [
+          'Enter data into each field on the left panel',
+          'Preview on the right auto-updates as you type',
+          'Zoom preview using <b>+ / −</b> buttons',
         ]} />
-        <Example>
-          Nhập ô "Công trình": <code>Nhà tập thể A</code> → preview hiện ngay ở đúng vị trí trong mẫu
-        </Example>
       </Section>
 
-      <Section icon="💰" title="Số tiền → Bằng chữ (tự động)">
+      <Section icon="💰" title={isVi ? 'Số tiền → Bằng chữ (tự động)' : 'Number → Text (auto)'}>
         <p style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>
-          Tự động chuyển số tiền sang tiếng Việt. Không cần gõ tay.
+          {isVi ? 'Tự động chuyển số tiền sang tiếng Việt. Không cần gõ tay.' : 'Automatically converts numbers to words. No manual typing needed.'}
         </p>
-        <Example>
-          Nhập: <code>292.000.000</code> → Kết quả: <b>"Hai trăm chín mươi hai triệu đồng"</b><br/>
-          Nhập: <code>1.500.000</code> → <b>"Một triệu năm trăm nghìn đồng"</b>
-        </Example>
-        <Tip>Chỉ cần nhập số (có hoặc không có dấu chấm). Ô "Bằng chữ" tự cập nhật.</Tip>
       </Section>
 
-      <Section icon="🏢" title="Quản lý nhà thầu">
+      <Section icon="🏢" title={isVi ? 'Quản lý nhà thầu' : 'Contractor Management'}>
         <p style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>
-          Lưu thông tin nhà thầu thường dùng, chọn nhanh khi cần — không cần gõ lại.
+          {isVi ? 'Lưu thông tin nhà thầu thường dùng, chọn nhanh khi cần.' : 'Save frequently used contractor info, select quickly when needed.'}
         </p>
-        <StepList steps={[
-          'Nhập đủ thông tin Bên B (tên, MST, đại diện, chức vụ, tài khoản, ngân hàng, địa chỉ)',
+        <StepList steps={isVi ? [
+          'Nhập đủ thông tin Bên B (tên, MST, đại diện, tài khoản, ngân hàng)',
           'Bấm <b>💾 Lưu nhà thầu</b> → lưu vĩnh viễn trên máy',
           'Lần sau: bấm <b>📋 Chọn NT</b> → click tên → <b>7 trường tự điền</b>',
+        ] : [
+          'Enter contractor info (name, tax ID, representative, bank account)',
+          'Click <b>💾 Save Contractor</b> → saved permanently on your device',
+          'Next time: click <b>📋 Select Contractor</b> → pick name → <b>7 fields auto-fill</b>',
         ]} />
-        <Example>
-          Lưu "Công ty TNHH ABC" → lần sau 1 click để điền MST, TK ngân hàng, người đại diện...
-        </Example>
       </Section>
 
-      <Section icon="💾" title="Auto-save & Quản lý phiên">
-        <StepList steps={[
+      <Section icon="💾" title={isVi ? 'Auto-save & Quản lý phiên' : 'Auto-save & Session Management'}>
+        <StepList steps={isVi ? [
           '<b>Auto-save</b>: tự lưu mỗi 2 giây. Đóng app → mở lại → dữ liệu còn nguyên',
           '<b>📂 Mẫu đã lưu</b>: xem danh sách tất cả phiên. Click để chuyển phiên',
           '<b>💾 Sao lưu</b>: tải file .json về máy (backup an toàn)',
           '<b>📂 Khôi phục</b>: chọn file .json để phục hồi dữ liệu',
           '<b>📋 Nhân bản</b>: copy toàn bộ hồ sơ → sửa vài chi tiết → xuất file mới',
+        ] : [
+          '<b>Auto-save</b>: saves every 2 seconds. Close app → reopen → data intact',
+          '<b>📂 Saved templates</b>: view all sessions. Click to switch',
+          '<b>💾 Backup</b>: download .json file (safe backup)',
+          '<b>📂 Restore</b>: select .json file to restore data',
+          '<b>📋 Clone</b>: copy entire record → edit few details → export new file',
         ]} />
-        <Tip>
-          Hoàn thành hồ sơ Nhà A → <b>Nhân bản</b> → chỉ sửa tên + số tiền → xuất hồ sơ Nhà B.
-          <b> Nhanh gấp 10 lần!</b>
-        </Tip>
       </Section>
 
-      <Section icon="📦" title="Xuất hàng loạt từ Excel">
+      <Section icon="📦" title={isVi ? 'Xuất hàng loạt từ Excel' : 'Batch Export from Excel'}>
         <p style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>
-          Tạo hàng loạt file Word từ 1 file Excel — mỗi dòng = 1 hồ sơ.
+          {isVi ? 'Tạo hàng loạt file Word từ 1 file Excel — mỗi dòng = 1 hồ sơ.' : 'Create multiple Word files from 1 Excel file — each row = 1 record.'}
         </p>
-        <StepList steps={[
+        <StepList steps={isVi ? [
           'Bấm <b>📦 Xuất hàng loạt</b>',
           'Chọn file Excel — <b>mỗi dòng = 1 công trình</b>',
           'Preview danh sách N công trình',
           'Bấm <b>📦 Xuất tất cả</b> → tải 1 file ZIP chứa N file Word',
+        ] : [
+          'Click <b>📦 Batch Export</b>',
+          'Choose Excel file — <b>each row = 1 project</b>',
+          'Preview the list of N projects',
+          'Click <b>📦 Export All</b> → download 1 ZIP file with N Word files',
         ]} />
-        <Example>
-          File Excel 20 dòng (20 công trình) → bấm 1 nút → tải <code>HoSo_20_files.zip</code> chứa 20 file Word đã điền đầy đủ.
-        </Example>
-        <div style={{
-          background: '#fef2f2', borderRadius: 8, padding: '0.6rem 0.8rem',
-          fontSize: '0.85rem', borderLeft: '3px solid #ef4444', marginTop: '0.5rem',
-        }}>
-          ⚠️ <b>Yêu cầu Excel:</b> Hàng 1 = tiêu đề cột (Công trình, Số tiền, Năm...). Hàng 2+ = dữ liệu.
-        </div>
       </Section>
 
-      <Section icon="⌨️" title="Phím tắt">
+      <Section icon="⌨️" title={isVi ? 'Phím tắt' : 'Keyboard Shortcuts'}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
           <tbody>
-            {[
+            {(isVi ? [
               ['Ctrl + S', 'Lưu nhanh phiên làm việc'],
               ['Ctrl + Enter', 'Bắt đầu quét template'],
               ['+ / −', 'Zoom in/out preview'],
-            ].map(([key, desc], i) => (
+            ] : [
+              ['Ctrl + S', 'Quick save session'],
+              ['Ctrl + Enter', 'Start template scan'],
+              ['+ / −', 'Zoom in/out preview'],
+            ]).map(([key, desc], i) => (
               <tr key={i} style={{ background: i % 2 === 0 ? '#f8fafc' : '#fff' }}>
                 <td style={{ ...tdStyle, width: '35%' }}><b>{key}</b></td>
                 <td style={tdStyle}>{desc}</td>
@@ -325,9 +342,9 @@ function TaoHoSoGuide() {
 }
 
 /* ══════════════════════════════════════════════════════════
-   GÓI MẪU NHIỀU FILE
+   MULTI-FILE BUNDLE GUIDE
    ══════════════════════════════════════════════════════════ */
-function GoiMauGuide() {
+function GoiMauGuide({ isVi }: { isVi: boolean }) {
   return (
     <div>
       <div style={{
@@ -336,96 +353,89 @@ function GoiMauGuide() {
         border: '1px solid #bae6fd',
       }}>
         <h3 style={{ color: '#0369a1', margin: '0 0 0.5rem', fontSize: '1.05rem' }}>
-          💡 Tính năng này dùng để làm gì?
+          💡 {isVi ? 'Tính năng này dùng để làm gì?' : 'What is this feature for?'}
         </h3>
         <p style={{ color: '#334155', fontSize: '0.9rem', margin: 0, lineHeight: 1.6 }}>
-          Khi làm hồ sơ dự án, bạn có <b>nhiều file Word</b> (HĐ giám sát, HĐ quản lý,
-          BB thương thảo, QĐ, Bìa HĐ...) cùng chia sẻ <b>dữ liệu giống nhau</b> (tên công trình,
-          nhà thầu, số tiền...). Thay vì mở từng file để sửa, bạn <b>điền 1 lần → xuất tất cả</b>.
+          {isVi
+            ? <>Khi làm hồ sơ dự án, bạn có <b>nhiều file Word</b> cùng chia sẻ <b>dữ liệu giống nhau</b> (tên công trình, nhà thầu, số tiền...). Thay vì mở từng file để sửa, bạn <b>điền 1 lần → xuất tất cả</b>.</>
+            : <>When working on project documents, you have <b>multiple Word files</b> that share <b>the same data</b> (project name, contractor, amount...). Instead of editing each file, you <b>fill once → export all</b>.</>
+          }
         </p>
       </div>
 
-      <Section icon="📁" title="Bước 1: Upload file">
+      <Section icon="📁" title={isVi ? 'Bước 1: Upload file' : 'Step 1: Upload Files'}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', marginBottom: '0.75rem' }}>
           <tbody>
             <tr style={{ background: '#e0f2fe' }}>
-              <td style={{ ...tdStyle, width: '40%' }}><b>📄 Thêm file lẻ</b></td>
-              <td style={tdStyle}>Chọn file .docx, .xlsx, .xls</td>
+              <td style={{ ...tdStyle, width: '40%' }}><b>📄 {isVi ? 'Thêm file lẻ' : 'Add files'}</b></td>
+              <td style={tdStyle}>{isVi ? 'Chọn file .docx, .xlsx, .xls' : 'Select .docx, .xlsx, .xls files'}</td>
             </tr>
             <tr>
-              <td style={tdStyle}><b>📁 Thêm thư mục</b></td>
-              <td style={tdStyle}>Chọn cả thư mục → tự lọc file .docx/.xlsx</td>
+              <td style={tdStyle}><b>📁 {isVi ? 'Thêm thư mục' : 'Add folder'}</b></td>
+              <td style={tdStyle}>{isVi ? 'Chọn cả thư mục → tự lọc file .docx/.xlsx' : 'Select entire folder → auto-filter .docx/.xlsx'}</td>
             </tr>
             <tr style={{ background: '#e0f2fe' }}>
-              <td style={tdStyle}><b>🖱️ Kéo thả</b></td>
-              <td style={tdStyle}>Kéo file/thư mục vào vùng upload</td>
+              <td style={tdStyle}><b>🖱️ {isVi ? 'Kéo thả' : 'Drag & drop'}</b></td>
+              <td style={tdStyle}>{isVi ? 'Kéo file/thư mục vào vùng upload' : 'Drag files/folders into upload area'}</td>
             </tr>
           </tbody>
         </table>
-        <Example>
-          Bạn có 3 thư mục: <code>Giám Sát/</code>, <code>QLDA/</code>, <code>Xây Lắp/</code><br/>
-          → Bấm 📁 Thêm thư mục 3 lần → hệ thống tự gộp tất cả file .docx (bỏ trùng tên)
-        </Example>
       </Section>
 
-      <Section icon="🔍" title="Bước 2: Quét & Tạo form">
+      <Section icon="🔍" title={isVi ? 'Bước 2: Quét & Tạo form' : 'Step 2: Scan & Create Form'}>
         <p style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>
-          Khi có ≥2 file → bấm <b style={{ color: '#10b981' }}>🔍 Quét & tạo form</b>
+          {isVi
+            ? <>Khi có ≥2 file → bấm <b style={{ color: '#10b981' }}>🔍 Quét & tạo form</b></>
+            : <>With ≥2 files → click <b style={{ color: '#10b981' }}>🔍 Scan & Create Form</b></>
+          }
         </p>
         <div style={{
           background: '#fef3c7', padding: '0.7rem', borderRadius: 8,
           fontSize: '0.85rem', marginBottom: '0.75rem',
         }}>
-          Hệ thống tự tìm <b>2 loại trường</b>:<br/>
-          • <b>Dữ liệu trùng lặp</b>: text xuất hiện ≥2 lần trong các file → tự tạo trường<br/>
-          • <b>📌 Trường [BRACKET]</b>: text trong dấu <code>[...]</code> → <b>luôn lấy</b> dù chỉ 1 lần<br/>
-          → Giảm nhiễu thông minh + gộp giá trị tương tự<br/>
-          → Bạn chỉ cần tích ✅ các trường cần tự động hóa
+          {isVi
+            ? <>
+                Hệ thống tự tìm <b>2 loại trường</b>:<br/>
+                • <b>Dữ liệu trùng lặp</b>: text xuất hiện ≥2 lần trong các file → tự tạo trường<br/>
+                • <b>📌 Trường [BRACKET]</b>: text trong dấu <code>[...]</code> → <b>luôn lấy</b> dù chỉ 1 lần<br/>
+                → Bạn chỉ cần tích ✅ các trường cần tự động hóa
+              </>
+            : <>
+                The system finds <b>2 types of fields</b>:<br/>
+                • <b>Duplicate data</b>: text appearing ≥2 times across files → auto-create field<br/>
+                • <b>📌 [BRACKET] fields</b>: text in <code>[...]</code> → <b>always captured</b> even if only once<br/>
+                → Just check ✅ the fields you want to automate
+              </>
+          }
         </div>
-        <Tip>
-          Bạn có thể đặt sẵn <code>[TÊN_CÔNG_TRÌNH]</code> trong file Word
-          → hệ thống tự nhận diện mà không cần quét trùng lặp.
+        <Tip isVi={isVi}>
+          {isVi
+            ? <>Bạn có thể đặt sẵn <code>[TÊN_CÔNG_TRÌNH]</code> trong file Word → hệ thống tự nhận diện.</>
+            : <>You can pre-mark <code>[PROJECT_NAME]</code> in your Word files → the system auto-detects them.</>
+          }
         </Tip>
       </Section>
 
-      <Section icon="📝" title="Bước 3: Điền form">
+      <Section icon="📝" title={isVi ? 'Bước 3: Điền form' : 'Step 3: Fill Form'}>
         <p style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>
-          Nhập dữ liệu <b>1 lần</b> → áp dụng cho <b>TẤT CẢ</b> file cùng lúc.
+          {isVi ? <>Nhập dữ liệu <b>1 lần</b> → áp dụng cho <b>TẤT CẢ</b> file cùng lúc.</> : <>Enter data <b>once</b> → apply to <b>ALL</b> files simultaneously.</>}
         </p>
-        <Example>
-          • Tên công trình: <i>"Sửa chữa nhà kho K59"</i><br/>
-          • Nhà thầu: <i>"Công ty TNHH ABC"</i><br/>
-          • Giá trị HĐ: <i>"1.500.000.000"</i><br/>
-          → Tất cả 8 file HĐ, BB, QĐ đều tự điền cùng lúc!
-        </Example>
-        <Tip>
-          Trường có tên chứa "GIA_TRI", "SO_TIEN", "TONG"... sẽ tự động
-          chuyển sang <b>"bằng chữ"</b> (tiếng Việt).
-        </Tip>
       </Section>
 
-      <Section icon="📊" title="Bước 4: Bảng dữ liệu (nếu có)">
-        <p style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>
-          Nếu file Word chứa bảng (bảng khối lượng, bảng dự toán...) → tự quét và cấu hình.
-        </p>
-        <StepList steps={[
-          'Hệ thống phát hiện bảng trong file → hiện nút <b>⚙️ Cấu hình bảng</b>',
-          'Chọn cột: <b>Nhập tay / Tự đánh số / Tự tính (công thức)</b>',
-          'Nhập dữ liệu vào bảng editor',
-          '<b>📊 Nhập từ Excel</b> để paste dữ liệu bảng nhanh',
-        ]} />
-      </Section>
-
-      <Section icon="👁️" title="Bước 5: Xem trước & Xuất">
+      <Section icon="👁️" title={isVi ? 'Bước 4: Xem trước & Xuất' : 'Step 4: Preview & Export'}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', marginBottom: '0.75rem' }}>
           <tbody>
-            {[
+            {(isVi ? [
               ['👁️ Xem trước', 'Bấm tab tên file → preview. Dùng + / − để zoom', '#e0f2fe'],
               ['📦 Xuất ZIP', 'Tải tất cả file đã chọn → 1 file ZIP', '#fff'],
               ['⬇️ Xuất riêng', 'Xuất từng file Word riêng lẻ', '#e0f2fe'],
               ['📄 Xuất PDF', 'Xuất file đang preview thành PDF', '#fff'],
-              ['📦 Xuất hàng loạt', 'Upload Excel → xuất N bộ file × M file = ZIP', '#e0f2fe'],
-            ].map(([name, desc, bg], i) => (
+            ] : [
+              ['👁️ Preview', 'Click file tab → preview. Use + / − to zoom', '#e0f2fe'],
+              ['📦 Export ZIP', 'Download all selected files → 1 ZIP file', '#fff'],
+              ['⬇️ Export Single', 'Export individual Word files', '#e0f2fe'],
+              ['📄 Export PDF', 'Export current preview as PDF', '#fff'],
+            ]).map(([name, desc, bg], i) => (
               <tr key={i} style={{ background: bg }}>
                 <td style={{ ...tdStyle, width: '35%' }}><b>{name}</b></td>
                 <td style={tdStyle}>{desc}</td>
@@ -435,37 +445,28 @@ function GoiMauGuide() {
         </table>
       </Section>
 
-      <Section icon="💾" title="Quản lý dữ liệu">
+      <Section icon="💾" title={isVi ? 'Quản lý dữ liệu' : 'Data Management'}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', marginBottom: '0.75rem' }}>
           <tbody>
-            {[
-              ['💾 Sao lưu', 'Xuất dữ liệu → file JSON (backup)', '#dcfce7'],
-              ['📂 Khôi phục', 'Tải lại từ file JSON đã backup', '#fff'],
-              ['📥 Nhập dữ liệu JSON', 'Import JSON → điền vào TẤT CẢ template', '#dcfce7'],
-              ['📤 Xuất dữ liệu JSON', 'Export data → dùng cho bộ file mới', '#fff'],
-              ['📊 Nhập từ Excel', 'Map dữ liệu Excel vào form tự động', '#dcfce7'],
-              ['💿 Lưu phiên', 'Lưu session vào máy tính', '#fff'],
-              ['📋 Nhân bản', 'Copy session → session mới', '#dcfce7'],
-              ['🗑️ Xóa tất cả', 'Reset toàn bộ form', '#fff'],
-            ].map(([name, desc, bg], i) => (
+            {(isVi ? [
+              ['💾 Sao lưu', 'Xuất dữ liệu → file JSON', '#dcfce7'],
+              ['📂 Khôi phục', 'Tải lại từ file JSON', '#fff'],
+              ['📥 Nhập dữ liệu', 'Import JSON → điền vào template', '#dcfce7'],
+              ['📤 Xuất dữ liệu', 'Export data → dùng cho bộ file mới', '#fff'],
+              ['💿 Lưu phiên', 'Lưu session vào máy tính', '#dcfce7'],
+              ['📋 Nhân bản', 'Copy session → session mới', '#fff'],
+              ['🗑️ Xóa tất cả', 'Reset toàn bộ form', '#dcfce7'],
+            ] : [
+              ['💾 Backup', 'Export data → JSON file', '#dcfce7'],
+              ['📂 Restore', 'Reload from JSON file', '#fff'],
+              ['📥 Import Data', 'Import JSON → fill into templates', '#dcfce7'],
+              ['📤 Export Data', 'Export data → use with new file set', '#fff'],
+              ['💿 Save Session', 'Save session to your device', '#dcfce7'],
+              ['📋 Clone', 'Copy session → new session', '#fff'],
+              ['🗑️ Clear All', 'Reset entire form', '#dcfce7'],
+            ]).map(([name, desc, bg], i) => (
               <tr key={i} style={{ background: bg }}>
                 <td style={{ ...tdStyle, width: '35%' }}><b>{name}</b></td>
-                <td style={tdStyle}>{desc}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </Section>
-
-      <Section icon="⌨️" title="Phím tắt">
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-          <tbody>
-            {[
-              ['Ctrl + S', 'Lưu nhanh phiên làm việc'],
-              ['Ctrl + Enter', 'Bắt đầu quét (ở bước Upload)'],
-            ].map(([key, desc], i) => (
-              <tr key={i} style={{ background: i % 2 === 0 ? '#f8fafc' : '#fff' }}>
-                <td style={{ ...tdStyle, width: '35%' }}><b>{key}</b></td>
                 <td style={tdStyle}>{desc}</td>
               </tr>
             ))}
@@ -477,12 +478,18 @@ function GoiMauGuide() {
         background: '#fef2f2', borderRadius: 8, padding: '0.75rem',
         fontSize: '0.85rem', borderLeft: '3px solid #ef4444',
       }}>
-        ⚠️ <b>Lưu ý quan trọng:</b><br/>
-        • Hỗ trợ file <b>.docx</b> (Word 2007+) và <b>.xlsx/.xls</b> (Excel)<br/>
-        • Trường trong dấu <b>[...]</b> được tự nhận dạng<br/>
-        • Dữ liệu xử lý <b>100% trên máy tính</b> — không upload lên server<br/>
-        • Nên <b>💾 Sao lưu</b> thường xuyên để không mất dữ liệu<br/>
-        • Dữ liệu <b>tự lưu mỗi 2 giây</b>, đóng app mở lại vẫn còn
+        {isVi
+          ? <>⚠️ <b>Lưu ý quan trọng:</b><br/>
+            • Hỗ trợ file <b>.docx</b> (Word 2007+) và <b>.xlsx/.xls</b> (Excel)<br/>
+            • Trường trong dấu <b>[...]</b> được tự nhận dạng<br/>
+            • Dữ liệu xử lý <b>100% trên máy tính</b> — không upload lên server<br/>
+            • Nên <b>💾 Sao lưu</b> thường xuyên</>
+          : <>⚠️ <b>Important notes:</b><br/>
+            • Supports <b>.docx</b> (Word 2007+) and <b>.xlsx/.xls</b> (Excel)<br/>
+            • Fields in <b>[...]</b> brackets are auto-detected<br/>
+            • Data processed <b>100% locally</b> — never uploaded to any server<br/>
+            • <b>💾 Backup</b> regularly to prevent data loss</>
+        }
       </div>
     </div>
   );

@@ -3,6 +3,7 @@ import { showToast } from '../components/Toast';
 import { Link } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import { isDesktop } from '../utils/desktopFileHelper';
+import { useLanguage } from '../i18n/i18n';
 
 /* ── Types ── */
 interface ProjectStats {
@@ -102,6 +103,8 @@ export default function Dashboard() {
     const [docPrefix, setDocPrefix] = useState('');
     const [docCounter, setDocCounter] = useState(1);
     const [generatedNumber, setGeneratedNumber] = useState('');
+    const { lang } = useLanguage();
+    const isVi = lang === 'vi';
 
     useEffect(() => {
         setStats(getStats());
@@ -133,10 +136,10 @@ export default function Dashboard() {
     return (
         <div className="container" style={{ paddingTop: '2rem', paddingBottom: '3rem' }}>
             <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.5rem' }}>
-                📊 Dashboard — Tổng quan hệ thống
+                📊 Dashboard — {isVi ? 'Tổng quan hệ thống' : 'System Overview'}
             </h1>
             <p style={{ color: '#64748b', marginBottom: '2rem', fontSize: '0.9rem' }}>
-                Thống kê, lịch sử thay đổi, QR Code, và đánh số văn bản tự động.
+                {isVi ? 'Thống kê, lịch sử thay đổi, QR Code, và đánh số văn bản tự động.' : 'Statistics, change history, QR Code, and auto document numbering.'}
             </p>
 
             {/* Stats Cards */}
@@ -144,22 +147,22 @@ export default function Dashboard() {
                 <div style={statCardStyle}>
                     <div style={{ fontSize: '2rem' }}>📁</div>
                     <div style={{ fontSize: '2rem', fontWeight: 800, color: '#10b981' }}>{stats.totalProjects}</div>
-                    <div style={{ color: '#64748b', fontSize: '0.85rem' }}>Dự án</div>
+                    <div style={{ color: '#64748b', fontSize: '0.85rem' }}>{isVi ? 'Dự án' : 'Projects'}</div>
                 </div>
                 <div style={statCardStyle}>
                     <div style={{ fontSize: '2rem' }}>📄</div>
                     <div style={{ fontSize: '2rem', fontWeight: 800, color: '#3b82f6' }}>{stats.totalFiles}</div>
-                    <div style={{ color: '#64748b', fontSize: '0.85rem' }}>File đã xử lý</div>
+                    <div style={{ color: '#64748b', fontSize: '0.85rem' }}>{isVi ? 'File đã xử lý' : 'Files Processed'}</div>
                 </div>
                 <div style={statCardStyle}>
                     <div style={{ fontSize: '2rem' }}>🏷️</div>
                     <div style={{ fontSize: '2rem', fontWeight: 800, color: '#f59e0b' }}>{stats.totalFields}</div>
-                    <div style={{ color: '#64748b', fontSize: '0.85rem' }}>Trường đã tạo</div>
+                    <div style={{ color: '#64748b', fontSize: '0.85rem' }}>{isVi ? 'Trường đã tạo' : 'Fields Created'}</div>
                 </div>
                 <div style={statCardStyle}>
                     <div style={{ fontSize: '2rem' }}>📋</div>
                     <div style={{ fontSize: '2rem', fontWeight: 800, color: '#8b5cf6' }}>{history.length}</div>
-                    <div style={{ color: '#64748b', fontSize: '0.85rem' }}>Lịch sử thay đổi</div>
+                    <div style={{ color: '#64748b', fontSize: '0.85rem' }}>{isVi ? 'Lịch sử thay đổi' : 'Change History'}</div>
                 </div>
             </div>
 
@@ -167,39 +170,39 @@ export default function Dashboard() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                 {/* Left: History */}
                 <div style={sectionStyle}>
-                    <h2 style={sectionTitleStyle}>🕐 Lịch sử thay đổi</h2>
+                    <h2 style={sectionTitleStyle}>🕐 {isVi ? 'Lịch sử thay đổi' : 'Change History'}</h2>
                     {history.length === 0 ? (
-                        <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Chưa có lịch sử. Sử dụng Gói mẫu để bắt đầu.</p>
+                        <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>{isVi ? 'Chưa có lịch sử. Sử dụng Gói mẫu để bắt đầu.' : 'No history yet. Use Bundle Template to get started.'}</p>
                     ) : (
                         <div style={{ maxHeight: 300, overflow: 'auto' }}>
                             {history.map((h, i) => (
                                 <div key={i} style={{ padding: '0.5rem', borderBottom: '1px solid #f1f5f9', fontSize: '0.82rem' }}>
                                     <div style={{ fontWeight: 600, color: '#1e293b' }}>{h.action}</div>
                                     <div style={{ color: '#64748b' }}>
-                                        {h.sessionName} • {h.fieldsCount} trường •{' '}
-                                        {new Date(h.timestamp).toLocaleString('vi-VN')}
+                                        {h.sessionName} • {h.fieldsCount} {isVi ? 'trường' : 'fields'} •{' '}
+                                        {new Date(h.timestamp).toLocaleString(isVi ? 'vi-VN' : 'en-US')}
                                     </div>
                                 </div>
                             ))}
                         </div>
                     )}
                     <Link to="/goi-mau" style={{ display: 'inline-block', marginTop: '0.75rem', color: '#10b981', fontWeight: 600, fontSize: '0.85rem' }}>
-                        → Mở Gói mẫu
+                        → {isVi ? 'Mở Gói mẫu' : 'Open Bundle Template'}
                     </Link>
                 </div>
 
                 {/* Right: Recent sessions */}
                 <div style={sectionStyle}>
-                    <h2 style={sectionTitleStyle}>💾 Phiên làm việc gần đây</h2>
+                    <h2 style={sectionTitleStyle}>💾 {isVi ? 'Phiên làm việc gần đây' : 'Recent Sessions'}</h2>
                     {stats.recentSessions.length === 0 ? (
-                        <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Chưa có phiên nào.</p>
+                        <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>{isVi ? 'Chưa có phiên nào.' : 'No sessions yet.'}</p>
                     ) : (
                         <div style={{ maxHeight: 300, overflow: 'auto' }}>
                             {stats.recentSessions.map((s, i) => (
                                 <div key={i} style={{ padding: '0.5rem', borderBottom: '1px solid #f1f5f9', fontSize: '0.82rem' }}>
                                     <div style={{ fontWeight: 600 }}>{s.name}</div>
                                     <div style={{ color: '#64748b' }}>
-                                        {s.fields} trường • {s.date ? new Date(s.date).toLocaleDateString('vi-VN') : ''}
+                                        {s.fields} {isVi ? 'trường' : 'fields'} • {s.date ? new Date(s.date).toLocaleDateString(isVi ? 'vi-VN' : 'en-US') : ''}
                                     </div>
                                 </div>
                             ))}
@@ -212,15 +215,15 @@ export default function Dashboard() {
             <div style={{ display: 'grid', gridTemplateColumns: isDesktop() ? '1fr' : '1fr 1fr', gap: '1.5rem', marginTop: '1.5rem' }}>
                 {/* QR Code Generator — ẩn trên desktop (cần internet) */}
                 {!isDesktop() && (<div style={sectionStyle}>
-                    <h2 style={sectionTitleStyle}>📱 Tạo QR Code</h2>
+                    <h2 style={sectionTitleStyle}>📱 {isVi ? 'Tạo QR Code' : 'Generate QR Code'}</h2>
                     <p style={{ color: '#64748b', fontSize: '0.8rem', marginBottom: '0.75rem' }}>
-                        Tạo QR chứa link bộ hồ sơ để chia sẻ nhanh.
+                        {isVi ? 'Tạo QR chứa link bộ hồ sơ để chia sẻ nhanh.' : 'Generate QR with document link for quick sharing.'}
                     </p>
                     <input
                         type="text"
                         value={qrUrl}
                         onChange={e => setQrUrl(e.target.value)}
-                        placeholder="Nhập URL hoặc text..."
+                        placeholder={isVi ? 'Nhập URL hoặc text...' : 'Enter URL or text...'}
                         className="form-input"
                         style={{ marginBottom: '0.5rem', fontSize: '0.85rem' }}
                     />
@@ -231,7 +234,7 @@ export default function Dashboard() {
                             setShowQr(true);
                         }
                     }}>
-                        🔲 Tạo QR Code
+                        🔲 {isVi ? 'Tạo QR Code' : 'Generate QR Code'}
                     </button>
                     {showQr && (
                         <div style={{ marginTop: '0.75rem', textAlign: 'center' }}>
@@ -249,9 +252,9 @@ export default function Dashboard() {
 
                 {/* Auto Document Numbering */}
                 <div style={sectionStyle}>
-                    <h2 style={sectionTitleStyle}>🔢 Đánh số văn bản tự động</h2>
+                    <h2 style={sectionTitleStyle}>🔢 {isVi ? 'Đánh số văn bản tự động' : 'Auto Document Numbering'}</h2>
                     <p style={{ color: '#64748b', fontSize: '0.8rem', marginBottom: '0.75rem' }}>
-                        Tự động tạo số hiệu văn bản theo format cơ quan.
+                        {isVi ? 'Tự động tạo số hiệu văn bản theo format cơ quan.' : 'Auto-generate document numbers per agency format.'}
                     </p>
                     <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
                         <select
@@ -260,13 +263,13 @@ export default function Dashboard() {
                             className="form-select"
                             style={{ flex: 1, fontSize: '0.85rem' }}
                         >
-                            <option value="">Chọn loại văn bản</option>
-                            <option value="QĐ">QĐ — Quyết định</option>
-                            <option value="CV">CV — Công văn</option>
-                            <option value="BB">BB — Biên bản</option>
-                            <option value="TB">TB — Thông báo</option>
-                            <option value="TTr">TTr — Tờ trình</option>
-                            <option value="HD">HĐ — Hợp đồng</option>
+                            <option value="">{isVi ? 'Chọn loại văn bản' : 'Select document type'}</option>
+                            <option value="QĐ">{isVi ? 'QĐ — Quyết định' : 'QĐ — Decision'}</option>
+                            <option value="CV">{isVi ? 'CV — Công văn' : 'CV — Official Letter'}</option>
+                            <option value="BB">{isVi ? 'BB — Biên bản' : 'BB — Minutes'}</option>
+                            <option value="TB">{isVi ? 'TB — Thông báo' : 'TB — Notice'}</option>
+                            <option value="TTr">{isVi ? 'TTr — Tờ trình' : 'TTr — Proposal'}</option>
+                            <option value="HD">{isVi ? 'HĐ — Hợp đồng' : 'HĐ — Contract'}</option>
                         </select>
                         <input
                             type="number"
@@ -275,18 +278,18 @@ export default function Dashboard() {
                             min={1}
                             className="form-input"
                             style={{ width: 80, fontSize: '0.85rem' }}
-                            placeholder="Số"
+                            placeholder={isVi ? 'Số' : 'Number'}
                         />
                     </div>
                     <button className="btn btn-primary btn-sm" onClick={generateDocNumber}>
-                        📝 Tạo số văn bản
+                        📝 {isVi ? 'Tạo số văn bản' : 'Generate Doc Number'}
                     </button>
                     {generatedNumber && (
                         <div style={{
                             marginTop: '0.75rem', padding: '0.75rem', background: '#f0fdf4',
                             borderRadius: 8, border: '1px solid #a7f3d0', textAlign: 'center',
                         }}>
-                            <div style={{ fontSize: '0.75rem', color: '#059669', marginBottom: 4 }}>Số hiệu văn bản:</div>
+                            <div style={{ fontSize: '0.75rem', color: '#059669', marginBottom: 4 }}>{isVi ? 'Số hiệu văn bản:' : 'Document Number:'}</div>
                             <div style={{ fontSize: '1.3rem', fontWeight: 700, color: '#1e293b', fontFamily: 'monospace' }}>
                                 {generatedNumber}
                             </div>
@@ -295,7 +298,7 @@ export default function Dashboard() {
                                 style={{ marginTop: '0.5rem', fontSize: '0.7rem', background: '#dbeafe' }}
                                 onClick={() => {
                                     navigator.clipboard.writeText(generatedNumber);
-                                    showToast('Đã copy: ' + generatedNumber);
+                                    showToast((isVi ? 'Đã copy: ' : 'Copied: ') + generatedNumber);
                                 }}
                             >
                                 📋 Copy
@@ -307,9 +310,9 @@ export default function Dashboard() {
 
             {/* Export Excel Report */}
             <div style={{ marginTop: '1.5rem', ...sectionStyle }}>
-                <h2 style={sectionTitleStyle}>📊 Xuất báo cáo Excel</h2>
+                <h2 style={sectionTitleStyle}>📊 {isVi ? 'Xuất báo cáo Excel' : 'Export Excel Report'}</h2>
                 <p style={{ color: '#64748b', fontSize: '0.8rem', marginBottom: '0.75rem' }}>
-                    Tổng hợp toàn bộ dữ liệu (dự án, phiên, lịch sử) thành 1 file Excel.
+                    {isVi ? 'Tổng hợp toàn bộ dữ liệu (dự án, phiên, lịch sử) thành 1 file Excel.' : 'Consolidate all data (projects, sessions, history) into one Excel file.'}
                 </p>
                 <button className="btn btn-primary btn-sm" onClick={() => {
                     try {
@@ -328,19 +331,19 @@ export default function Dashboard() {
                             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Lịch sử');
                         }
                         XLSX.writeFile(wb, `BaoCao_TaoHoSo_${new Date().toISOString().slice(0,10)}.xlsx`);
-                        showToast('Đã xuất báo cáo Excel!', 'success');
-                    } catch (err) { showToast('Lỗi: ' + (err as Error).message, 'error'); }
+                        showToast(isVi ? 'Đã xuất báo cáo Excel!' : 'Excel report exported!', 'success');
+                    } catch (err) { showToast((isVi ? 'Lỗi: ' : 'Error: ') + (err as Error).message, 'error'); }
                 }}>
-                    📥 Xuất báo cáo tổng hợp (.xlsx)
+                    📥 {isVi ? 'Xuất báo cáo tổng hợp (.xlsx)' : 'Export Summary Report (.xlsx)'}
                 </button>
             </div>
 
             <div style={{ marginTop: '2rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                <Link to="/goi-mau" className="btn btn-primary">📦 Gói mẫu</Link>
-                <Link to="/quan-ly-du-an" className="btn btn-outline">📋 Quản lý dự án</Link>
-                <Link to="/danh-ba-nha-thau" className="btn btn-outline">📇 Danh bạ nhà thầu</Link>
-                <Link to="/tra-cuu-du-an" className="btn btn-outline">🔍 Tra cứu dự án</Link>
-                <Link to="/so-sanh-du-an" className="btn btn-outline">⚖️ So sánh dự án</Link>
+                <Link to="/goi-mau" className="btn btn-primary">📦 {isVi ? 'Gói mẫu' : 'Bundle Template'}</Link>
+                <Link to="/quan-ly-du-an" className="btn btn-outline">📋 {isVi ? 'Quản lý dự án' : 'Project Management'}</Link>
+                <Link to="/danh-ba-nha-thau" className="btn btn-outline">📇 {isVi ? 'Danh bạ nhà thầu' : 'Contractor Directory'}</Link>
+                <Link to="/tra-cuu-du-an" className="btn btn-outline">🔍 {isVi ? 'Tra cứu dự án' : 'Search Projects'}</Link>
+                <Link to="/so-sanh-du-an" className="btn btn-outline">⚖️ {isVi ? 'So sánh dự án' : 'Compare Projects'}</Link>
             </div>
         </div>
     );

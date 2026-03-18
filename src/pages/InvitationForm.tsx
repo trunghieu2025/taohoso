@@ -11,6 +11,7 @@ import {
 } from '../utils/militaryDocGenerator';
 import { FormInput } from '../components/FormField';
 import { showToast } from '../components/Toast';
+import { useLanguage } from '../i18n/i18n';
 
 /* ── Helper: detect list field ── */
 const isListTag = (tag: string) =>
@@ -19,6 +20,8 @@ const isListTag = (tag: string) =>
 
 export default function InvitationForm() {
     const navigate = useNavigate();
+    const { lang } = useLanguage();
+    const isVi = lang === 'vi';
     const fileRef = useRef<HTMLInputElement>(null);
     const previewRef = useRef<HTMLDivElement>(null);
 
@@ -85,7 +88,7 @@ export default function InvitationForm() {
 
         const listCount = groups.reduce((sum, g) => sum + g.tags.length, 0);
         const regularCount = scanned.length - listCount;
-        showToast(`Đã quét ${scanned.length} trường (${groups.length} nhóm danh sách, ${regularCount} trường thường)`);
+        showToast(isVi ? `Đã quét ${scanned.length} trường (${groups.length} nhóm danh sách, ${regularCount} trường thường)` : `Scanned ${scanned.length} fields (${groups.length} list groups, ${regularCount} regular fields)`);
         handlePreview(buffer);
     };
 
@@ -93,7 +96,7 @@ export default function InvitationForm() {
     const handleUpload = async (e: ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        if (!file.name.endsWith('.docx')) { showToast('Chỉ hỗ trợ file .docx'); return; }
+        if (!file.name.endsWith('.docx')) { showToast(isVi ? 'Chỉ hỗ trợ file .docx' : 'Only .docx files are supported'); return; }
         const buffer = await file.arrayBuffer();
         loadTemplateBuffer(buffer, file.name);
     };
@@ -102,11 +105,11 @@ export default function InvitationForm() {
     const loadSampleTemplate = async () => {
         try {
             const res = await fetch('/templates/mau-giay-moi.docx');
-            if (!res.ok) throw new Error('Không tìm thấy file mẫu');
+            if (!res.ok) throw new Error(isVi ? 'Không tìm thấy file mẫu' : 'Template file not found');
             const buffer = await res.arrayBuffer();
             loadTemplateBuffer(buffer, 'mau-giay-moi.docx');
         } catch (err) {
-            showToast('Lỗi tải mẫu: ' + (err as Error).message);
+            showToast((isVi ? 'Lỗi tải mẫu: ' : 'Load error: ') + (err as Error).message);
         }
     };
 
@@ -168,9 +171,9 @@ export default function InvitationForm() {
             a.download = templateName.replace('.docx', '_filled.docx');
             a.click();
             URL.revokeObjectURL(url);
-            showToast('Đã xuất file thành công!', 'success');
+            showToast(isVi ? 'Đã xuất file thành công!' : 'File exported successfully!', 'success');
         } catch (err) {
-            showToast('Lỗi khi xuất: ' + (err as Error).message);
+            showToast((isVi ? 'Lỗi khi xuất: ' : 'Export error: ') + (err as Error).message);
         }
         setLoading(false);
     };
@@ -185,8 +188,8 @@ export default function InvitationForm() {
                 margin: 10, filename: templateName.replace('.docx', '.pdf'),
                 html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
             }).save();
-            showToast('Đã xuất PDF!', 'success');
-        } catch (err) { showToast('Lỗi xuất PDF: ' + (err as Error).message); }
+            showToast(isVi ? 'Đã xuất PDF!' : 'PDF exported!', 'success');
+        } catch (err) { showToast((isVi ? 'Lỗi xuất PDF: ' : 'PDF export error: ') + (err as Error).message); }
         setLoading(false);
     };
 
@@ -206,7 +209,7 @@ export default function InvitationForm() {
 
     /* ── Save/Load session ── */
     const handleSave = () => {
-        const name = prompt('Tên phiên:', `Giấy mời ${new Date().toLocaleDateString('vi-VN')}`);
+        const name = prompt(isVi ? 'Tên phiên:' : 'Session name:', isVi ? `Giấy mời ${new Date().toLocaleDateString('vi-VN')}` : `Invitation ${new Date().toLocaleDateString('en-US')}`);
         if (!name) return;
         const session = {
             id: Date.now().toString(), name, data, labels: customLabels, tags, templateName,
@@ -217,7 +220,7 @@ export default function InvitationForm() {
         const sessions = [...savedSessions, session];
         saveSessions(sessions);
         setSavedSessions(sessions);
-        showToast(`Đã lưu "${name}"`);
+        showToast(isVi ? `Đã lưu "${name}"` : `Saved "${name}"`);
     };
 
     const handleLoad = (s: any) => {
@@ -231,15 +234,15 @@ export default function InvitationForm() {
         if (s.templateBase64) {
             const buf = base64ToBuffer(s.templateBase64);
             setTemplateBuffer(buf);
-            showToast(`Đã tải "${s.name}" — sẵn sàng chỉnh sửa & xuất file`);
+            showToast(isVi ? `Đã tải "${s.name}" — sẵn sàng chỉnh sửa & xuất file` : `Loaded "${s.name}" — ready to edit & export`);
             setTimeout(() => handlePreview(buf), 300);
         } else {
-            showToast(`Đã tải dữ liệu "${s.name}" — cần upload lại file mẫu`);
+            showToast(isVi ? `Đã tải dữ liệu "${s.name}" — cần upload lại file mẫu` : `Loaded data "${s.name}" — please re-upload template`);
         }
     };
 
     const handleDelete = (id: string) => {
-        if (!confirm('Xóa phiên này?')) return;
+        if (!confirm(isVi ? 'Xóa phiên này?' : 'Delete this session?')) return;
         const sessions = savedSessions.filter(s => s.id !== id);
         saveSessions(sessions);
         setSavedSessions(sessions);
@@ -248,7 +251,7 @@ export default function InvitationForm() {
     const handleRename = (id: string) => {
         const s = savedSessions.find(s => s.id === id);
         if (!s) return;
-        const name = prompt('Đổi tên:', s.name);
+        const name = prompt(isVi ? 'Đổi tên:' : 'Rename:', s.name);
         if (!name) return;
         const sessions = savedSessions.map(s => s.id === id ? { ...s, name } : s);
         saveSessions(sessions);
@@ -258,7 +261,7 @@ export default function InvitationForm() {
     /* ── Save/Load/Delete project templates ── */
     const handleSaveAsTemplate = () => {
         if (!templateBuffer) return;
-        const name = prompt('Tên mẫu dự án:', templateName.replace('.docx', ''));
+        const name = prompt(isVi ? 'Tên mẫu dự án:' : 'Project template name:', templateName.replace('.docx', ''));
         if (!name) return;
         const tmpl = {
             id: Date.now().toString(), name, templateName,
@@ -269,18 +272,18 @@ export default function InvitationForm() {
         const templates = [...savedTemplates, tmpl];
         saveTemplates(templates);
         setSavedTemplates(templates);
-        showToast(`Đã lưu mẫu dự án "${name}" — dùng lại không cần upload!`);
+        showToast(isVi ? `Đã lưu mẫu dự án "${name}" — dùng lại không cần upload!` : `Saved project template "${name}" — reuse without re-uploading!`);
     };
 
     const handleLoadTemplate = (t: any) => {
-        if (!t.templateBase64) { showToast('Mẫu không có file template'); return; }
+        if (!t.templateBase64) { showToast(isVi ? 'Mẫu không có file template' : 'Template has no file data'); return; }
         const buf = base64ToBuffer(t.templateBase64);
         loadTemplateBuffer(buf, t.templateName || 'template.docx');
-        showToast(`Đã tải mẫu "${t.name}" — điền dữ liệu mới!`);
+        showToast(isVi ? `Đã tải mẫu "${t.name}" — điền dữ liệu mới!` : `Loaded template "${t.name}" — fill new data!`);
     };
 
     const handleDeleteTemplate = (id: string) => {
-        if (!confirm('Xóa mẫu dự án này?')) return;
+        if (!confirm(isVi ? 'Xóa mẫu dự án này?' : 'Delete this project template?')) return;
         const templates = savedTemplates.filter(t => t.id !== id);
         saveTemplates(templates);
         setSavedTemplates(templates);
@@ -295,13 +298,13 @@ export default function InvitationForm() {
         <div className="container" style={{ maxWidth: 1200, margin: '0 auto', padding: '1rem' }}>
             {/* Header */}
             <div style={{ ...S, background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)', borderColor: '#93c5fd', textAlign: 'center' }}>
-                <h2 style={{ margin: 0, color: '#1e40af', fontSize: '1.3rem' }}>📨 Giấy mời & Văn bản có danh sách</h2>
+                <h2 style={{ margin: 0, color: '#1e40af', fontSize: '1.3rem' }}>📨 {isVi ? 'Giấy mời & Văn bản có danh sách' : 'Invitations & List Documents'}</h2>
                 <p style={{ color: '#475569', fontSize: '0.85rem', margin: '0.3rem 0 0' }}>
-                    Upload mẫu Word của bạn → app tự nhận diện danh sách → thêm/bớt người linh động → xuất file
+                    {isVi ? 'Upload mẫu Word của bạn → app tự nhận diện danh sách → thêm/bớt người linh động → xuất file' : 'Upload your Word template → app auto-detects lists → add/remove items flexibly → export file'}
                 </p>
                 <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginTop: '0.5rem' }}>
-                    <button className="btn btn-sm" onClick={() => navigate('/huong-dan/tao-ho-so')} style={{ ...btnSm, background: '#dbeafe', color: '#1d4ed8' }}>❓ Hướng dẫn</button>
-                    <button className="btn btn-sm" onClick={() => navigate('/')} style={btnSm}>🏠 Trang chủ</button>
+                    <button className="btn btn-sm" onClick={() => navigate('/huong-dan/tao-ho-so')} style={{ ...btnSm, background: '#dbeafe', color: '#1d4ed8' }}>❓ {isVi ? 'Hướng dẫn' : 'Guide'}</button>
+                    <button className="btn btn-sm" onClick={() => navigate('/')} style={btnSm}>🏠 {isVi ? 'Trang chủ' : 'Home'}</button>
                 </div>
             </div>
 
@@ -309,19 +312,18 @@ export default function InvitationForm() {
                 /* ── Upload section ── */
                 <div style={{ ...S, textAlign: 'center', padding: '2rem' }}>
                     <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>📄</div>
-                    <h3 style={{ marginBottom: '0.5rem', color: '#1e293b' }}>Upload mẫu giấy mời Word (.docx)</h3>
+                    <h3 style={{ marginBottom: '0.5rem', color: '#1e293b' }}>{isVi ? 'Upload mẫu giấy mời Word (.docx)' : 'Upload Invitation Word Template (.docx)'}</h3>
                     <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '1rem' }}>
-                        App sẽ <b>tự nhận diện</b> các danh sách đại biểu, phân công nhiệm vụ trong file của bạn.
-                        <br />Không cần chỉnh sửa file mẫu — upload nguyên bản!
+                        {isVi ? <>App sẽ <b>tự nhận diện</b> các danh sách đại biểu, phân công nhiệm vụ trong file của bạn.<br />Không cần chỉnh sửa file mẫu — upload nguyên bản!</> : <>The app will <b>auto-detect</b> delegate lists and task assignments in your file.<br />No need to edit the template — upload as-is!</>}
                     </p>
                     <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
                         <button className="btn btn-primary" onClick={() => fileRef.current?.click()}
                             style={{ padding: '0.6rem 1.5rem', fontSize: '1rem' }}>
-                            📂 Chọn file Word của bạn
+                            📂 {isVi ? 'Chọn file Word của bạn' : 'Choose your Word file'}
                         </button>
                         <button className="btn btn-secondary" onClick={loadSampleTemplate}
                             style={{ padding: '0.6rem 1.5rem', fontSize: '1rem', background: '#fef3c7', borderColor: '#fbbf24', color: '#92400e' }}>
-                            📨 Dùng mẫu giấy mời sẵn
+                            📨 {isVi ? 'Dùng mẫu giấy mời sẵn' : 'Use sample template'}
                         </button>
                     </div>
                     <input ref={fileRef} type="file" accept=".docx" style={{ display: 'none' }} onChange={handleUpload} />
@@ -329,15 +331,15 @@ export default function InvitationForm() {
                     {/* Saved project templates */}
                     {savedTemplates.length > 0 && (
                         <div style={{ marginTop: '1.5rem', textAlign: 'left', ...S, background: '#faf5ff', borderColor: '#c4b5fd' }}>
-                            <div style={{ fontWeight: 600, color: '#6d28d9', marginBottom: '0.5rem' }}>🗂️ Mẫu dự án đã lưu ({savedTemplates.length})</div>
-                            <p style={{ fontSize: '0.75rem', color: '#7c3aed', margin: '0 0 0.5rem' }}>Click để dùng lại — không cần upload lại file!</p>
+                            <div style={{ fontWeight: 600, color: '#6d28d9', marginBottom: '0.5rem' }}>🗂️ {isVi ? 'Mẫu dự án đã lưu' : 'Saved Project Templates'} ({savedTemplates.length})</div>
+                            <p style={{ fontSize: '0.75rem', color: '#7c3aed', margin: '0 0 0.5rem' }}>{isVi ? 'Click để dùng lại — không cần upload lại file!' : 'Click to reuse — no need to re-upload!'}</p>
                             {savedTemplates.map(t => (
                                 <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem', padding: '0.35rem 0.5rem', marginBottom: '0.3rem', borderRadius: 6, background: '#ede9fe', cursor: 'pointer' }}
                                     onClick={() => handleLoadTemplate(t)}>
                                     <span style={{ flex: 1, color: '#6d28d9', fontWeight: 500 }}>
                                         📚 {t.name}
                                         <span style={{ fontWeight: 400, color: '#94a3b8', fontSize: '0.7rem', marginLeft: '0.3rem' }}>
-                                            ({t.tags?.length || 0} trường • {new Date(t.date).toLocaleDateString('vi-VN')})
+                                            ({t.tags?.length || 0} {isVi ? 'trường' : 'fields'} • {new Date(t.date).toLocaleDateString(isVi ? 'vi-VN' : 'en-US')})
                                         </span>
                                     </span>
                                     <button onClick={(e) => { e.stopPropagation(); handleDeleteTemplate(t.id); }}
@@ -350,8 +352,8 @@ export default function InvitationForm() {
                     {/* Saved sessions */}
                     {savedSessions.length > 0 && (
                         <div style={{ marginTop: '1rem', textAlign: 'left', ...S, background: '#f0fdf4', borderColor: '#86efac' }}>
-                            <div style={{ fontWeight: 600, color: '#166534', marginBottom: '0.5rem' }}>📂 Phiên đã lưu ({savedSessions.length})</div>
-                            <p style={{ fontSize: '0.75rem', color: '#166534', margin: '0 0 0.5rem' }}>Click để tiếp tục chỉnh sửa (có sẵn dữ liệu đã điền)</p>
+                            <div style={{ fontWeight: 600, color: '#166534', marginBottom: '0.5rem' }}>📂 {isVi ? 'Phiên đã lưu' : 'Saved Sessions'} ({savedSessions.length})</div>
+                            <p style={{ fontSize: '0.75rem', color: '#166534', margin: '0 0 0.5rem' }}>{isVi ? 'Click để tiếp tục chỉnh sửa (có sẵn dữ liệu đã điền)' : 'Click to continue editing (pre-filled data)'}</p>
                             {savedSessions.map(s => (
                                 <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem', padding: '0.25rem 0', borderBottom: '1px solid #dcfce7' }}>
                                     <span style={{ flex: 1, cursor: 'pointer', color: '#166534' }} onClick={() => handleLoad(s)} title="Click để tải">
@@ -371,22 +373,22 @@ export default function InvitationForm() {
                     <div>
                         <div style={{ ...S, background: '#f0fdf4', borderColor: '#86efac' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                                <div style={{ fontWeight: 600, color: '#166534', fontSize: '0.9rem' }}>📝 Điền thông tin</div>
+                                <div style={{ fontWeight: 600, color: '#166534', fontSize: '0.9rem' }}>📝 {isVi ? 'Điền thông tin' : 'Fill Information'}</div>
                                 <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{templateName}</span>
                             </div>
 
                             {/* Data management buttons */}
                             <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
-                                <button className="btn btn-sm" onClick={handleSave} style={btnSm}>💿 Lưu phiên</button>
-                                <button className="btn btn-sm" onClick={handleSaveAsTemplate} style={{ ...btnSm, background: '#faf5ff', color: '#7c3aed', borderColor: '#c4b5fd' }}>📚 Lưu làm mẫu dự án</button>
-                                <button className="btn btn-sm" onClick={() => { setTemplateBuffer(null); setTags([]); setData({}); setListGroups([]); setListData({}); }} style={{ ...btnSm, color: '#ef4444' }}>↩️ Đổi mẫu</button>
+                                <button className="btn btn-sm" onClick={handleSave} style={btnSm}>💿 {isVi ? 'Lưu phiên' : 'Save Session'}</button>
+                                <button className="btn btn-sm" onClick={handleSaveAsTemplate} style={{ ...btnSm, background: '#faf5ff', color: '#7c3aed', borderColor: '#c4b5fd' }}>📚 {isVi ? 'Lưu làm mẫu dự án' : 'Save as Template'}</button>
+                                <button className="btn btn-sm" onClick={() => { setTemplateBuffer(null); setTags([]); setData({}); setListGroups([]); setListData({}); }} style={{ ...btnSm, color: '#ef4444' }}>↩️ {isVi ? 'Đổi mẫu' : 'Change Template'}</button>
                             </div>
 
                             {/* ═══ LIST GROUPS (auto-detected) ═══ */}
                             {listGroups.length > 0 && (
                                 <div style={{ marginBottom: '1rem' }}>
                                     <div style={{ fontWeight: 600, fontSize: '0.85rem', color: '#7c3aed', marginBottom: '0.5rem' }}>
-                                        🔍 Đã nhận diện {listGroups.length} nhóm danh sách — thêm/bớt tùy ý
+                                        🔍 {isVi ? `Đã nhận diện ${listGroups.length} nhóm danh sách — thêm/bớt tùy ý` : `Detected ${listGroups.length} list groups — add/remove freely`}
                                     </div>
                                     {listGroups.map((group, gIdx) => {
                                         const items = listData[group.id] || [];
@@ -394,9 +396,9 @@ export default function InvitationForm() {
                                             <div key={group.id} style={{ marginBottom: '0.75rem', padding: '0.75rem', background: '#faf5ff', borderRadius: 8, border: '1px solid #c4b5fd' }}>
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                                                     <label style={{ fontWeight: 600, fontSize: '0.85rem', color: '#6d28d9' }}>
-                                                        📋 Nhóm {gIdx + 1}: {group.tags.length} dòng gốc
+                                                        📋 {isVi ? 'Nhóm' : 'Group'} {gIdx + 1}: {group.tags.length} {isVi ? 'dòng gốc' : 'original rows'}
                                                         <span style={{ fontWeight: 400, fontSize: '0.75rem', color: '#64748b', marginLeft: '0.3rem' }}>
-                                                            (hiện: {items.length} dòng)
+                                                            ({isVi ? 'hiện' : 'current'}: {items.length} {isVi ? 'dòng' : 'rows'})
                                                         </span>
                                                     </label>
                                                     <button className="btn btn-sm"
@@ -407,7 +409,7 @@ export default function InvitationForm() {
                                                             }));
                                                         }}
                                                         style={{ fontSize: '0.75rem', padding: '0.15rem 0.5rem', background: '#ede9fe', color: '#7c3aed', border: '1px solid #c4b5fd', borderRadius: 4 }}>
-                                                        ➕ Thêm dòng
+                                                        ➕ {isVi ? 'Thêm dòng' : 'Add row'}
                                                     </button>
                                                 </div>
                                                 {items.map((item, idx) => (
@@ -454,12 +456,12 @@ export default function InvitationForm() {
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                                                 <label style={{ fontWeight: 600, fontSize: '0.85rem', color: '#0369a1' }}>
                                                     📋 {customLabels[tag] || tag.replace(/^(DANH_SACH_|DS_)/, '').replace(/_/g, ' ')}
-                                                    <span style={{ fontWeight: 400, fontSize: '0.75rem', color: '#64748b', marginLeft: '0.3rem' }}>({items.filter(i => i.trim()).length} mục)</span>
+                                                    <span style={{ fontWeight: 400, fontSize: '0.75rem', color: '#64748b', marginLeft: '0.3rem' }}>({items.filter(i => i.trim()).length} {isVi ? 'mục' : 'items'})</span>
                                                 </label>
                                                 <button className="btn btn-sm"
                                                     onClick={() => { const ni = [...items, '']; setData(prev => ({ ...prev, [tag]: JSON.stringify(ni) })); }}
                                                     style={{ fontSize: '0.75rem', padding: '0.15rem 0.5rem', background: '#dbeafe', color: '#1d4ed8', border: '1px solid #93c5fd', borderRadius: 4 }}>
-                                                    ➕ Thêm dòng
+                                                    ➕ {isVi ? 'Thêm dòng' : 'Add row'}
                                                 </button>
                                             </div>
                                             {items.map((item, idx) => (
@@ -492,10 +494,10 @@ export default function InvitationForm() {
                         {/* Export buttons */}
                         <div style={{ ...S, display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
                             <button className="btn btn-primary" onClick={handleExport} disabled={loading} style={{ padding: '0.5rem 1.2rem' }}>
-                                {loading ? '⏳' : '📥 Xuất Word'}
+                                {loading ? '⏳' : `📥 ${isVi ? 'Xuất Word' : 'Export Word'}`}
                             </button>
                             <button className="btn btn-secondary" onClick={handleExportPDF} disabled={loading} style={{ padding: '0.5rem 1.2rem' }}>
-                                📄 Xuất PDF
+                                📄 {isVi ? 'Xuất PDF' : 'Export PDF'}
                             </button>
                         </div>
                     </div>
@@ -503,7 +505,7 @@ export default function InvitationForm() {
                     {/* RIGHT: Preview */}
                     <div style={{ position: 'sticky', top: '2.5rem', alignSelf: 'start' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem', fontSize: '0.8rem' }}>
-                            <span style={{ fontWeight: 600 }}>👁️ Xem trước</span>
+                            <span style={{ fontWeight: 600 }}>👁️ {isVi ? 'Xem trước' : 'Preview'}</span>
                             <button className="btn btn-sm" onClick={() => setZoom(z => Math.max(20, z - 10))} style={btnSm}>−</button>
                             <span style={{ minWidth: 35, textAlign: 'center' }}>{zoom}%</span>
                             <button className="btn btn-sm" onClick={() => setZoom(z => Math.min(100, z + 10))} style={btnSm}>+</button>
@@ -512,7 +514,7 @@ export default function InvitationForm() {
                         <div style={{ ...S, height: 'calc(100vh - 200px)', overflow: 'auto' }}>
                             <div ref={previewRef} style={{ zoom: zoom / 100 }} />
                             {!previewRef.current?.innerHTML && (
-                                <div style={{ textAlign: 'center', color: '#94a3b8', padding: '2rem' }}>Upload file để xem trước</div>
+                                <div style={{ textAlign: 'center', color: '#94a3b8', padding: '2rem' }}>{isVi ? 'Upload file để xem trước' : 'Upload file to preview'}</div>
                             )}
                         </div>
                     </div>
