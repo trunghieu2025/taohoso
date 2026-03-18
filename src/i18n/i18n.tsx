@@ -38,7 +38,7 @@ function getSavedLang(): Lang {
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved && ['vi', 'en', 'ja', 'ko', 'zh'].includes(saved)) return saved as Lang;
     } catch { /* ignore */ }
-    return 'vi';
+    return 'en';
 }
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
