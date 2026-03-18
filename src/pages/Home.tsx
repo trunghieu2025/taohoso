@@ -95,10 +95,8 @@ export default function Home() {
       {/* CTA */}
       <section className="section" style={{ background: 'linear-gradient(135deg, #f0f9ff, #ede9fe)' }}>
         <div className="container">
-          <h2 className="section-title">🏆 Top 3 tính năng cho Quản lý Dự án</h2>
-          <p className="section-subtitle">
-            Những công cụ mạnh nhất giúp bạn quản lý hồ sơ hiệu quả hơn
-          </p>
+          <h2 className="section-title">{t('top3_title')}</h2>
+          <p className="section-subtitle">{t('top3_subtitle')}</p>
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
@@ -113,18 +111,15 @@ export default function Home() {
             }}>
               <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>🏷️</div>
               <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#dc2626', marginBottom: '0.5rem' }}>
-                Gắn nhãn & Lọc dự án
+                {t('top3_tags_title')}
               </h3>
               <p style={{ fontSize: '0.9rem', color: '#64748b', lineHeight: 1.6 }}>
-                Đánh dấu dự án <strong style={{ color: '#dc2626' }}>Khẩn cấp</strong>,{' '}
-                <strong style={{ color: '#7c3aed' }}>VIP</strong>,{' '}
-                <strong style={{ color: '#d97706' }}>Chờ duyệt</strong> bằng nhãn màu.
-                Lọc nhanh — không bao giờ bỏ sót.
+                {t('top3_tags_desc')}
               </p>
               <div style={{ marginTop: '0.75rem', display: 'flex', gap: 6 }}>
-                <span style={{ padding: '2px 8px', borderRadius: 10, fontSize: '0.7rem', background: '#fef2f2', color: '#dc2626', fontWeight: 700 }}>Khẩn cấp</span>
+                <span style={{ padding: '2px 8px', borderRadius: 10, fontSize: '0.7rem', background: '#fef2f2', color: '#dc2626', fontWeight: 700 }}>{t('tag_urgent')}</span>
                 <span style={{ padding: '2px 8px', borderRadius: 10, fontSize: '0.7rem', background: '#f5f3ff', color: '#7c3aed', fontWeight: 700 }}>VIP</span>
-                <span style={{ padding: '2px 8px', borderRadius: 10, fontSize: '0.7rem', background: '#f0fdf4', color: '#059669', fontWeight: 700 }}>Hoàn tất</span>
+                <span style={{ padding: '2px 8px', borderRadius: 10, fontSize: '0.7rem', background: '#f0fdf4', color: '#059669', fontWeight: 700 }}>{t('tag_done')}</span>
               </div>
             </div>
             {/* Gantt */}
@@ -136,16 +131,15 @@ export default function Home() {
             }}>
               <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>📊</div>
               <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#059669', marginBottom: '0.5rem' }}>
-                Biểu đồ Gantt & Timeline
+                {t('top3_gantt_title')}
               </h3>
               <p style={{ fontSize: '0.9rem', color: '#64748b', lineHeight: 1.6 }}>
-                Xem tiến độ dự án trực quan. Theo dõi từ <strong>Ký HĐ</strong> →{' '}
-                <strong>Khởi công</strong> → <strong>Nghiệm thu</strong> → <strong>Thanh toán</strong>.
+                {t('top3_gantt_desc')}
               </p>
               <div style={{ marginTop: '0.75rem' }}>
-                {['Ký HĐ', 'Khởi công', 'Nghiệm thu'].map((label, i) => (
+                {[t('gantt_sign'), t('gantt_start'), t('gantt_inspect')].map((label, i) => (
                   <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                    <span style={{ fontSize: '0.65rem', color: '#64748b', width: 55, textAlign: 'right' }}>{label}</span>
+                    <span style={{ fontSize: '0.65rem', color: '#64748b', width: 65, textAlign: 'right' }}>{label}</span>
                     <div style={{ flex: 1, height: 8, background: '#e2e8f0', borderRadius: 4 }}>
                       <div style={{ height: '100%', borderRadius: 4, width: `${30 + i * 30}%`, background: 'linear-gradient(90deg, #3b82f6, #059669)' }} />
                     </div>
@@ -162,16 +156,15 @@ export default function Home() {
             }}>
               <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>💡</div>
               <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#2563eb', marginBottom: '0.5rem' }}>
-                Gợi ý thông minh
+                {t('top3_suggest_title')}
               </h3>
               <p style={{ fontSize: '0.9rem', color: '#64748b', lineHeight: 1.6 }}>
-                Hệ thống tự gợi ý <strong>tên nhà thầu</strong>, <strong>địa chỉ</strong>,{' '}
-                <strong>giá trị HĐ</strong> từ dữ liệu cũ. Tiết kiệm 80% thời gian nhập liệu.
+                {t('top3_suggest_desc')}
               </p>
               <div style={{ marginTop: '0.75rem', background: '#f8fafc', borderRadius: 8, padding: '0.5rem', border: '1px solid #e2e8f0', fontSize: '0.8rem' }}>
-                <div style={{ color: '#94a3b8', marginBottom: 4 }}>💡 Gợi ý:</div>
-                <div style={{ color: '#1e293b' }}>• Công ty TNHH ABC</div>
-                <div style={{ color: '#1e293b' }}>• Cty CP Xây dựng XYZ</div>
+                <div style={{ color: '#94a3b8', marginBottom: 4 }}>💡 {t('top3_suggest_hint')}</div>
+                <div style={{ color: '#1e293b' }}>• ABC Company Ltd</div>
+                <div style={{ color: '#1e293b' }}>• XYZ Construction Corp</div>
               </div>
             </div>
           </div>
@@ -181,22 +174,20 @@ export default function Home() {
       {/* NEW FEATURES v2.7 */}
       <section className="section">
         <div className="container">
-          <h2 className="section-title">🆕 Tính năng mới v2.7</h2>
-          <p className="section-subtitle">
-            8 tính năng mạnh mẽ vừa được cập nhật
-          </p>
+          <h2 className="section-title">{t('v27_title')}</h2>
+          <p className="section-subtitle">{t('v27_subtitle')}</p>
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
             gap: '1rem', marginTop: '1.5rem',
           }}>
             {[
-              { icon: '💾', title: 'Lưu trữ an toàn', desc: 'Dữ liệu lưu 100% trên máy tính, không qua internet', color: '#0ea5e9', bg: '#f0f9ff' },
-              { icon: '🧮', title: 'Công thức tính', desc: 'Tự tạo công thức: {GIÁ_TRỊ} * {THUẾ} / 100', color: '#7c3aed', bg: '#faf5ff' },
-              { icon: '👁️', title: 'Xem trước Word', desc: 'Preview file Word đã điền ngay trước khi tải', color: '#059669', bg: '#f0fdf4' },
-              { icon: '🔒', title: 'Bảo mật PIN', desc: 'Đặt PIN bảo vệ dữ liệu khi mở ứng dụng', color: '#dc2626', bg: '#fef2f2' },
-              { icon: '🎯', title: 'Hướng dẫn tương tác', desc: 'Tour hướng dẫn 4 bước cho người mới sử dụng', color: '#2563eb', bg: '#eff6ff' },
-              { icon: '📦', title: 'Xuất hàng loạt', desc: 'Upload JSON/Excel → xuất nhiều file ZIP cùng lúc', color: '#0891b2', bg: '#ecfeff' },
+              { icon: '💾', title: t('v27_storage'), desc: t('v27_storage_desc'), color: '#0ea5e9', bg: '#f0f9ff' },
+              { icon: '🧮', title: t('v27_formula'), desc: t('v27_formula_desc'), color: '#7c3aed', bg: '#faf5ff' },
+              { icon: '👁️', title: t('v27_preview'), desc: t('v27_preview_desc'), color: '#059669', bg: '#f0fdf4' },
+              { icon: '🔒', title: t('v27_pin'), desc: t('v27_pin_desc'), color: '#dc2626', bg: '#fef2f2' },
+              { icon: '🎯', title: t('v27_tour'), desc: t('v27_tour_desc'), color: '#2563eb', bg: '#eff6ff' },
+              { icon: '📦', title: t('v27_batch'), desc: t('v27_batch_desc'), color: '#0891b2', bg: '#ecfeff' },
             ].map(f => (
               <div key={f.title} style={{
                 background: f.bg, borderRadius: 12, padding: '1.2rem',
@@ -210,7 +201,7 @@ export default function Home() {
           </div>
           <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
             <Link to="/goi-mau" className="btn btn-primary">
-              📦 Thử ngay
+              📦 {t('cta_try_now')}
             </Link>
           </div>
         </div>
@@ -219,11 +210,11 @@ export default function Home() {
       {/* CTA */}
       <section className="cta-section">
         <div className="container">
-          <h2>Bắt đầu tạo hồ sơ ngay</h2>
-          <p>Miễn phí, nhanh chóng và bảo mật. Xử lý hoàn toàn trên máy tính.</p>
+          <h2>{t('cta_title')}</h2>
+          <p>{t('cta_desc')}</p>
           <div className="hero-actions">
             <Link to="/hop-dong-thue-nha" className="btn btn-lg">
-              📄 Tạo hợp đồng thuê nhà
+              {t('hero_btn_contract')}
             </Link>
           </div>
         </div>
